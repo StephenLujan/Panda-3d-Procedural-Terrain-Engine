@@ -1,0 +1,136 @@
+//Cg
+//Cg profile arbvp1 arbfp1
+
+// shader contains  work by pro-rsoft and gsk from the panda3d forums
+
+
+void vshader( in float4 vtx_position : POSITION,
+	      in float3 vtx_normal : NORMAL,
+              in float2 vtx_texcoord0 : TEXCOORD0,
+              in float2 vtx_texcoord3 : TEXCOORD3,
+              in uniform float4x4 mat_modelproj,
+	      in uniform float4x4 trans_model_to_world,
+	      in uniform float4 k_lightvec,
+	      in uniform float4 k_lightcolor,
+	      in uniform float4 k_ambientlight,
+	      in uniform float4 k_tscale,
+	      out float l_brightness,
+	      out float4 l_mpos,
+          out float3 l_normal,
+              out float2 l_texcoord0 : TEXCOORD0,
+              out float2 l_texcoord3 : TEXCOORD3,
+              out float4 l_position : POSITION)
+{
+
+  // worldspace position, for clipping in the fragment shader
+  l_mpos = mul(trans_model_to_world, vtx_position);
+
+  l_position=mul(mat_modelproj,vtx_position);
+  l_texcoord0=vtx_texcoord0*k_tscale;
+  l_texcoord3=vtx_texcoord3;
+
+  // lighting
+  float3 N = normalize( vtx_normal );
+  float3 L = normalize( k_lightvec.xyz );
+  l_normal = N;
+  l_brightness = (max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
+}
+
+float calculateWeight( float height, float slope, float4 limits )
+{
+
+    if (height > limits.x)  // above height max
+        return 0.0;
+    if (height < limits.y)  // below height min
+        return 0.0;
+
+    return 1.0;
+
+    if (slope > limits.z)   //slope above max
+        return 0.0;
+    if (slope < limits.a)   //slope below min
+        return 0.0;
+
+    float hweight;
+    float hrange;
+    float sweight;
+    float srange;
+
+    hrange = limits.x - limits.y;
+    hweight = height - limits.y < limits.x - height ?
+                height - limits.y : limits.x - height;
+    hweight /= hrange;
+
+    srange = limits.z - limits.a;
+    sweight = slope - limits.a < limits.z - slope ?
+                slope - limits.a : limits.z - slope;
+    sweight /= srange;
+
+    return hweight * sweight;
+}
+
+float calculateWeightByHeight( float height, float4 limits )
+{
+
+    if (height > limits.x)  // above height max
+        return 0.0;
+    if (height < limits.y)  // below height min
+        return 0.0;
+
+    float hweight;
+    float hrange;
+
+    hrange = limits.x - limits.y;
+    hweight = height - limits.y < limits.x - height ?
+                height - limits.y : limits.x - height;
+    //hweight /= hrange;
+
+    return hweight;
+}
+
+
+void fshader( in float4 l_position : POSITION,
+              in float2 l_texcoord0 : TEXCOORD0,
+              in float2 l_texcoord3 : TEXCOORD3,
+              in uniform float4 region1Limits : REGION1LIMITS,
+              in uniform float4 region2Limits : REGION2LIMITS,
+              in uniform float4 region3Limits : REGION3LIMITS,
+              in uniform float4 region4Limits : REGION4LIMITS,
+	      in float  l_brightness,
+	      in float4 l_mpos,
+	      in uniform float4 k_waterlevel,
+              in uniform sampler2D region1ColorMap : TEXUNIT0,
+              in uniform sampler2D region2ColorMap : TEXUNIT1,
+              in uniform sampler2D region3ColorMap : TEXUNIT2,
+              in uniform sampler2D region4ColorMap : TEXUNIT3,
+              out float4 o_color : COLOR )
+{
+    // clipping
+    //if ( l_mpos.z < k_waterlevel.z) discard;
+
+    vec4 terrainColor = float4(0.0, 0.0, 0.0, 1.0);
+    float height = l_mpos.z;
+    float regionRange = 0.0;
+    vec4 weights = float4(0.0, 0.0, 0.0, 0.0);
+
+    weights.x = calculateWeightByHeight(height, region1Limits);
+    weights.y = calculateWeightByHeight(height, region2Limits);
+    weights.z = calculateWeightByHeight(height, region3Limits);
+    weights.a = calculateWeightByHeight(height, region4Limits);
+
+    //--- Color terrain proportionately to weights
+    float normalizer = (weights.x + weights.y + weights.z + weights.a + 0.00001);
+
+    if (weights.x)
+        terrainColor += weights.x / normalizer * tex2D(region1ColorMap, l_texcoord0);
+    if (weights.y)
+        terrainColor += weights.y / normalizer * tex2D(region2ColorMap, l_texcoord0);
+    if (weights.z)
+        terrainColor += weights.z / normalizer * tex2D(region3ColorMap, l_texcoord0);
+    if (weights.a)
+        terrainColor += weights.a / normalizer * tex2D(region4ColorMap, l_texcoord0);
+
+    // alpha splatting and lighting
+    o_color=terrainColor*(l_brightness);
+    o_color.a=1.0;
+}
