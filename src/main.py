@@ -141,8 +141,7 @@ class WaterNode():
 class World(DirectObject):
 
     def __init__(self):
-        # some constants
-        self._water_level = Vec4(0.0, 0.0, 12.0, 1.0)
+
         #print(str(base.win.getGsg().getMaxTextureStages()) + ' texture stages available')
         #base.setFrameRateMeter(True)
         # PStatClient.connect()
@@ -173,6 +172,9 @@ class World(DirectObject):
         #root.reparentTo(render)
         self.terrain.reparentTo(render)
         self.environ = self.terrain	# make available for original Ralph code below
+        # some constants
+        self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
+                                    * self.terrain.waterHeight, 1.0)
 
         # water
         self.water = WaterNode(self, -1000, -1000, 2000, 2000, self._water_level.getZ())

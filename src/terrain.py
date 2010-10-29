@@ -53,7 +53,7 @@ class HeightMapTile(GeoMipTerrain):
 
         self.getRoot().setPos(x, y, 0)
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
-        GeoMipTerrain.setMinLevel(self,1)
+        #GeoMipTerrain.setMinLevel(self,1)
 
 
         #self.generateNoiseObjects()
@@ -109,7 +109,7 @@ class HeightMapTile(GeoMipTerrain):
         #normalMax = -9999.0
         #normalMax = 9999.0
 
-        print "generating heightmap for offsets: ",self.xOffset,self.yOffset
+        #print "generating heightmap for offsets: ",self.xOffset,self.yOffset
 
         for x in range(self.image.getXSize()):
             for y in range(self.image.getYSize()):
@@ -239,10 +239,10 @@ class TerrainTile(HeightMapTile):
 
 
         # this is half the blend area between each texture
-        blendRadius = self.terrain.tileHeight * 0.11 + 0.5
-        transitionHeights = Vec3(12.0 + blendRadius / 2,
-                                 self.terrain.tileHeight * 0.52,
-                                 self.terrain.tileHeight * 0.82)
+        blendRadius = self.terrain.maxHeight * 0.11 + 0.5
+        transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
+                                 self.terrain.maxHeight * 0.52,
+                                 self.terrain.maxHeight * 0.80)
 
         # This is the current shader input format. The unused parameters are
         # for easy extensibility.
@@ -366,14 +366,17 @@ class Terrain(NodePath):
         self.name = name
 
         ### tile physical properties
-        self.tileHeight = 200
-        self.heightMapSize = 65
+        self.maxHeight = 200
+        self.heightMapSize = 129
         self.tileSize = self.heightMapSize - 1
-        self.consistency = 800
-        self.smoothness = 120
+        self.consistency = 1000
+        self.smoothness = 100
+        self.waterHeight = 0.3
+        # for realism the flatHeight should be at or very close to waterHeight
+        self.flatHeight = self.waterHeight
 
         ### rendering properties
-        self.blockSize = 8
+        self.blockSize = 32
         self.near = 15
         self.far = 80
 
@@ -394,7 +397,7 @@ class Terrain(NodePath):
 
         self.makeNewTiles(focus.getX(), focus.getY())
 
-        self.setSz(self.tileHeight)
+        self.setSz(self.maxHeight)
         self.setupElevationRay()
 
     def updateTask(self, task):
@@ -468,23 +471,37 @@ class Terrain(NodePath):
         # without perlin2 everything would look unnaturally smooth and regular
         # increase perlin2 to make the terrain smoother
         self.perlin2 = StackedPerlinNoise2()
-        stackSpread = 1.5
-        perlin2Course = PerlinNoise2()
-        perlin2Course.setScale(self.smoothness * stackSpread)
-        self.perlin2.addLevel(perlin2Course, stackSpread)
-        perlin2Fine = PerlinNoise2()
-        perlin2Fine.setScale(self.smoothness / stackSpread)
-        self.perlin2.addLevel(perlin2Fine, 1 / stackSpread)
+        frequencySpread = 3.0
+        amplitudeSpread = 3.2
+        perlin2a = PerlinNoise2()
+        perlin2a.setScale(self.smoothness)
+        self.perlin2.addLevel(perlin2a)
+        perlin2b = PerlinNoise2()
+        perlin2b.setScale(self.smoothness / frequencySpread)
+        self.perlin2.addLevel(perlin2b, 1 / amplitudeSpread)
+        perlin2c = PerlinNoise2()
+        perlin2c.setScale(self.smoothness / (frequencySpread*frequencySpread))
+        self.perlin2.addLevel(perlin2c, 1 / (amplitudeSpread*amplitudeSpread))
+        perlin2d = PerlinNoise2()
+        perlin2d.setScale(self.smoothness / (math.pow(frequencySpread,3)))
+        self.perlin2.addLevel(perlin2d, 1 / (math.pow(amplitudeSpread,3)))
+        perlin2e = PerlinNoise2()
+        perlin2e.setScale(self.smoothness / (math.pow(frequencySpread,4)))
+        self.perlin2.addLevel(perlin2e, 1 / (math.pow(amplitudeSpread,4)))
         #        self.perlin2 = PerlinNoise2( self.heightMapSize, self.heightMapSize)
         #        self.perlin2.setScale( self.smoothness )
 
     def getHeight(self, x, y):
-        """Returns the height at the specified terrain coordinates."""
+        """Returns the height at the specified terrain coordinates.
+        The values returned should be between 0 and 1 and use the full range.
+        Heights should be the smoothest and flatest at flatHeight.
 
-        #height = (perlin1(x,y)*2 + perlin2(x,y) + 3.0)/6.0
-        #height = (perlin1(x,y)/2 * perlin2(x,y)/2)+0.5
-        return (self.perlin1(x, y) + 1) / 4 + \
-                ((self.perlin1(x, y) + 1) * (self.perlin2(x, y) + 1)) / 8
+        """
+
+        return ((self.perlin1(x, y) + 1 - self.flatHeight) / 4 + \
+                ((self.perlin1(x, y) + 1 - self.flatHeight) * \
+                (self.perlin2(x, y) + 1 - self.flatHeight)) / 8) \
+                + self.flatHeight
 
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
@@ -619,8 +636,8 @@ class TerrainTexturer():
         self.shader2 = Shader.load('shaders/stephen2.sha', Shader.SLCg)
         setShaderInput('tscale', Vec4(16.0, 16.0, 16.0, 1.0))	# texture scaling
 
-        blendArea = self.terrain.tileHeight * 0.11 + 0.5 #actually half the blend area
-        transitionHeights = Vec3(12.0 + blendArea / 2, self.terrain.tileHeight * 0.52, self.terrain.tileHeight * 0.82)
+        blendArea = self.terrain.maxHeight * 0.11 + 0.5 #actually half the blend area
+        transitionHeights = Vec3(12.0 + blendArea / 2, self.terrain.maxHeight * 0.52, self.terrain.maxHeight * 0.82)
 
         # regionLimits ( max height, min height, unused/extensible, unused/extensible )
         setShaderInput("region1Limits", Vec4(transitionHeights.getX() + blendArea, -999.0, 0, 0))
