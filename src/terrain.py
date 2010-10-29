@@ -52,6 +52,8 @@ class HeightMapTile(GeoMipTerrain):
         self.image = PNMImage()
 
         self.getRoot().setPos(x, y, 0)
+        GeoMipTerrain.setFocalPoint(self, terrain.focus)
+        GeoMipTerrain.setMinLevel(self,1)
 
 
         #self.generateNoiseObjects()
@@ -115,7 +117,8 @@ class HeightMapTile(GeoMipTerrain):
                 #normalize height
                 #height = (height - min) / (max-min)
                 #feed pixel into image
-                self.image.setGray(x, y, height)
+                #why is it necessary to invert the y axis I wonder?
+                self.image.setGray(x, self.image.getYSize()-1-y, height)
                 #this is just a test
                 #if height < normalMin:
                 #    normalMin = height
@@ -366,7 +369,7 @@ class Terrain(NodePath):
         self.tileHeight = 200
         self.heightMapSize = 65
         self.tileSize = self.heightMapSize - 1
-        self.consistency = 750
+        self.consistency = 800
         self.smoothness = 120
 
         ### rendering properties
@@ -376,7 +379,7 @@ class Terrain(NodePath):
 
         ### tile generation
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 200
+        self.maxViewRange = 400
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize/2
@@ -402,8 +405,9 @@ class Terrain(NodePath):
 
         for pos, tile in self.tiles.items():
             tile.update(task)
-            self.makeNewTiles(self.focus.getX(), self.focus.getY())
-            self.removeOldTiles(self.focus.getX(), self.focus.getY())
+            
+        self.makeNewTiles(self.focus.getX(), self.focus.getY())
+        self.removeOldTiles(self.focus.getX(), self.focus.getY())
         return task.again
 
     def makeNewTiles(self, x, y):
@@ -485,7 +489,7 @@ class Terrain(NodePath):
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
 
-        #return self.getHeight(x, y) * self.getSz()
+        return self.getHeight(x, y) * self.getSz()
 
         #        self.elevationRay.setOrigin(x,y,1000)
         #        self.cTrav.traverse(render)
@@ -503,16 +507,16 @@ class Terrain(NodePath):
         #            print "failure!"
         #            return self.getHeight(x, y) * self.getSz()
 
-        for pos, tile in self.tiles.items():
-            if x > tile.getRoot().getX() and x < tile.getRoot().getSx() \
-               * self.tileSize + tile.getRoot().getX():
-                if y > tile.getRoot().getY() and y < tile.getRoot().getSy() \
-                   * self.tileSize + tile.getRoot().getY():
-                    return tile.getElevation(x- tile.getRoot().getX(),
-                                        y- tile.getRoot().getY()) * self.getSz()
+        #for pos, tile in self.tiles.items():
+        #    if x > tile.getRoot().getX() and x < tile.getRoot().getSx() \
+        #       * self.tileSize + tile.getRoot().getX():
+        #        if y > tile.getRoot().getY() and y < tile.getRoot().getSy() \
+        #           * self.tileSize + tile.getRoot().getY():
+        #            return tile.getElevation(x- tile.getRoot().getX(),
+        #                                y- tile.getRoot().getY()) * self.getSz()
 
         print "getElevation() failure!"
-        return self.getHeight(x, y) * self.getSz()
+
 
     def setupElevationRay(self):
         """ Doesn't appear to work. """
