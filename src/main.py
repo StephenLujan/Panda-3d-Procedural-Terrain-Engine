@@ -39,6 +39,7 @@ from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import WindowProperties
+from pandac.PandaModules import PStatClient
 from terrain import *
 
 ###############################################################################
@@ -143,8 +144,8 @@ class World(DirectObject):
     def __init__(self):
 
         #print(str(base.win.getGsg().getMaxTextureStages()) + ' texture stages available')
-        #base.setFrameRateMeter(True)
-        # PStatClient.connect()
+        base.setFrameRateMeter(True)
+        PStatClient.connect()
         self.keyMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "mouse":0, "turbo":0, "option+":0, "option-":0}
         base.win.setClearColor(Vec4(0, 0, 0, 1))
         # Post the instructions
@@ -257,7 +258,7 @@ class World(DirectObject):
         self.accept("y", self.setKey, ["invert-y", 1])
         self.accept("shift", self.setKey, ["turbo", 1])
         #self.accept("space", self.terrain.make )
-        #self.accept("l", self.terrain.wireframe )
+        self.accept("l", self.terrain.toggleWireFrame )
         #self.accept("+", self.setKey, ["option+",1])
         #self.accept("-", self.setKey, ["option-",1])
         #self.accept("+", self.terrain.incrementDetailBlendMode )
@@ -284,15 +285,6 @@ class World(DirectObject):
         # ---- tasks -------------------------------------
         # Ralph movement
         taskMgr.add(self.move, "moveTask")
-        # Add a task to keep updating the terrain
-        #taskMgr.add(self.terrain.update, "update")
-        #taskMgr.add(self.terrain.updateTask, "updateTerrain")
-        #def setupTaskChain(self, chainName, numThreads=None, tickClock=None, threadPriority=None, frameBudget=None, timeslicePriority=None)
-        taskMgr.setupTaskChain('terrainChain', numThreads=1, tickClock=0,
-                               threadPriority=0, frameBudget=0.02, frameSync=False, timeslicePriority=True)
-        #taskMgr.doMethodLater(6, self.terrain.updateTask, "updateTerrain", taskChain = 'terrainChain', sort = 99, priority = 0)
-        taskMgr.add(self.terrain.updateTask, "updateTerrain", taskChain='terrainChain', sort=99, priority=0)
-        #taskMgr.add(self.terrain.updateTask, "updateTerrain")
 
         # Game state variables
         self.prevtime = 0

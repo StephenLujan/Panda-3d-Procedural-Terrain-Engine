@@ -26,6 +26,8 @@ from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec2
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
+from direct.task.Task import Task
+from operator import itemgetter
 
 ###############################################################################
 #   HeightMapTile
@@ -54,6 +56,10 @@ class HeightMapTile(GeoMipTerrain):
         self.getRoot().setPos(x, y, 0)
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
         #GeoMipTerrain.setMinLevel(self,1)
+        GeoMipTerrain.setBruteforce(self, True)
+        self.setNear(self.terrain.near)
+        self.setFar(self.terrain.far)
+        #self.setBorderStitching(1)
 
 
         #self.generateNoiseObjects()
@@ -367,8 +373,8 @@ class Terrain(NodePath):
 
         ### tile physical properties
         self.maxHeight = 200
-        self.heightMapSize = 129
-        self.tileSize = self.heightMapSize - 1
+        self.tileSize = 64
+        self.heightMapSize = self.tileSize + 1
         self.consistency = 1000
         self.smoothness = 100
         self.waterHeight = 0.3
@@ -376,42 +382,135 @@ class Terrain(NodePath):
         self.flatHeight = self.waterHeight
 
         ### rendering properties
-        self.blockSize = 32
-        self.near = 15
-        self.far = 80
+        self.blockSize = 16
+        self.midBlockSize = 32
+        self.farBlockSize = 64
+        self.near = 40
+        self.far = 100
+        self.wireFrame = 0
 
         ### tile generation
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 400
+        self.maxViewRange = 300
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize/2
         # make larger to avoid excess loading when milling about a small area
         # make smaller to shrink some overhead
-        self.maxTileDistance = self.minTileDistance * 1.5
+        self.maxTileDistance = self.minTileDistance * 1.5 + 100
         self.focus = focus
 
         self.generateNoiseObjects()
 
         self.tiles = {}
 
-        self.makeNewTiles(focus.getX(), focus.getY())
+        #self.makeNewTiles(focus.getX(), focus.getY())
 
         self.setSz(self.maxHeight)
         self.setupElevationRay()
 
+        #Add tasks to keep updating the terrain
+        #def setupTaskChain(self, chainName, numThreads=None, tickClock=None,
+        #       threadPriority=None, frameBudget=None, timeslicePriority=None)
+
+        taskMgr.setupTaskChain('updateTilesChain', numThreads=1, tickClock=0,
+                               threadPriority=0, frameBudget=0.1,
+                               frameSync=False, timeslicePriority=True)
+        taskMgr.add(self.updateTask, "updateTiles", taskChain='updateTilesChain',
+                    sort=99, priority=0)
+
+        taskMgr.setupTaskChain('loadTilesChain', numThreads=1, tickClock=0,
+                               threadPriority=0, frameBudget=0.1,
+                               frameSync=False, timeslicePriority=True)
+        taskMgr.add(self.tileBuilderTask, "loadTiles", taskChain='loadTilesChain',
+                    sort=99, priority=0)
+
+        taskMgr.setupTaskChain('blockSizeUpdateChain', numThreads=1, tickClock=0,
+                               threadPriority=0, frameBudget=0.1,
+                               frameSync=False, timeslicePriority=True)
+        taskMgr.add(self.blockSizeUpdateTask, "blockSizeUpdate",
+                    taskChain='blockSizeUpdateChain', sort=99, priority=0)
+
+        #taskMgr.setupTaskChain('terrain', numThreads=3, tickClock=0,
+        #                       threadPriority=0, frameBudget=0.1,
+        #                       frameSync=False, timeslicePriority=True)
+        #taskMgr.add(self.updateTask, 'updateTiles', taskChain='terrain')
+        #taskMgr.add(self.tileBuilderTask, 'loadTiles', taskChain='terrain')
+
+
     def updateTask(self, task):
-        """This task adds and removes terrain tiles as needed.
-        It also updates each tile, which updates the LOD.
+        """This task updates each tile, which updates the LOD.
 
         """
 
         for pos, tile in self.tiles.items():
             tile.update(task)
             
-        self.makeNewTiles(self.focus.getX(), self.focus.getY())
-        self.removeOldTiles(self.focus.getX(), self.focus.getY())
         return task.again
+
+    def tileBuilderTask(self, task):
+        """This task adds and removes tiles as needed."""
+
+        self.makeNewTile(self.focus.getX(), self.focus.getY())
+        self.removeOldTiles(self.focus.getX(), self.focus.getY())
+
+        return task.again
+
+    def blockSizeUpdateTask(self, task):
+
+        x = self.focus.getX()
+        y = self.focus.getY()
+        center = self.tileSize * 0.5
+
+        for pos, tile in self.tiles.items():
+            deltaX = x - tile.xOffset + center
+            deltaY = y - tile.yOffset + center
+            distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
+            if distance < self.minTileDistance * 0.25:
+                self.setBlockSize(tile, self.blockSize)
+            elif distance < self.minTileDistance * 0.55 \
+                 and distance > self.minTileDistance * 0.30:
+                self.setBlockSize(tile, self.midBlockSize)
+            elif distance > self.minTileDistance * 0.60:
+                self.setBlockSize(tile, self.farBlockSize)
+
+        return task.again
+
+    def setBlockSize(self, tile, size):
+
+        if tile.getBlockSize() == size:
+            return
+
+        tile.setBlockSize(size)
+        #tile.generate()
+        
+
+    def makeNewTile(self, x, y):
+        """generate the closest terrain tile needed."""
+
+        xstart = (int(x) / self.tileSize) * self.tileSize
+        ystart = (int(y) / self.tileSize) * self.tileSize
+        radius = (self.minTileDistance / self.tileSize + 2) * self.tileSize
+        halfTile = self.tileSize * 0.49
+
+        print xstart, ystart, radius
+
+        neededTiles = {}
+        vec = 0
+        minDistance = 99999.0
+
+        for checkX in range (xstart - radius, xstart + radius, self.tileSize):
+            for checkY in range (ystart - radius, ystart + radius, self.tileSize):
+                deltaX = x - (checkX + halfTile)
+                deltaY = y - (checkY + halfTile)
+                distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+                if distance < self.minTileDistance and distance < minDistance:
+                    if not Vec2(checkX, checkY) in self.tiles:
+                        minDistance = distance
+                        vec = Vec2(checkX, checkY)
+
+        self.generateTile(vec.getX(), vec.getY())
 
     def makeNewTiles(self, x, y):
         """generate terrain tiles as needed."""
@@ -419,26 +518,39 @@ class Terrain(NodePath):
         xstart = (int(x) / self.tileSize) * self.tileSize
         ystart = (int(y) / self.tileSize) * self.tileSize
         radius = (self.minTileDistance / self.tileSize + 2) * self.tileSize
+        halfTile = self.tileSize * 0.49
 
-        #print xstart, ystart, radius
+        print xstart, ystart, radius
+
+        neededTiles = {}
 
         for checkX in range (xstart - radius, xstart + radius, self.tileSize):
             for checkY in range (ystart - radius, ystart + radius, self.tileSize):
-                deltaX = x - (checkX + self.tileSize * 0.5)
-                deltaY = y - (checkY + self.tileSize * 0.5)
-                if math.sqrt(deltaX * deltaX + deltaY * deltaY) \
-                   < self.minTileDistance:
-                    if not Vec2(checkX, checkY) in self.tiles:
-                        tile = self.generateTile(checkX, checkY)
-                        print "tile generated at", checkX, checkY
+                deltaX = x - (checkX + halfTile)
+                deltaY = y - (checkY + halfTile)
+                distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
-    def removeOldTiles(self, x, y):
-        """todo"""
+                if distance < self.minTileDistance:
+                    if not Vec2(checkX, checkY) in self.tiles:
+                        neededTiles[Vec2(checkX, checkY)] = distance
+
+        #print neededTiles
+        #neededTiles = sorted(self.neededTiles.iteritems(), key=lambda (k,v): v)
+        sortedTiles = sorted(neededTiles.iteritems(), key=itemgetter(1), reverse=False)
+        #print sortedTiles
+        for it in sortedTiles:
+            #print it
+            tile = self.generateTile(it[0].getX(), it[0].getY())
+        #for pos, distance in neededTiles:
+        #    tile = self.generateTile(pos.x, pos.y)
+                        
 
     def generateTile(self, x, y):
         """Creates a terrain tile at the input coordinates."""
 
         tile = TerrainTile(self, x, y)
+        #tile.setBlockSize(self.farBlockSize)
+        tile.setBlockSize(self.blockSize)
         tile.make()
         #np = self.attachNewNode("tileNode")
         #np.reparentTo(self)
@@ -446,10 +558,28 @@ class Terrain(NodePath):
         #self.tiles.append(np)
         tile.getRoot().reparentTo(self)
         self.tiles[Vec2(x, y)] = tile
+
+        print "tile generated at", x, y
         return tile
 
+    def removeOldTiles(self, x, y):
+        """todo"""
 
-    def generateNoiseObjects(self, seed=0):
+        center = self.tileSize * 0.5
+        for pos, tile in self.tiles.items():
+            deltaX = x - tile.xOffset + center
+            deltaY = y - tile.yOffset + center
+            distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
+            if distance > self.maxTileDistance:
+                self.removeTile(pos, tile)
+
+    def removeTile(self, pos, tile):
+        """Removes a specific tile from the Terrain"""
+
+        del self.tiles[pos]
+        print "Tile removed from",pos
+
+    def generateNoiseObjects(self, id=123):
         """Create perlin noise."""
 
         # where perlin 1 is low terrain will be mostly low and flat
@@ -464,7 +594,7 @@ class Terrain(NodePath):
         #        perlin1Fine = PerlinNoise2( self.heightMapSize, self.heightMapSize)
         #        perlin1Fine.setScale( self.consistency / stackSpread)
         #        self.perlin1.addLevel( perlin1Fine, 1 / stackSpread)
-        self.perlin1 = PerlinNoise2()
+        self.perlin1 = PerlinNoise2(0, 0, 256, seed = id)
         self.perlin1.setScale(self.consistency)
 
         # perlin2 creates the noticeable noise in the terrain
@@ -472,20 +602,20 @@ class Terrain(NodePath):
         # increase perlin2 to make the terrain smoother
         self.perlin2 = StackedPerlinNoise2()
         frequencySpread = 3.0
-        amplitudeSpread = 3.2
-        perlin2a = PerlinNoise2()
+        amplitudeSpread = 3.3
+        perlin2a = PerlinNoise2(0, 0, 256,  seed = id*2)
         perlin2a.setScale(self.smoothness)
         self.perlin2.addLevel(perlin2a)
-        perlin2b = PerlinNoise2()
+        perlin2b = PerlinNoise2(0, 0, 256,  seed = id*3+3)
         perlin2b.setScale(self.smoothness / frequencySpread)
         self.perlin2.addLevel(perlin2b, 1 / amplitudeSpread)
-        perlin2c = PerlinNoise2()
+        perlin2c = PerlinNoise2(0, 0, 256, seed = id*4+4)
         perlin2c.setScale(self.smoothness / (frequencySpread*frequencySpread))
         self.perlin2.addLevel(perlin2c, 1 / (amplitudeSpread*amplitudeSpread))
-        perlin2d = PerlinNoise2()
+        perlin2d = PerlinNoise2(0, 0, 256,  seed = id*5+5)
         perlin2d.setScale(self.smoothness / (math.pow(frequencySpread,3)))
         self.perlin2.addLevel(perlin2d, 1 / (math.pow(amplitudeSpread,3)))
-        perlin2e = PerlinNoise2()
+        perlin2e = PerlinNoise2(0, 0, 256, seed = id*6+6)
         perlin2e.setScale(self.smoothness / (math.pow(frequencySpread,4)))
         self.perlin2.addLevel(perlin2e, 1 / (math.pow(amplitudeSpread,4)))
         #        self.perlin2 = PerlinNoise2( self.heightMapSize, self.heightMapSize)
@@ -549,6 +679,16 @@ class Terrain(NodePath):
         self.elevationHandler = CollisionHandlerQueue()
         self.cTrav = CollisionTraverser()
         self.cTrav.addCollider(self.elevationColNp, self.elevationHandler)
+
+    def setWireFrame(self, state):
+    
+        self.wireFrame = state
+        for pos, tile in self.tiles.items():
+            tile.setWireFrame(state)
+    
+    def toggleWireFrame(self):
+    
+        self.setWireFrame(not self.wireFrame)
 
 
 
