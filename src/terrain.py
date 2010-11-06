@@ -47,7 +47,7 @@ class HeightMapTile(GeoMipTerrain):
         self.yOffset = y
 
 
-        name = terrain.name + "X" + str(x) + "Y" + str(y)
+        name = "ID" + str(terrain.id) + "X" + str(x) + "Y" + str(y)
         GeoMipTerrain.__init__(self, name=terrain.name)
 
         self.mapName = "heightmaps/" + name + ".png"
@@ -55,13 +55,14 @@ class HeightMapTile(GeoMipTerrain):
 
         self.getRoot().setPos(x, y, 0)
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
-        #GeoMipTerrain.setMinLevel(self,1)
-        GeoMipTerrain.setBruteforce(self, True)
+        if self.terrain.bruteForce:
+            GeoMipTerrain.setMinLevel(self,1)
+            GeoMipTerrain.setBruteforce(self, True)
+        else:
+            self.setBorderStitching(1)
         self.setNear(self.terrain.near)
         self.setFar(self.terrain.far)
-        #self.setBorderStitching(1)
-
-
+        
         #self.generateNoiseObjects()
         #self.make()
 
@@ -373,31 +374,33 @@ class Terrain(NodePath):
 
         ### tile physical properties
         self.maxHeight = 200
-        self.tileSize = 64
+        self.tileSize = 128
         self.heightMapSize = self.tileSize + 1
         self.consistency = 1000
         self.smoothness = 100
         self.waterHeight = 0.3
         # for realism the flatHeight should be at or very close to waterHeight
         self.flatHeight = self.waterHeight
+        self.id = 123
 
         ### rendering properties
-        self.blockSize = 16
+        self.bruteForce = True
+        self.blockSize = 8
         self.midBlockSize = 32
-        self.farBlockSize = 64
+        self.farBlockSize = 128
         self.near = 40
         self.far = 100
         self.wireFrame = 0
 
         ### tile generation
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 300
+        self.maxViewRange = 400
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize/2
         # make larger to avoid excess loading when milling about a small area
         # make smaller to shrink some overhead
-        self.maxTileDistance = self.minTileDistance * 1.5 + 100
+        self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
         self.focus = focus
 
         self.generateNoiseObjects()
@@ -419,17 +422,18 @@ class Terrain(NodePath):
         taskMgr.add(self.updateTask, "updateTiles", taskChain='updateTilesChain',
                     sort=99, priority=0)
 
-        taskMgr.setupTaskChain('loadTilesChain', numThreads=1, tickClock=0,
-                               threadPriority=0, frameBudget=0.1,
+        taskMgr.setupTaskChain('loadTilesChain', numThreads=2, tickClock=0,
+                               threadPriority=1, frameBudget=0.2,
                                frameSync=False, timeslicePriority=True)
         taskMgr.add(self.tileBuilderTask, "loadTiles", taskChain='loadTilesChain',
                     sort=99, priority=0)
 
-        taskMgr.setupTaskChain('blockSizeUpdateChain', numThreads=1, tickClock=0,
-                               threadPriority=0, frameBudget=0.1,
-                               frameSync=False, timeslicePriority=True)
-        taskMgr.add(self.blockSizeUpdateTask, "blockSizeUpdate",
-                    taskChain='blockSizeUpdateChain', sort=99, priority=0)
+        if self.bruteForce:
+            taskMgr.setupTaskChain('blockSizeUpdateChain', numThreads=1, tickClock=0,
+                                   threadPriority=0, frameBudget=0.1,
+                                   frameSync=False, timeslicePriority=True)
+            taskMgr.add(self.blockSizeUpdateTask, "blockSizeUpdate",
+                        taskChain='blockSizeUpdateChain', sort=99, priority=0)
 
         #taskMgr.setupTaskChain('terrain', numThreads=3, tickClock=0,
         #                       threadPriority=0, frameBudget=0.1,
@@ -466,12 +470,12 @@ class Terrain(NodePath):
             deltaX = x - tile.xOffset + center
             deltaY = y - tile.yOffset + center
             distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
-            if distance < self.minTileDistance * 0.25:
+            if distance < self.minTileDistance * 0.20 + center:
                 self.setBlockSize(tile, self.blockSize)
-            elif distance < self.minTileDistance * 0.55 \
-                 and distance > self.minTileDistance * 0.30:
+            elif distance < self.minTileDistance * 0.50 + center \
+                 and distance > self.minTileDistance * 0.25  + center:
                 self.setBlockSize(tile, self.midBlockSize)
-            elif distance > self.minTileDistance * 0.60:
+            elif distance > self.minTileDistance * 0.55  + center:
                 self.setBlockSize(tile, self.farBlockSize)
 
         return task.again
@@ -483,7 +487,6 @@ class Terrain(NodePath):
 
         tile.setBlockSize(size)
         #tile.generate()
-        
 
     def makeNewTile(self, x, y):
         """generate the closest terrain tile needed."""
@@ -493,9 +496,7 @@ class Terrain(NodePath):
         radius = (self.minTileDistance / self.tileSize + 2) * self.tileSize
         halfTile = self.tileSize * 0.49
 
-        print xstart, ystart, radius
-
-        neededTiles = {}
+        #print xstart, ystart, radius
         vec = 0
         minDistance = 99999.0
 
@@ -509,8 +510,8 @@ class Terrain(NodePath):
                     if not Vec2(checkX, checkY) in self.tiles:
                         minDistance = distance
                         vec = Vec2(checkX, checkY)
-
-        self.generateTile(vec.getX(), vec.getY())
+        if not vec == 0:
+            self.generateTile(vec.getX(), vec.getY())
 
     def makeNewTiles(self, x, y):
         """generate terrain tiles as needed."""
@@ -549,8 +550,10 @@ class Terrain(NodePath):
         """Creates a terrain tile at the input coordinates."""
 
         tile = TerrainTile(self, x, y)
-        #tile.setBlockSize(self.farBlockSize)
-        tile.setBlockSize(self.blockSize)
+        if (self.bruteForce):
+            tile.setBlockSize(self.farBlockSize)
+        else:
+            tile.setBlockSize(self.blockSize)
         tile.make()
         #np = self.attachNewNode("tileNode")
         #np.reparentTo(self)
@@ -579,7 +582,7 @@ class Terrain(NodePath):
         del self.tiles[pos]
         print "Tile removed from",pos
 
-    def generateNoiseObjects(self, id=123):
+    def generateNoiseObjects(self):
         """Create perlin noise."""
 
         # where perlin 1 is low terrain will be mostly low and flat
@@ -594,7 +597,7 @@ class Terrain(NodePath):
         #        perlin1Fine = PerlinNoise2( self.heightMapSize, self.heightMapSize)
         #        perlin1Fine.setScale( self.consistency / stackSpread)
         #        self.perlin1.addLevel( perlin1Fine, 1 / stackSpread)
-        self.perlin1 = PerlinNoise2(0, 0, 256, seed = id)
+        self.perlin1 = PerlinNoise2(0, 0, 256, seed = self.id)
         self.perlin1.setScale(self.consistency)
 
         # perlin2 creates the noticeable noise in the terrain
@@ -603,19 +606,19 @@ class Terrain(NodePath):
         self.perlin2 = StackedPerlinNoise2()
         frequencySpread = 3.0
         amplitudeSpread = 3.3
-        perlin2a = PerlinNoise2(0, 0, 256,  seed = id*2)
+        perlin2a = PerlinNoise2(0, 0, 256,  seed = self.id*2)
         perlin2a.setScale(self.smoothness)
         self.perlin2.addLevel(perlin2a)
-        perlin2b = PerlinNoise2(0, 0, 256,  seed = id*3+3)
+        perlin2b = PerlinNoise2(0, 0, 256,  seed = self.id*3+3)
         perlin2b.setScale(self.smoothness / frequencySpread)
         self.perlin2.addLevel(perlin2b, 1 / amplitudeSpread)
-        perlin2c = PerlinNoise2(0, 0, 256, seed = id*4+4)
+        perlin2c = PerlinNoise2(0, 0, 256, seed = self.id*4+4)
         perlin2c.setScale(self.smoothness / (frequencySpread*frequencySpread))
         self.perlin2.addLevel(perlin2c, 1 / (amplitudeSpread*amplitudeSpread))
-        perlin2d = PerlinNoise2(0, 0, 256,  seed = id*5+5)
+        perlin2d = PerlinNoise2(0, 0, 256,  seed = self.id*5+5)
         perlin2d.setScale(self.smoothness / (math.pow(frequencySpread,3)))
         self.perlin2.addLevel(perlin2d, 1 / (math.pow(amplitudeSpread,3)))
-        perlin2e = PerlinNoise2(0, 0, 256, seed = id*6+6)
+        perlin2e = PerlinNoise2(0, 0, 256, seed = self.id*6+6)
         perlin2e.setScale(self.smoothness / (math.pow(frequencySpread,4)))
         self.perlin2.addLevel(perlin2e, 1 / (math.pow(amplitudeSpread,4)))
         #        self.perlin2 = PerlinNoise2( self.heightMapSize, self.heightMapSize)
