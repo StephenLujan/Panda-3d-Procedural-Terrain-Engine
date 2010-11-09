@@ -181,7 +181,7 @@ class World(DirectObject):
         self.water = WaterNode(self, -1000, -1000, 2000, 2000, self._water_level.getZ())
         # add some lighting
         ambient = Vec4(0.34, 0.3, 0.3, 1)
-        direct = Vec4(0.74, 0.7, 0.7, 1)
+        direct = Vec4(1.9, 1.8, 1.8, 1)
         # ambient light
         alight = AmbientLight('alight')
         alight.setColor(ambient)

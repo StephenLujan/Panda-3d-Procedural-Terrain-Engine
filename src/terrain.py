@@ -30,10 +30,10 @@ from direct.task.Task import Task
 from operator import itemgetter
 
 ###############################################################################
-#   HeightMapTile
+#   TerrainTile
 ###############################################################################
 
-class HeightMapTile(GeoMipTerrain):
+class TerrainTile(GeoMipTerrain):
 
     def __init__(self, terrain, x, y):
         """Important settings are used directly from the terrain.
@@ -155,212 +155,6 @@ class HeightMapTile(GeoMipTerrain):
         #self.getRoot().setSz(self.maxHeight)
         self.generate()
 
-###############################################################################
-#   TerrainTile
-###############################################################################
-
-class TerrainTile(HeightMapTile):
-    """The TerrainTile is a heightmap tile that textures and or shaders.
-    Texture storage and loading should be moved to an outside class.
-
-    """
-
-    def __init__(self, terrain, x, y):
-        """Important settings are used directly from the terrain.
-        This allows for easier setting changes, and reduces memory overhead.
-        x and y parameters give the appropriate world coordinates of this tile.
-
-        """
-
-        HeightMapTile.__init__(self, terrain, x, y)
-
-        self.textureBlendMode = 7
-        self.detailTexture = 0
-
-    def setMonoTexture(self):
-        """single texture"""
-
-        root = self.getRoot()
-        ts = TextureStage('ts')
-        tex = loader.loadTexture("textures/rock.jpg")
-        tex.setWrapU(Texture.WMMirror)
-        tex.setWrapV(Texture.WMMirror)
-        root.setTexture(ts, tex)
-        root.setTexScale(ts, 10, 10)
-
-    def setDetailBlendMode(self, num):
-        """Set the blending mode of the detail texture."""
-
-        if (not self.detailTexture):
-            return
-        self.textureBlendMode = num
-        self.detailTexture.setMode(self.textureBlendMode)
-
-    def incrementDetailBlendMode(self):
-        """Set the blending mode of the detail texture."""
-
-        if (not self.detailTexture):
-            return
-        self.textureBlendMode += 1
-        self.detailTexture.setMode(self.textureBlendMode)
-
-    def decrementDetailBlendMode(self):
-        """Set the blending mode of the detail texture."""
-
-        if (not self.detailTexture):
-            return
-        self.textureBlendMode -= 1
-        self.detailTexture.setMode(self.textureBlendMode)
-
-    def setDetailTexture(self):
-        """texture + detail texture"""
-
-        root = self.getRoot()
-
-        ts = TextureStage('ts')
-        tex = loader.loadTexture("textures/snow.jpg")
-        tex.setWrapU(Texture.WMMirror)
-        tex.setWrapV(Texture.WMMirror)
-        root.setTexture(ts, tex)
-        root.setTexScale(ts, 5, 5)
-
-        self.detailTexture = TextureStage('ts2')
-        tex = loader.loadTexture("textures/Detail.jpg")
-        tex.setWrapU(Texture.WMMirror)
-        tex.setWrapV(Texture.WMMirror)
-        root.setTexture(self.detailTexture, tex)
-        self.setDetailBlendMode(2)
-        root.setTexScale(self.detailTexture, 120, 120)
-
-    def setShader2(self):
-        """Textures based on altitude. My own version"""
-
-        root = self.getRoot()
-
-        self.myShader = Shader.load('shaders/stephen2.sha', Shader.SLCg)
-        root.setShader(self.myShader)
-
-        # texture scaling
-        texScale = self.terrain.tileSize/32
-        root.setShaderInput('tscale', Vec4(texScale, texScale, texScale, 1.0))
-
-
-        # this is half the blend area between each texture
-        blendRadius = self.terrain.maxHeight * 0.11 + 0.5
-        transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
-                                 self.terrain.maxHeight * 0.52,
-                                 self.terrain.maxHeight * 0.80)
-
-        # This is the current shader input format. The unused parameters are
-        # for easy extensibility.
-        #   regionLimits ( max height, min height, unused, unused)
-        root.setShaderInput("region1Limits", Vec4(transitionHeights.getX() + blendRadius, -999.0, 0, 0))
-        root.setShaderInput("region2Limits", Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX() - blendRadius, 0, 0))
-        root.setShaderInput("region3Limits", Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getY() - blendRadius, 0, 0))
-        root.setShaderInput("region4Limits", Vec4(999.0, transitionHeights.getZ() - blendRadius, 0, 0))
-
-        #self.tex0 = loader.loadTexture(self.mapName)
-        self.tex1 = loader.loadTexture("textures/dirt.jpg")
-        #self.tex1.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex1.setMagfilter(Texture.FTLinear)
-        self.tex2 = loader.loadTexture("textures/grass.jpg")
-        #self.tex2.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex2.setMagfilter(Texture.FTLinear)
-        self.tex3 = loader.loadTexture("textures/rock.jpg")
-        #self.tex3.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex3.setMagfilter(Texture.FTLinear)
-        self.tex4 = loader.loadTexture("textures/snow.jpg")
-        #self.tex4.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex4.setMagfilter(Texture.FTLinear)
-
-        ts = TextureStage('tex1')	# stage 0
-        root.setTexture(ts, self.tex1)
-        ts = TextureStage('tex2')	# stage 1
-        root.setTexture(ts, self.tex2)
-        ts = TextureStage('tex3')	# stage 2
-        root.setTexture(ts, self.tex3)
-        ts = TextureStage('tex4')	# stage 3
-        root.setTexture(ts, self.tex4)
-
-        root.setShaderInput("region1ColorMap", self.tex1)
-        root.setShaderInput("region2ColorMap", self.tex2)
-        root.setShaderInput("region3ColorMap", self.tex3)
-        root.setShaderInput("region4ColorMap", self.tex4)
-
-        # enable use of the two separate tagged render states for our two cameras
-        root.setTag('Normal', 'True')
-        root.setTag('Clipped', 'True')
-
-        #self.shaderAttribute = ShaderAttrib.make( )
-        #self.shaderAttribute = self.shaderAttribute.setShader(
-        #loader.loadShader('shaders/stephen.sha'))
-
-
-    def setShader4(self):
-        """Textures based on altitude and slope. My own version. Normal data appears broken."""
-
-        root = self.getRoot()
-
-        self.myShader = Shader.load('shaders/stephen4.sha', Shader.SLCg)
-        root.setShader(self.myShader)
-
-        #self.tex0 = loader.loadTexture(self.mapName)
-        self.tex1 = loader.loadTexture("textures/dirt.jpg")
-        #self.tex1.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex1.setMagfilter(Texture.FTLinear)
-        self.tex2 = loader.loadTexture("textures/grass.jpg")
-        #self.tex2.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex2.setMagfilter(Texture.FTLinear)
-        self.tex3 = loader.loadTexture("textures/rock.jpg")
-        #self.tex3.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex3.setMagfilter(Texture.FTLinear)
-        self.tex4 = loader.loadTexture("textures/snow.jpg")
-        #self.tex4.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex4.setMagfilter(Texture.FTLinear)
-
-        ts = TextureStage('tex1')	# stage 0
-        root.setTexture(ts, self.tex1)
-        ts = TextureStage('tex2')	# stage 1
-        root.setTexture(ts, self.tex2)
-        ts = TextureStage('tex3')	# stage 2
-        root.setTexture(ts, self.tex3)
-        ts = TextureStage('tex4')	# stage 3
-        root.setTexture(ts, self.tex4)
-
-        
-        root.setShaderInput("region1ColorMap", self.tex1)
-        root.setShaderInput("region2ColorMap", self.tex2)
-        root.setShaderInput("region3ColorMap", self.tex3)
-        root.setShaderInput("region4ColorMap", self.tex4)
-
-        root.setShaderInput('tscale', Vec4(16.0, 16.0, 16.0, 1.0))	# texture scaling
-
-        blendArea = self.maxHeight * 0.11 + 0.5
-
-        # This is the current shader input format.
-        # Limits : height max, height min, slope max, slope min
-        root.setShaderInput("region1Limits", Vec4(12 + blendArea, -999.0, 0.6, 0.0))
-        root.setShaderInput("region2Limits", Vec4(self.maxHeight * 0.65, 10, 0.6, 0.0))
-        root.setShaderInput("region3Limits", Vec4(self.maxHeight * 0.8 + blendArea, 12.0, 1.0, 0.3))
-        root.setShaderInput("region4Limits", Vec4(999.0, self.maxHeight * 0.8 - blendArea, 1.0, 0.0))
-
-        # enable use of the two separate tagged render states for our two cameras
-        # This is not working fully at the moment
-        root.setTag('Normal', 'True')
-        root.setTag('Clipped', 'True')
-        #self.shaderAttribute = ShaderAttrib.make( )
-        #self.shaderAttribute = self.shaderAttribute.setShader(
-        #loader.loadShader('shaders/stephen2.sha'))
-
-    def setMultiTexture(self):
-        """Set up the appropriate shader for multi texture terrain."""
-        self.setShader2()
-
-    def make(self):
-
-        self.setMultiTexture()
-        HeightMapTile.make(self)
-        #self.setMultiTexture()
 
 ###############################################################################
 #   Terrain
@@ -385,12 +179,17 @@ class Terrain(NodePath):
 
         ### rendering properties
         self.bruteForce = True
-        self.blockSize = 8
-        self.midBlockSize = 32
+        #alterblocksize of terrain tiles based on distance
+        #this works well with bruteforce terrain.
+        self.lodBlockSize = self.bruteForce
+        self.blockSize = 16
+        self.midBlockSize = 64
         self.farBlockSize = 128
         self.near = 40
         self.far = 100
         self.wireFrame = 0
+        self.texturer = ShaderTexturer(self)
+        self.texturer.load()
 
         ### tile generation
         # Don't show untiled terrain below this distance etc.
@@ -550,7 +349,7 @@ class Terrain(NodePath):
         """Creates a terrain tile at the input coordinates."""
 
         tile = TerrainTile(self, x, y)
-        if (self.bruteForce):
+        if (self.lodBlockSize):
             tile.setBlockSize(self.farBlockSize)
         else:
             tile.setBlockSize(self.blockSize)
@@ -561,6 +360,9 @@ class Terrain(NodePath):
         #self.tiles.append(np)
         tile.getRoot().reparentTo(self)
         self.tiles[Vec2(x, y)] = tile
+
+        #texturize tile
+        self.texturer.texturize(tile)
 
         print "tile generated at", x, y
         return tile
@@ -693,22 +495,75 @@ class Terrain(NodePath):
     
         self.setWireFrame(not self.wireFrame)
 
-
-
 ###############################################################################
 #   TerrainTexturer
 ###############################################################################
 
 class TerrainTexturer():
     """Not yet complete or implemented."""
-    
-    def LoadMonoTexture(self):
+
+    def __init__(self, terrain):
+        """initialize"""
+        self.terrain = terrain
+
+    def load(self):
+        """Load textures and shaders."""
+
+    def texturize(self, tile):
+        """Apply textures and shaders to the inputted tile."""
+
+###############################################################################
+#   MonoTexturer
+###############################################################################
+class MonoTexturer(TerrainTexturer):
+    def load(self):
         """single texture"""
 
+        self.ts = TextureStage('ts')
         tex = loader.loadTexture("textures/rock.jpg")
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.monoTexture = tex
+    def texturize(self, tile):
+        """Apply textures and shaders to the inputted tile."""
+
+        root = tile.getRoot()
+        root.setTexture(self.ts, self.monoTexture)
+        root.setTexScale(ts, 10, 10)
+
+###############################################################################
+#   DetailTexturer
+###############################################################################
+
+class DetailTexturer(TerrainTexturer):
+    def load(self):
+        """texture + detail texture"""
+
+        self.ts1 = TextureStage('ts')
+        tex = loader.loadTexture("textures/snow.jpg")
+        tex.setWrapU(Texture.WMMirror)
+        tex.setWrapV(Texture.WMMirror)
+        self.monoTexture = tex
+
+        self.detailTS = TextureStage('ts2')
+        tex = loader.loadTexture("textures/Detail.png")
+        tex.setWrapU(Texture.WMMirror)
+        tex.setWrapV(Texture.WMMirror)
+        self.detailTexture = tex
+        self.textureBlendMode = 7
+        self.detailTS.setMode(self.textureBlendMode)
+
+    def texturize(self, tile):
+        """Apply textures and shaders to the inputted tile."""
+
+        root = tile.getRoot()
+
+        root.setTexture(self.ts1, self.monoTexture)
+        root.setTexScale(self.ts1, 5, 5)
+
+        root.setTexture(self.detailTS, self.detailTexture)
+        root.setTexScale(self.detailTS, 120, 120)
+
 
     def setDetailBlendMode(self, num):
         """Set the blending mode of the detail texture."""
@@ -716,10 +571,11 @@ class TerrainTexturer():
         if (not self.detailTexture):
             return
         self.textureBlendMode = num
+        #for pos, tile in self.tiles.items():
+        #    if tile.detailTS:
+        #        tile.detailTS.setMode(self.textureBlendMode)
 
-        for pos, tile in self.tiles.items():
-            if tile.detailTexture:
-                tile.detailTexture.setMode(self.textureBlendMode)
+        self.detailTS.setMode(self.textureBlendMode)
 
     def incrementDetailBlendMode(self):
         """Set the blending mode of the detail texture."""
@@ -737,22 +593,26 @@ class TerrainTexturer():
         self.textureBlendMode -= 1
         self.setDetailBlendMode(self.textureBlendMode)
 
-    def LoadDetailTexture(self):
+###############################################################################
+#   ShaderTexturer
+###############################################################################
+class ShaderTexturer(DetailTexturer):
+    def load(self):
         """texture + detail texture"""
 
-        tex = loader.loadTexture("textures/snow.jpg")
-        tex.setWrapU(Texture.WMMirror)
-        tex.setWrapV(Texture.WMMirror)
+        DetailTexturer.load(self)
+        self.loadShader2()
 
-        self.detailTexture = TextureStage('ts2')
-        tex = loader.loadTexture("textures/Detail.jpg")
-        tex.setWrapU(Texture.WMMirror)
-        tex.setWrapV(Texture.WMMirror)
-        self.textureBlendMode = 7
+    def loadShader2(self):
+        """Textures based on altitude. My own version"""
 
-    def LoadMultiTexture(self):
+        self.shader = Shader.load('shaders/stephen2.sha', Shader.SLCg)
+        
+        ### texture scaling
+        texScale = self.terrain.tileSize/32
+        self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
-        #self.tex0 = loader.loadTexture(self.mapName)
+        ### Load textures
         self.tex1 = loader.loadTexture("textures/dirt.jpg")
         #self.tex1.setMinfilter(Texture.FTNearestMipmapLinear)
         #self.tex1.setMagfilter(Texture.FTLinear)
@@ -766,34 +626,43 @@ class TerrainTexturer():
         #self.tex4.setMinfilter(Texture.FTNearestMipmapLinear)
         #self.tex4.setMagfilter(Texture.FTLinear)
 
-        #root.setShaderInput( "tex0", self.tex0 )
-        root.setShaderInput("region1ColorMap", self.tex1)
-        root.setShaderInput("region2ColorMap", self.tex2)
-        root.setShaderInput("region3ColorMap", self.tex3)
-        root.setShaderInput("region4ColorMap", self.tex4)
-        
+        self.ts1 = TextureStage('tex1')
+        self.ts2 = TextureStage('tex2')
+        self.ts3 = TextureStage('tex3')
+        self.ts4 = TextureStage('tex4')
 
-    def LoadShader2(self):
-        """Textures based on altitude. My own version"""
 
-        self.shader2 = Shader.load('shaders/stephen2.sha', Shader.SLCg)
-        setShaderInput('tscale', Vec4(16.0, 16.0, 16.0, 1.0))	# texture scaling
-
-        blendArea = self.terrain.maxHeight * 0.11 + 0.5 #actually half the blend area
-        transitionHeights = Vec3(12.0 + blendArea / 2, self.terrain.maxHeight * 0.52, self.terrain.maxHeight * 0.82)
+        ### Load the boundries for each texture
+        # this is half the blend area between each texture
+        blendRadius = self.terrain.maxHeight * 0.11 + 0.5
+        transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
+                                 self.terrain.maxHeight * 0.52,
+                                 self.terrain.maxHeight * 0.80)
 
         # regionLimits ( max height, min height, unused/extensible, unused/extensible )
-        setShaderInput("region1Limits", Vec4(transitionHeights.getX() + blendArea, -999.0, 0, 0))
-        setShaderInput("region2Limits", Vec4(transitionHeights.getY() + blendArea, transitionHeights.getX() - blendArea, 0, 0))
-        setShaderInput("region3Limits", Vec4(transitionHeights.getZ() + blendArea, transitionHeights.getY() - blendArea, 0, 0))
-        setShaderInput("region4Limits", Vec4(999.0, transitionHeights.getZ() - blendArea, 0, 0))
+        self.region1 = Vec4(transitionHeights.getX() + blendRadius, -999.0, 0, 0)
+        self.region2 = Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX() - blendRadius, 0, 0)
+        self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getY() - blendRadius, 0, 0)
+        self.region4 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 0, 0)
 
-    def LoadShader4(self):
+        self.terrain.setShaderInput("region1ColorMap", self.tex1)
+        self.terrain.setShaderInput("region2ColorMap", self.tex2)
+        self.terrain.setShaderInput("region3ColorMap", self.tex3)
+        self.terrain.setShaderInput("region4ColorMap", self.tex4)
+        self.terrain.setShaderInput("detailTexture", self.detailTexture)
+        self.terrain.setShaderInput("region1Limits", self.region1)
+        self.terrain.setShaderInput("region2Limits", self.region2)
+        self.terrain.setShaderInput("region3Limits", self.region3)
+        self.terrain.setShaderInput("region4Limits", self.region4)
+        self.terrain.setShaderInput('tscale', self.texScale)
+
+        self.terrain.setShader(self.shader)
+
+    def loadShader4(self):
         """Textures based on altitude and slope. My own version. Normal data appears broken."""
 
-
-        self.myShader = Shader.load('shaders/stephen4.sha', Shader.SLCg)
-        root.setShader(self.myShader)
+        self.shader = Shader.load('shaders/stephen4.sha', Shader.SLCg)
+        root.setShader(self.shader)
 
         #root.setShaderInput( "tex0", self.tex0 )
         root.setShaderInput("region1ColorMap", self.tex1)
@@ -810,16 +679,32 @@ class TerrainTexturer():
         root.setShaderInput("region3Limits", Vec4(self.maxHeight * 0.8 + blendArea, 12.0, 1.0, 0.3))
         root.setShaderInput("region4Limits", Vec4(999.0, self.maxHeight * 0.8 - blendArea, 1.0, 0.0))
 
-        # enable use of the two separate tagged render states for our two cameras
-        root.setTag('Normal', 'True')
-        root.setTag('Clipped', 'True')
-        #self.shaderAttribute = ShaderAttrib.make( )
-        #self.shaderAttribute = self.shaderAttribute.setShader(
-        #loader.loadShader('shaders/stephen2.sha'))
-
-    def setMultiTexture(self):
-        """Set up the appropriate shader for multi texture terrain."""
-        self.setShader2()
-
-    def texturize(tile):
+    def texturize(self, tile):
         """Apply textures and shaders to the inputted tile."""
+        root = tile.getRoot()
+
+        #root.setTexture(self.detailTS, self.detailTexture)
+        #root.setTexScale(self.detailTS, 120, 120)
+
+        # enable use of the two separate tagged render states for our two cameras
+        #root.setTag('Normal', 'True')
+        #root.setTag('Clipped', 'True')
+        root.setTexture(self.ts1, self.tex1)
+        root.setTexture(self.ts2, self.tex2)
+        root.setTexture(self.ts3, self.tex3)
+        root.setTexture(self.ts4, self.tex4)
+        root.setTexture(self.ts4, self.tex4)
+        root.setTexture(self.detailTS, self.detailTexture)
+        root.setTexScale(self.detailTS, 120, 120)
+
+        #root.setShaderInput("region1ColorMap", self.tex1)
+        #root.setShaderInput("region2ColorMap", self.tex2)
+        #root.setShaderInput("region3ColorMap", self.tex3)
+        #root.setShaderInput("region4ColorMap", self.tex4)
+        #root.setShaderInput("region1Limits", self.region1)
+        #root.setShaderInput("region2Limits", self.region2)
+        #root.setShaderInput("region3Limits", self.region3)
+        #root.setShaderInput("region4Limits", self.region4)
+        #root.setShaderInput('tscale', self.texScale)
+        #
+        #root.setShader(self.shader)
