@@ -191,11 +191,13 @@ class World(DirectObject):
         dlight = DirectionalLight('dlight')
         dlight.setColor(direct)
         dlnp = render.attachNewNode(dlight)
-        dlnp.setHpr(0.7, 0.2, -0.2)
+        #dlnp.setHpr(1.0, -0.6, -0.2)
+        dlnp.setHpr(240.0, -20, 0)
         render.setLight(dlnp)
+        self.terrain.setShaderInput("light", dlnp)
 
         # make waterlevel and lights available to the terrain shader
-        self.terrain.setShaderInput('lightvec', Vec4(0.7, 0.2, -0.2, 1))
+        self.terrain.setShaderInput('lightvec', Vec4(1.0, -0.6, -1.0, 1))
         self.terrain.setShaderInput('lightcolor', direct)
         self.terrain.setShaderInput('ambientlight', ambient)
         wl = self._water_level
@@ -528,6 +530,14 @@ class World(DirectObject):
 
 print('instancing world...')
 w = World()
+
+def setResolution():
+    wp = WindowProperties()
+    wp.setSize(1024, 768) # there will be more resolutions
+    #wp.setFullscreen(True)
+    base.win.requestProperties(wp)
+
+setResolution()
 
 print('calling run()...')
 run()

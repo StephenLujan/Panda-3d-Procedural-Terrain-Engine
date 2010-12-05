@@ -172,7 +172,7 @@ class Terrain(NodePath):
         self.heightMapSize = self.tileSize + 1
         self.consistency = 1000
         self.smoothness = 100
-        self.waterHeight = 0.3
+        self.waterHeight = 0.3 # out of a max of 1.0
         # for realism the flatHeight should be at or very close to waterHeight
         self.flatHeight = self.waterHeight
         self.id = 123
@@ -189,6 +189,7 @@ class Terrain(NodePath):
         self.far = 100
         self.wireFrame = 0
         self.texturer = ShaderTexturer(self)
+        #self.texturer = DetailTexturer(self)
         self.texturer.load()
 
         ### tile generation
@@ -607,6 +608,10 @@ class ShaderTexturer(DetailTexturer):
         """Textures based on altitude. My own version"""
 
         self.shader = Shader.load('shaders/stephen2.sha', Shader.SLCg)
+        #self.shader = Shader.load('shaders/9.sha', Shader.SLCg)
+        #self.shader = Shader.load('shaders/filter-vlight.cg', Shader.SLCg)
+        #self.terrain.setShaderInput("casterpos", Vec4(100.0,100.0,100.0,100.0))
+        #self.terrain.setShaderInput("light", Vec4(100.0,100.0,100.0,100.0))
         
         ### texture scaling
         texScale = self.terrain.tileSize/32

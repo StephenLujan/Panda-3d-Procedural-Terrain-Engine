@@ -21,17 +21,22 @@ void vshader( in float4 vtx_position : POSITION,
               out float4 l_position : POSITION)
 {
 
-  // worldspace position, for clipping in the fragment shader
-  l_mpos = mul(trans_model_to_world, vtx_position);
+    // worldspace position, for clipping in the fragment shader
+    l_mpos = mul(trans_model_to_world, vtx_position);
 
-  l_position=mul(mat_modelproj,vtx_position);
-  l_texcoord0=vtx_texcoord0*k_tscale;
-  l_texcoord3=vtx_texcoord3;
+    l_position=mul(mat_modelproj,vtx_position);
+    l_texcoord0=vtx_texcoord0*k_tscale;
+    l_texcoord3=vtx_texcoord3;
 
-  // lighting
-  float3 N = normalize( vtx_normal );
-  float3 L = normalize( k_lightvec.xyz );
-  l_brightness = (max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
+    // lighting
+    //WTF IS THIS NECESSARY
+    k_lightvec.x *= -400;
+    k_lightvec.y *= -400;
+    //k_lightvec.z /= 400;
+    float3 N = normalize( vtx_normal );
+    float3 L = normalize( k_lightvec.xyz );
+    //wth is this coefficient also necessary.
+    l_brightness = 200*(max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
 }
 
 
@@ -111,8 +116,8 @@ void fshader( in float4 l_position : POSITION,
     // alpha splatting and lighting
     //brightened up slightly to compensate for detail texture
     //o_color=(terrainColor+detailTexCompensation)*(l_brightness)*1.3;
-    //o_color=terrainColor*l_brightness;
-    o_color=float4(0.8, 0.8, 0.8, 1.0)*l_brightness*l_brightness*l_brightness; //brightness test
+    o_color=terrainColor*l_brightness;
+    //o_color=float4(0.8, 0.8, 0.8, 1.0)*l_brightness*l_brightness*l_brightness; //brightness test
     o_color = (o_color*o_color + o_color) / (o_color*o_color + o_color + float4(1.0, 1.0, 1.0, 1.0));
     o_color.a=1.0;
 }
