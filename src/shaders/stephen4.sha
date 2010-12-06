@@ -2,6 +2,19 @@
 //Cg profile arbvp1 arbfp1
 
 // shader contains  work by pro-rsoft and gsk from the panda3d forums
+float3 UP = float3(0,0,1);
+
+struct vfconn
+{
+    out float2 l_texcoord0 : TEXCOORD0;
+    out float2 l_texcoord3 : TEXCOORD3;
+    out float4 l_position : POSITION;
+    out float l_brightness,
+    out float4 l_mpos,
+    //out float3 l_normal,
+    out float l_slope,
+};
+
 
 
 void vshader( in float4 vtx_position : POSITION,
@@ -23,19 +36,25 @@ void vshader( in float4 vtx_position : POSITION,
               out float4 l_position : POSITION)
 {
 
-  // worldspace position, for clipping in the fragment shader
-  l_mpos = mul(trans_model_to_world, vtx_position);
 
-  l_position=mul(mat_modelproj,vtx_position);
-  l_texcoord0=vtx_texcoord0*k_tscale;
-  l_texcoord3=vtx_texcoord3;
+    // worldspace position, for clipping in the fragment shader
+    l_mpos = mul(trans_model_to_world, vtx_position);
 
-  // lighting
-  float3 N = normalize( vtx_normal );
-  float3 L = normalize( k_lightvec.xyz );
-  l_brightness = (max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
-  //l_normal = normalize(vec3( 0.5, 0.5, 0.5));
-  l_slope = 0.5;
+    l_position=mul(mat_modelproj,vtx_position);
+    l_texcoord0=vtx_texcoord0*k_tscale;
+    l_texcoord3=vtx_texcoord3;
+
+    // lighting
+    //WTF IS THIS NECESSARY
+    vtx_normal.x *= -400;
+    vtx_normal.y *= -400;
+    //k_lightvec.z /= 400;
+    float3 N = normalize( vtx_normal );
+    float3 L = normalize( k_lightvec.xyz );
+
+    //wth is this coefficient also necessary.
+    l_brightness = (max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
+    l_slope = 1.0 - dot( N, UP );
 }
 
 float calculateWeight( float value, float max, float min )
@@ -90,7 +109,7 @@ void fshader( in float4 l_position : POSITION,
     //if ( l_mpos.z < k_waterlevel.z) discard;
 
     // 0 = horizontal 1 = vertical 
-    float slope =  0.45;
+    float slope =  l_slope; //0.45;
     //float slope = abs( l_slope );
     //float3 vertical = normalize(float3(0.0, 0.0, 1.0));
     //float slope =  1.0 - abs( dot( l_normal, vertical) );
@@ -106,7 +125,7 @@ void fshader( in float4 l_position : POSITION,
     weights.a = calculateFinalWeight(height, slope, region4Limits);
 
     //--- Color terrain proportionately to weights
-    float normalizer = (weights.x + weights.y + weights.z + weights.a + 0.00001);
+    float normalizer = (weights.x + weights.y + weights.z + weights.a + 0.000001);
 
     if (weights.x)
         terrainColor += weights.x / normalizer * tex2D(region1ColorMap, l_texcoord0);
@@ -119,5 +138,7 @@ void fshader( in float4 l_position : POSITION,
 
     // alpha splatting and lighting
     o_color=terrainColor*(l_brightness);
+    //HDRL
+    o_color = (o_color*o_color + o_color) / (o_color*o_color + o_color + float4(1.0, 1.0, 1.0, 1.0));
     o_color.a=1.0;
 }

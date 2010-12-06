@@ -149,7 +149,7 @@ class World(DirectObject):
         self.keyMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "mouse":0, "turbo":0, "option+":0, "option-":0}
         base.win.setClearColor(Vec4(0, 0, 0, 1))
         # Post the instructions
-        self.title = addTitle("Yet Another Roaming Ralph (Walking on uneven terrain too)")
+        self.title = addTitle("Animate Dream Terrain Engine")
         self.inst1 = addInstructions(0.95, "[ESC]: Quit")
         self.inst2 = addInstructions(0.90, "[mouse wheel]: Camera Zoom")
         self.inst3 = addInstructions(0.85, "[y]: Y-axis Mouse Invert")

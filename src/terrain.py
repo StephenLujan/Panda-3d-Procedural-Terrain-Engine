@@ -161,7 +161,7 @@ class TerrainTile(GeoMipTerrain):
 ###############################################################################
 
 class Terrain(NodePath):
-    def __init__(self, name, focus):
+    def __init__(self, name, focus, id = 321):
         NodePath.__init__(self, name)
 
         self.name = name
@@ -170,12 +170,12 @@ class Terrain(NodePath):
         self.maxHeight = 200
         self.tileSize = 128
         self.heightMapSize = self.tileSize + 1
-        self.consistency = 1000
-        self.smoothness = 100
+        self.consistency = 1000 # how quickly altitude and roughness shift
+        self.smoothness = 150 # the overall smoothness/roughness of the terrain
         self.waterHeight = 0.3 # out of a max of 1.0
         # for realism the flatHeight should be at or very close to waterHeight
-        self.flatHeight = self.waterHeight
-        self.id = 123
+        self.flatHeight = self.waterHeight+0.03
+        self.id = id
 
         ### rendering properties
         self.bruteForce = True
@@ -194,7 +194,7 @@ class Terrain(NodePath):
 
         ### tile generation
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 400
+        self.maxViewRange = 1000
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize/2
@@ -313,39 +313,6 @@ class Terrain(NodePath):
         if not vec == 0:
             self.generateTile(vec.getX(), vec.getY())
 
-    def makeNewTiles(self, x, y):
-        """generate terrain tiles as needed."""
-
-        xstart = (int(x) / self.tileSize) * self.tileSize
-        ystart = (int(y) / self.tileSize) * self.tileSize
-        radius = (self.minTileDistance / self.tileSize + 2) * self.tileSize
-        halfTile = self.tileSize * 0.49
-
-        print xstart, ystart, radius
-
-        neededTiles = {}
-
-        for checkX in range (xstart - radius, xstart + radius, self.tileSize):
-            for checkY in range (ystart - radius, ystart + radius, self.tileSize):
-                deltaX = x - (checkX + halfTile)
-                deltaY = y - (checkY + halfTile)
-                distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
-
-                if distance < self.minTileDistance:
-                    if not Vec2(checkX, checkY) in self.tiles:
-                        neededTiles[Vec2(checkX, checkY)] = distance
-
-        #print neededTiles
-        #neededTiles = sorted(self.neededTiles.iteritems(), key=lambda (k,v): v)
-        sortedTiles = sorted(neededTiles.iteritems(), key=itemgetter(1), reverse=False)
-        #print sortedTiles
-        for it in sortedTiles:
-            #print it
-            tile = self.generateTile(it[0].getX(), it[0].getY())
-        #for pos, distance in neededTiles:
-        #    tile = self.generateTile(pos.x, pos.y)
-                        
-
     def generateTile(self, x, y):
         """Creates a terrain tile at the input coordinates."""
 
@@ -369,7 +336,12 @@ class Terrain(NodePath):
         return tile
 
     def removeOldTiles(self, x, y):
-        """todo"""
+        """Remove distant tiles to free memory.
+        Also reduces the amount of terrain that will need to be occluded.
+        Presently distant terrain WILL still be rendered instead of occluded,
+        creating additional gpu strain.
+
+        """
 
         center = self.tileSize * 0.5
         for pos, tile in self.tiles.items():
@@ -602,7 +574,8 @@ class ShaderTexturer(DetailTexturer):
         """texture + detail texture"""
 
         DetailTexturer.load(self)
-        self.loadShader2()
+        #self.loadShader2()
+        self.loadShader4()
 
     def loadShader2(self):
         """Textures based on altitude. My own version"""
@@ -667,22 +640,60 @@ class ShaderTexturer(DetailTexturer):
         """Textures based on altitude and slope. My own version. Normal data appears broken."""
 
         self.shader = Shader.load('shaders/stephen4.sha', Shader.SLCg)
-        root.setShader(self.shader)
+        #self.shader = Shader.load('shaders/9.sha', Shader.SLCg)
+        #self.shader = Shader.load('shaders/filter-vlight.cg', Shader.SLCg)
+        #self.terrain.setShaderInput("casterpos", Vec4(100.0,100.0,100.0,100.0))
+        #self.terrain.setShaderInput("light", Vec4(100.0,100.0,100.0,100.0))
 
-        #root.setShaderInput( "tex0", self.tex0 )
-        root.setShaderInput("region1ColorMap", self.tex1)
-        root.setShaderInput("region2ColorMap", self.tex2)
-        root.setShaderInput("region3ColorMap", self.tex3)
-        root.setShaderInput("region4ColorMap", self.tex4)
+        ### texture scaling
+        texScale = self.terrain.tileSize/32
+        self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
-        root.setShaderInput('tscale', Vec4(16.0, 16.0, 16.0, 1.0))	# texture scaling
+        ### Load textures
+        self.tex1 = loader.loadTexture("textures/dirt.jpg")
+        #self.tex1.setMinfilter(Texture.FTNearestMipmapLinear)
+        #self.tex1.setMagfilter(Texture.FTLinear)
+        self.tex2 = loader.loadTexture("textures/grass.jpg")
+        #self.tex2.setMinfilter(Texture.FTNearestMipmapLinear)
+        #self.tex2.setMagfilter(Texture.FTLinear)
+        self.tex3 = loader.loadTexture("textures/rock.jpg")
+        #self.tex3.setMinfilter(Texture.FTNearestMipmapLinear)
+        #self.tex3.setMagfilter(Texture.FTLinear)
+        self.tex4 = loader.loadTexture("textures/snow.jpg")
+        #self.tex4.setMinfilter(Texture.FTNearestMipmapLinear)
+        #self.tex4.setMagfilter(Texture.FTLinear)
 
-        blendArea = self.maxHeight * 0.11 + 0.5
-        # Limits (height max, height min, slope max, slope min)
-        root.setShaderInput("region1Limits", Vec4(12 + blendArea, -999.0, 0.6, 0.0))
-        root.setShaderInput("region2Limits", Vec4(self.maxHeight * 0.65, 10, 0.6, 0.0))
-        root.setShaderInput("region3Limits", Vec4(self.maxHeight * 0.8 + blendArea, 12.0, 1.0, 0.3))
-        root.setShaderInput("region4Limits", Vec4(999.0, self.maxHeight * 0.8 - blendArea, 1.0, 0.0))
+        self.ts1 = TextureStage('tex1')
+        self.ts2 = TextureStage('tex2')
+        self.ts3 = TextureStage('tex3')
+        self.ts4 = TextureStage('tex4')
+
+
+        ### Load the boundries for each texture
+        # this is half the blend area between each texture
+        blendRadius = self.terrain.maxHeight * 0.11 + 0.5
+        transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
+                                 self.terrain.maxHeight * 0.52,
+                                 self.terrain.maxHeight * 0.80)
+
+        # regionLimits ( max height, min height, slope max, slope min )
+        self.region1 = Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0)
+        self.region2 = Vec4(transitionHeights.getZ() , transitionHeights.getX() - blendRadius, 0.5, 0)
+        self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getX(), 1.0, 0.2)
+        self.region4 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0)
+
+        self.terrain.setShaderInput("region1ColorMap", self.tex1)
+        self.terrain.setShaderInput("region2ColorMap", self.tex2)
+        self.terrain.setShaderInput("region3ColorMap", self.tex3)
+        self.terrain.setShaderInput("region4ColorMap", self.tex4)
+        self.terrain.setShaderInput("detailTexture", self.detailTexture)
+        self.terrain.setShaderInput("region1Limits", self.region1)
+        self.terrain.setShaderInput("region2Limits", self.region2)
+        self.terrain.setShaderInput("region3Limits", self.region3)
+        self.terrain.setShaderInput("region4Limits", self.region4)
+        self.terrain.setShaderInput('tscale', self.texScale)
+
+        self.terrain.setShader(self.shader)
 
     def texturize(self, tile):
         """Apply textures and shaders to the inputted tile."""
