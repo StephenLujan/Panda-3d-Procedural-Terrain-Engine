@@ -167,7 +167,7 @@ class World(DirectObject):
 
         # Set up the environment
         # GeoMipTerrain
-        self.terrain = Terrain('Terrain', base.camera)
+        self.terrain = Terrain('Terrain', base.camera, 123)
         # Store the root NodePath for convenience
         #root = self.terrain.getRoot()
         #root.reparentTo(render)
@@ -259,6 +259,7 @@ class World(DirectObject):
         self.accept("d", self.setKey, ["right", 1])
         self.accept("y", self.setKey, ["invert-y", 1])
         self.accept("shift", self.setKey, ["turbo", 1])
+        self.accept("f11", self.screenShot)
         #self.accept("space", self.terrain.make )
         self.accept("l", self.terrain.toggleWireFrame )
         #self.accept("+", self.setKey, ["option+",1])
@@ -527,6 +528,10 @@ class World(DirectObject):
     # records the state of the mouse
     def setMouseBtn(self, btn, value):
         self.mousebtn[btn] = value
+
+    def screenShot(self):
+        base.screenshot()
+        print 'screenshot taken.'
 
 print('instancing world...')
 w = World()

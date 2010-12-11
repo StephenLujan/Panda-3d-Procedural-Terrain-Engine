@@ -1,7 +1,7 @@
 //Cg
 //Cg profile arbvp1 arbfp1
 
-// shader contains  work by pro-rsoft and gsk from the panda3d forums
+// shader based on work by pro-rsoft and gsk from the panda3d forums
 
 
 void vshader( in float4 vtx_position : POSITION,
@@ -29,13 +29,12 @@ void vshader( in float4 vtx_position : POSITION,
     l_texcoord3=vtx_texcoord3;
 
     // lighting
-    //WTF IS THIS NECESSARY
+    //WTF IS THIS NECESSARY the normal should not need to be exaggerated
     vtx_normal.x *= -400;
     vtx_normal.y *= -400;
     //k_lightvec.z /= 400;
     float3 N = normalize( vtx_normal );
     float3 L = normalize( k_lightvec.xyz );
-    //wth is this coefficient also necessary.
     l_brightness = (max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
 }
 

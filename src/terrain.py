@@ -56,7 +56,7 @@ class TerrainTile(GeoMipTerrain):
         self.getRoot().setPos(x, y, 0)
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
         if self.terrain.bruteForce:
-            GeoMipTerrain.setMinLevel(self,1)
+            #GeoMipTerrain.setMinLevel(self,1)
             GeoMipTerrain.setBruteforce(self, True)
         else:
             self.setBorderStitching(1)
@@ -194,7 +194,7 @@ class Terrain(NodePath):
 
         ### tile generation
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 1000
+        self.maxViewRange = 500
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize/2
@@ -479,6 +479,18 @@ class TerrainTexturer():
         """initialize"""
         self.terrain = terrain
 
+    def loadTexture(self, name):
+        """A better texture loader"""
+        tex = loader.loadTexture('textures/'+name)
+        self.defaultFilters(tex)
+        return tex
+
+    def defaultFilters(self, texture):
+        """Set a texture to use desired default filters."""
+        texture.setMinfilter(Texture.FTLinearMipmapLinear)
+        texture.setMagfilter(Texture.FTLinearMipmapLinear)
+        texture.setAnisotropicDegree(2)
+
     def load(self):
         """Load textures and shaders."""
 
@@ -493,7 +505,7 @@ class MonoTexturer(TerrainTexturer):
         """single texture"""
 
         self.ts = TextureStage('ts')
-        tex = loader.loadTexture("textures/rock.jpg")
+        tex = self.loadTexture("rock.jpg")
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.monoTexture = tex
@@ -513,17 +525,18 @@ class DetailTexturer(TerrainTexturer):
         """texture + detail texture"""
 
         self.ts1 = TextureStage('ts')
-        tex = loader.loadTexture("textures/snow.jpg")
+        tex = self.loadTexture("snow.jpg")
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.monoTexture = tex
 
         self.detailTS = TextureStage('ts2')
-        tex = loader.loadTexture("textures/Detail.png")
+        tex = self.loadTexture("Detail.png")
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.detailTexture = tex
-        self.textureBlendMode = 7
+        #self.textureBlendMode = 7
+        self.textureBlendMode = self.detailTS.MHeight
         self.detailTS.setMode(self.textureBlendMode)
 
     def texturize(self, tile):
@@ -574,8 +587,8 @@ class ShaderTexturer(DetailTexturer):
         """texture + detail texture"""
 
         DetailTexturer.load(self)
-        #self.loadShader2()
-        self.loadShader4()
+        self.loadShader2()
+        #self.loadShader4()
 
     def loadShader2(self):
         """Textures based on altitude. My own version"""
@@ -591,18 +604,10 @@ class ShaderTexturer(DetailTexturer):
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
         ### Load textures
-        self.tex1 = loader.loadTexture("textures/dirt.jpg")
-        #self.tex1.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex1.setMagfilter(Texture.FTLinear)
-        self.tex2 = loader.loadTexture("textures/grass.jpg")
-        #self.tex2.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex2.setMagfilter(Texture.FTLinear)
-        self.tex3 = loader.loadTexture("textures/rock.jpg")
-        #self.tex3.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex3.setMagfilter(Texture.FTLinear)
-        self.tex4 = loader.loadTexture("textures/snow.jpg")
-        #self.tex4.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex4.setMagfilter(Texture.FTLinear)
+        self.tex1 = self.loadTexture("dirt.jpg")
+        self.tex2 = self.loadTexture("grass.jpg")
+        self.tex3 = self.loadTexture("rock.jpg")
+        self.tex4 = self.loadTexture("snow.jpg")
 
         self.ts1 = TextureStage('tex1')
         self.ts2 = TextureStage('tex2')
@@ -650,18 +655,10 @@ class ShaderTexturer(DetailTexturer):
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
         ### Load textures
-        self.tex1 = loader.loadTexture("textures/dirt.jpg")
-        #self.tex1.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex1.setMagfilter(Texture.FTLinear)
-        self.tex2 = loader.loadTexture("textures/grass.jpg")
-        #self.tex2.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex2.setMagfilter(Texture.FTLinear)
-        self.tex3 = loader.loadTexture("textures/rock.jpg")
-        #self.tex3.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex3.setMagfilter(Texture.FTLinear)
-        self.tex4 = loader.loadTexture("textures/snow.jpg")
-        #self.tex4.setMinfilter(Texture.FTNearestMipmapLinear)
-        #self.tex4.setMagfilter(Texture.FTLinear)
+        self.tex1 = self.loadTexture("dirt.jpg")
+        self.tex2 = self.loadTexture("grass.jpg")
+        self.tex3 = self.loadTexture("rock.jpg")
+        self.tex4 = self.loadTexture("snow.jpg")
 
         self.ts1 = TextureStage('tex1')
         self.ts2 = TextureStage('tex2')

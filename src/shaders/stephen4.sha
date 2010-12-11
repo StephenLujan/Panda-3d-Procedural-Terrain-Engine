@@ -2,22 +2,22 @@
 //Cg profile arbvp1 arbfp1
 
 // shader contains  work by pro-rsoft and gsk from the panda3d forums
-float3 UP = float3(0,0,1);
+
 
 struct vfconn
 {
-    out float2 l_texcoord0 : TEXCOORD0;
-    out float2 l_texcoord3 : TEXCOORD3;
-    out float4 l_position : POSITION;
-    out float l_brightness,
-    out float4 l_mpos,
-    //out float3 l_normal,
-    out float l_slope,
+    float2 l_texcoord0 : TEXCOORD0;
+    float2 l_texcoord3 : TEXCOORD3;
+    float4 l_position  : POSITION;
+    //float l_slope      : SLOPE;
+    //float l_brightness : BRIGHTNESS;
+    float2 l_slope_brightness: TEXCOORD2;
+    float4 l_mpos      : COLOR1;
+    //float3 l_normal;
+    //uniform float3 normal       : TEXCOORD1;
 };
 
-
-
-void vshader( in float4 vtx_position : POSITION,
+vfconn vshader( in float4 vtx_position : POSITION,
 	      in float3 vtx_normal : NORMAL,
               in float2 vtx_texcoord0 : TEXCOORD0,
               in float2 vtx_texcoord3 : TEXCOORD3,
@@ -26,23 +26,18 @@ void vshader( in float4 vtx_position : POSITION,
 	      in uniform float4 k_lightvec,
 	      in uniform float4 k_lightcolor,
 	      in uniform float4 k_ambientlight,
-	      in uniform float4 k_tscale,
-	      out float l_brightness,
-	      out float4 l_mpos,
-          //out float3 l_normal,
-          out float l_slope,
-              out float2 l_texcoord0 : TEXCOORD0,
-              out float2 l_texcoord3 : TEXCOORD3,
-              out float4 l_position : POSITION)
+	      in uniform float4 k_tscale
+          //out vfconn OUT
+            )
 {
+    vfconn OUT;
 
+    OUT.l_position=mul(mat_modelproj,vtx_position);
+    OUT.l_texcoord0=vtx_texcoord0*k_tscale;
+    OUT.l_texcoord3=vtx_texcoord3;
 
     // worldspace position, for clipping in the fragment shader
-    l_mpos = mul(trans_model_to_world, vtx_position);
-
-    l_position=mul(mat_modelproj,vtx_position);
-    l_texcoord0=vtx_texcoord0*k_tscale;
-    l_texcoord3=vtx_texcoord3;
+    OUT.l_mpos = mul(trans_model_to_world, vtx_position);
 
     // lighting
     //WTF IS THIS NECESSARY
@@ -52,9 +47,12 @@ void vshader( in float4 vtx_position : POSITION,
     float3 N = normalize( vtx_normal );
     float3 L = normalize( k_lightvec.xyz );
 
-    //wth is this coefficient also necessary.
-    l_brightness = (max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
-    l_slope = 1.0 - dot( N, UP );
+    float3 UP = float3(0,0,1);
+    OUT.l_slope_brightness.x = 1.0 - dot( N, UP );
+
+    OUT.l_slope_brightness.y = (max( dot( -N, L ), 0.0f )*k_lightcolor)+k_ambientlight;
+    //OUT.l_normal = N;
+    return OUT;
 }
 
 float calculateWeight( float value, float max, float min )
@@ -83,22 +81,17 @@ float calculateWeight( float value, float max, float min )
 
 float calculateFinalWeight( float height, float slope, float4 limits )
 {
-    return calculateWeight(height, limits.x, limits.y)
-           * calculateWeight(slope, limits.z, limits.a);
+    return calculateWeight(height, limits.x, limits.y);
+           //* calculateWeight(0.4, limits.z, limits.a);
+           //* calculateWeight(slope, limits.z, limits.a);
 }
 
-void fshader( in float4 l_position : POSITION,
-              in float2 l_texcoord0 : TEXCOORD0,
-              in float2 l_texcoord3 : TEXCOORD3,
+void fshader( in  vfconn IN,
               in uniform float4 region1Limits : REGION1LIMITS,
               in uniform float4 region2Limits : REGION2LIMITS,
               in uniform float4 region3Limits : REGION3LIMITS,
               in uniform float4 region4Limits : REGION4LIMITS,
-	      in float  l_brightness,
-	      in float4 l_mpos,
-          //in float3 l_normal,
-          in float l_slope,
-	      in uniform float4 k_waterlevel,
+              in uniform float4 k_waterlevel  : WATERLEVEL,
               in uniform sampler2D region1ColorMap : TEXUNIT0,
               in uniform sampler2D region2ColorMap : TEXUNIT1,
               in uniform sampler2D region3ColorMap : TEXUNIT2,
@@ -106,15 +99,18 @@ void fshader( in float4 l_position : POSITION,
               out float4 o_color : COLOR )
 {
     // clipping
-    //if ( l_mpos.z < k_waterlevel.z) discard;
+    //if ( IN.l_mpos.z < k_waterlevel.z) discard;
 
+    //unpack some input
     // 0 = horizontal 1 = vertical 
-    float slope =  l_slope; //0.45;
+    float slope = IN.l_slope_brightness.x; //0.45;
+    float brightness = IN.l_slope_brightness.y;
     //float slope = abs( l_slope );
     //float3 vertical = normalize(float3(0.0, 0.0, 1.0));
-    //float slope =  1.0 - abs( dot( l_normal, vertical) );
+    //float slope =  1 - abs( dot( normalize(IN.normal), vertical) );
+    float height = IN.l_mpos.z;
 
-    float height = l_mpos.z;
+
     vec4 weights = float4(0.0, 0.0, 0.0, 0.0);
     vec4 terrainColor = float4(0.0, 0.0, 0.0, 1.0);
 
@@ -128,16 +124,16 @@ void fshader( in float4 l_position : POSITION,
     float normalizer = (weights.x + weights.y + weights.z + weights.a + 0.000001);
 
     if (weights.x)
-        terrainColor += weights.x / normalizer * tex2D(region1ColorMap, l_texcoord0);
+        terrainColor += weights.x / normalizer * tex2D(region1ColorMap, IN.l_texcoord0);
     if (weights.y)
-        terrainColor += weights.y / normalizer * tex2D(region2ColorMap, l_texcoord0);
+        terrainColor += weights.y / normalizer * tex2D(region2ColorMap, IN.l_texcoord0);
     if (weights.z)
-        terrainColor += weights.z / normalizer * tex2D(region3ColorMap, l_texcoord0);
+        terrainColor += weights.z / normalizer * tex2D(region3ColorMap, IN.l_texcoord0);
     if (weights.a)
-        terrainColor += weights.a / normalizer * tex2D(region4ColorMap, l_texcoord0);
+        terrainColor += weights.a / normalizer * tex2D(region4ColorMap, IN.l_texcoord0);
 
     // alpha splatting and lighting
-    o_color=terrainColor*(l_brightness);
+    o_color=terrainColor*(brightness);
     //HDRL
     o_color = (o_color*o_color + o_color) / (o_color*o_color + o_color + float4(1.0, 1.0, 1.0, 1.0));
     o_color.a=1.0;
