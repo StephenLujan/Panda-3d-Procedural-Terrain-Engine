@@ -194,7 +194,7 @@ class Terrain(NodePath):
 
         ### tile generation
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 500
+        self.maxViewRange = 1000
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize/2
@@ -380,7 +380,7 @@ class Terrain(NodePath):
         # increase perlin2 to make the terrain smoother
         self.perlin2 = StackedPerlinNoise2()
         frequencySpread = 3.0
-        amplitudeSpread = 3.3
+        amplitudeSpread = 3.4
         perlin2a = PerlinNoise2(0, 0, 256,  seed = self.id*2)
         perlin2a.setScale(self.smoothness)
         self.perlin2.addLevel(perlin2a)
@@ -587,8 +587,8 @@ class ShaderTexturer(DetailTexturer):
         """texture + detail texture"""
 
         DetailTexturer.load(self)
-        self.loadShader2()
-        #self.loadShader4()
+        #self.loadShader2()
+        self.loadShader4()
 
     def loadShader2(self):
         """Textures based on altitude. My own version"""
@@ -671,12 +671,12 @@ class ShaderTexturer(DetailTexturer):
         blendRadius = self.terrain.maxHeight * 0.11 + 0.5
         transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
                                  self.terrain.maxHeight * 0.52,
-                                 self.terrain.maxHeight * 0.80)
+                                 self.terrain.maxHeight * 0.82)
 
         # regionLimits ( max height, min height, slope max, slope min )
         self.region1 = Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0)
-        self.region2 = Vec4(transitionHeights.getZ() , transitionHeights.getX() - blendRadius, 0.5, 0)
-        self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getX(), 1.0, 0.2)
+        self.region2 = Vec4(transitionHeights.getZ() - blendRadius/2, transitionHeights.getX() - blendRadius, 0.45, 0)
+        self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getX(), 1.0, 0.1)
         self.region4 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0)
 
         self.terrain.setShaderInput("region1ColorMap", self.tex1)

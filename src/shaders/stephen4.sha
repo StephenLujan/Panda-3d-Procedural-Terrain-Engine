@@ -9,12 +9,9 @@ struct vfconn
     float2 l_texcoord0 : TEXCOORD0;
     float2 l_texcoord3 : TEXCOORD3;
     float4 l_position  : POSITION;
-    //float l_slope      : SLOPE;
-    //float l_brightness : BRIGHTNESS;
     float2 l_slope_brightness: TEXCOORD2;
-    float4 l_mpos      : COLOR1;
+    float3 l_mpos;//      : FOG;
     //float3 l_normal;
-    //uniform float3 normal       : TEXCOORD1;
 };
 
 vfconn vshader( in float4 vtx_position : POSITION,
@@ -81,9 +78,9 @@ float calculateWeight( float value, float max, float min )
 
 float calculateFinalWeight( float height, float slope, float4 limits )
 {
-    return calculateWeight(height, limits.x, limits.y);
+    return calculateWeight(height, limits.x, limits.y)
            //* calculateWeight(0.4, limits.z, limits.a);
-           //* calculateWeight(slope, limits.z, limits.a);
+           * calculateWeight(slope, limits.z, limits.a);
 }
 
 void fshader( in  vfconn IN,
@@ -96,6 +93,7 @@ void fshader( in  vfconn IN,
               in uniform sampler2D region2ColorMap : TEXUNIT1,
               in uniform sampler2D region3ColorMap : TEXUNIT2,
               in uniform sampler2D region4ColorMap : TEXUNIT3,
+              in uniform sampler2D detailTexture   : TEXUNIT4,
               out float4 o_color : COLOR )
 {
     // clipping
@@ -110,10 +108,8 @@ void fshader( in  vfconn IN,
     //float slope =  1 - abs( dot( normalize(IN.normal), vertical) );
     float height = IN.l_mpos.z;
 
-
     vec4 weights = float4(0.0, 0.0, 0.0, 0.0);
     vec4 terrainColor = float4(0.0, 0.0, 0.0, 1.0);
-
 
     weights.x = calculateFinalWeight(height, slope, region1Limits);
     weights.y = calculateFinalWeight(height, slope, region2Limits);
@@ -132,6 +128,9 @@ void fshader( in  vfconn IN,
     if (weights.a)
         terrainColor += weights.a / normalizer * tex2D(region4ColorMap, IN.l_texcoord0);
 
+    // detail texture
+    float2 detailTexCoord= IN.l_texcoord0*8.0;
+    terrainColor*= tex2D(detailTexture, detailTexCoord);
     // alpha splatting and lighting
     o_color=terrainColor*(brightness);
     //HDRL
