@@ -542,7 +542,7 @@ def setResolution():
     #wp.setFullscreen(True)
     base.win.requestProperties(wp)
 
-setResolution()
+#setResolution()
 
 print('calling run()...')
 run()
