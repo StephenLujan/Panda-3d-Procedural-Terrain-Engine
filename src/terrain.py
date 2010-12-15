@@ -5,7 +5,10 @@ __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
 
 import math
+from operator import itemgetter
 
+from direct.showbase.RandomNumGen import *
+from direct.task.Task import Task
 from panda3d.core import BitMask32
 from panda3d.core import CollisionHandlerQueue
 from panda3d.core import CollisionNode
@@ -15,6 +18,7 @@ from panda3d.core import PNMImage
 from panda3d.core import PerlinNoise2
 from panda3d.core import Shader
 from panda3d.core import StackedPerlinNoise2
+from panda3d.core import TimeVal
 from pandac.PandaModules import Filename
 from pandac.PandaModules import GeoMipTerrain
 from pandac.PandaModules import NodePath
@@ -26,10 +30,6 @@ from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec2
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
-from direct.task.Task import Task
-from operator import itemgetter
-from direct.showbase.RandomNumGen import *
-from panda3d.core import TimeVal
 
 """ Panda3d GeoMipTerrain tips:
 least detail = max detail level = log(block_size) / log(2)
@@ -44,9 +44,12 @@ bruteforce is disabled.
 ###############################################################################
 
 class TerrainTile(GeoMipTerrain):
+    """TerrainTiles are the building blocks of a terrain."""
 
     def __init__(self, terrain, x, y):
-        """Important settings are used directly from the terrain.
+        """Builds a Tile for the terrain at input coordinates.
+
+        Important settings are used directly from the terrain.
         This allows for easier setting changes, and reduces memory overhead.
         x and y parameters give the appropriate world coordinates of this tile.
 
@@ -55,7 +58,6 @@ class TerrainTile(GeoMipTerrain):
         self.terrain = terrain
         self.xOffset = x
         self.yOffset = y
-
 
         name = "ID" + str(terrain.id) + "X" + str(x) + "Y" + str(y)
         GeoMipTerrain.__init__(self, name=terrain.name)
@@ -66,14 +68,12 @@ class TerrainTile(GeoMipTerrain):
         self.getRoot().setPos(x, y, 0)
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
         if self.terrain.bruteForce:
-            #GeoMipTerrain.setMinLevel(self,1)
             GeoMipTerrain.setBruteforce(self, True)
         else:
             self.setBorderStitching(1)
             self.setNear(self.terrain.near)
             self.setFar(self.terrain.far)
-        
-        #self.generateNoiseObjects()
+
         #self.make()
 
     def update(self, dummy):
@@ -92,22 +92,20 @@ class TerrainTile(GeoMipTerrain):
 
         GeoMipTerrain.setHeightfield(self, filename)
 
-    def setHeightFromFile(self):
-        """Set the heightfield to the the image file or generate a new one."""
-
-        if (self.image.getXSize() < 1):
-            self.image.read(Filename(self.mapName))
-            if (self.image.getXSize() < 1):
-                self.makeHeightMap()
-                self.image.read(Filename(self.mapName))
-        self.setHeightField(Filename(self.mapName))
 
     def setHeight(self):
-        """Sets the height to the image."""
+        """Sets the height field to match the height map image."""
+
         self.setHeightField(self.image)
 
     def makeHeightMap(self):
-        """Generate a new heightmap image to use."""
+        """Generate a new heightmap image.
+
+        Panda3d GeoMipMaps require an image from which to build and update
+        their height field. This function creates the correct image using the
+        tile's position and the Terrain's getHeight() function
+
+        """
 
         self.image = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
         self.image.makeGrayscale()
@@ -168,6 +166,12 @@ class TerrainTile(GeoMipTerrain):
 ###############################################################################
 
 class CachingTerrainTile(TerrainTile):
+    """Unused!
+
+    This TerrainTile will use cached heightmap images if possible.
+    If it is not possible it will create new images and save them to disk.
+
+    """
     def setHeightField(self, filename):
         """Set the GeoMip heightfield from a heightmap image."""
 
@@ -196,9 +200,11 @@ class CachingTerrainTile(TerrainTile):
 class Terrain(NodePath):
     """A terrain contains a set of geomipmaps, and maintains their common properties."""
 
-    def __init__(self, name, focus, id = 0):
-        """The focus is the NodePath where the LOD is the greatest.
-            id is a seed for the map and unique name for any cached heightmap images
+    def __init__(self, name, focus, id=0):
+        """Create a new terrain centered on the focus.
+
+        The focus is the NodePath where the LOD is the greatest.
+        id is a seed for the map and unique name for any cached heightmap images
 
         """
 
@@ -212,14 +218,16 @@ class Terrain(NodePath):
         self.heightMapSize = self.tileSize + 1
 
         ##### heightmap properties
-        self.smoothness = 45 # the overall smoothness/roughness of the terrain
-        self.consistency = self.smoothness * 8 # how quickly altitude and roughness shift
+        # the overall smoothness/roughness of the terrain
+        self.smoothness = 45
+        # how quickly altitude and roughness shift
+        self.consistency = self.smoothness * 8
         self.waterHeight = 0.3 # out of a max of 1.0
         # for realism the flatHeight should be at or very close to waterHeight
-        self.flatHeight = self.waterHeight+0.06
+        self.flatHeight = self.waterHeight + 0.06
         self.dice = RandomNumGen(TimeVal().getUsec())
         if id == 0:
-            id = self.dice.randint(2,1000000)
+            id = self.dice.randint(2, 1000000)
         self.id = id
         #creates noise objects that will be used by the getHeight function
         self.generateNoiseObjects()
@@ -229,7 +237,7 @@ class Terrain(NodePath):
         self.maxViewRange = 600
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
-        self.minTileDistance = self.maxViewRange + self.tileSize/2
+        self.minTileDistance = self.maxViewRange + self.tileSize / 2
         # make larger to avoid excess loading when milling about a small area
         # make smaller to shrink some overhead
         self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
@@ -267,11 +275,15 @@ class Terrain(NodePath):
         self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
     def _setupSimpleTasks(self):
+        """This sets up tasks to maintain the terrain as the focus moves."""
+
         ##Add tasks to keep updating the terrain
         #taskMgr.add(self.updateTask, "updateTiles", sort=9, priority=0)
         taskMgr.add(self.tileBuilderTask, "loadTiles", sort=9, priority=0)
 
     def _setupThreadedTasks(self):
+        """This sets up tasks to maintain the terrain as the focus moves."""
+
         ##Add tasks to keep updating the terrain
         ##def setupTaskChain(self, chainName, numThreads=None, tickClock=None,
         ##        threadPriority=None, frameBudget=None, timeslicePriority=None)
@@ -289,8 +301,8 @@ class Terrain(NodePath):
                     sort=1, priority=0)
 
         taskMgr.setupTaskChain('tileGenerationQueue', numThreads=3, tickClock=0,
-                            threadPriority=1, frameBudget=0.2,
-                            frameSync=False, timeslicePriority=True)
+                               threadPriority=1, frameBudget=0.2,
+                               frameSync=False, timeslicePriority=True)
 
         #if self.bruteForce:
         #    taskMgr.setupTaskChain('blockSizeUpdateChain', numThreads=1, tickClock=0,
@@ -300,13 +312,11 @@ class Terrain(NodePath):
         #                taskChain='blockSizeUpdateChain', sort=1, priority=0)
 
     def updateTask(self, task):
-        """This task updates each tile, which updates the LOD.
-
-        """
+        """Deprecated -- This task updates each tile, which updates the LOD."""
 
         for pos, tile in self.tiles.items():
             tile.update(task)
-            
+
         return task.again
 
     def tileBuilderTask(self, task):
@@ -317,11 +327,8 @@ class Terrain(NodePath):
 
         return task.again
 
-    def blockLodUpdateTask(self, task):
-        """This task will alter the blocksize of each TerrainTile to control
-            the level of detail depending on their distances.
-
-        """
+    def tileLodUpdateTask(self, task):
+        """Deprecated."""
 
         x = self.focus.getX() / self.horizontalScale
         y = self.focus.getY() / self.horizontalScale
@@ -348,7 +355,15 @@ class Terrain(NodePath):
 
         return task.again
 
-    def preload(self, xpos = 1, ypos = 1):
+    def preload(self, xpos=1, ypos=1):
+        """Loads all tiles in range immediately.
+
+        This can suspend the program for a long time and is best used when
+        first loading a level. It simply iterates through a square region
+        building any tile that is reasonably within the max distance. It does not
+        prioritize tiles closest to the focus.
+
+        """
 
         xstart = (int(xpos) / self.tileSize) * self.tileSize
         ystart = (int(ypos) / self.tileSize) * self.tileSize
@@ -365,9 +380,9 @@ class Terrain(NodePath):
                     distanceSquared = deltaX * deltaX + deltaY * deltaY
 
                     if distanceSquared < maxDistanceSquared:
-                        self._generateTile(x,y)
+                        self._generateTile(x, y)
                         #self.dispatchNewTileAt(x,y)
-        
+
     def makeNewTile(self, x, y):
         """Generate the closest terrain tile needed."""
 
@@ -401,13 +416,13 @@ class Terrain(NodePath):
         self.dummyTile.xOffset = x
         self.dummyTile.yOffset = y
         self.tiles[Vec2(x, y)] = self.dummyTile
-        taskMgr.add(self._generateTileTask, name = "generateTile",
-        extraArgs = [x, y], appendTask=True,
-        taskChain='tileGenerationQueue', sort=1, priority=1)
+        taskMgr.add(self._generateTileTask, name="_generateTile",
+                    extraArgs=[x, y], appendTask=True,
+                    taskChain='tileGenerationQueue', sort=1, priority=1)
 
     def _generateTileTask(self, x, y, task):
         """Task wrapper for _generateTile. Probably redundant now..."""
-        self._generateTile(x,y)
+        self._generateTile(x, y)
         return task.done
 
     def _generateTile(self, x, y):
@@ -430,12 +445,7 @@ class Terrain(NodePath):
         return tile
 
     def removeOldTiles(self, x, y):
-        """Remove distant tiles to free memory.
-        Also reduces the amount of terrain that will need to be occluded.
-        Presently distant terrain WILL still be rendered instead of occluded,
-        creating additional gpu strain.
-
-        """
+        """Remove distant tiles to free system resources."""
 
         center = self.tileSize * 0.5
         for pos, tile in self.tiles.items():
@@ -447,28 +457,21 @@ class Terrain(NodePath):
                 self.removeTile(pos, tile)
 
     def removeTile(self, pos, tile):
-        """Removes a specific tile from the Terrain"""
-        
+        """Removes a specific tile from the Terrain."""
+
         self.tiles[pos].getRoot().detachNode()
         del self.tiles[pos]
-        print "Tile removed from",pos
+        print "Tile removed from", pos
 
     def generateNoiseObjects(self):
         """Create perlin noise."""
 
+        # See getHeight() for more details....
+
         # where perlin 1 is low terrain will be mostly low and flat
         # where it is high terrain will be higher and slopes will be exagerrated
         # increase perlin1 to create larger areas of geographic consistency
-        # increasing it too much on a small map may not work due normalization
-        #        self.perlin1 = StackedPerlinNoise2()
-        #        stackSpread = 1.2
-        #        perlin1Course = PerlinNoise2( self.heightMapSize, self.heightMapSize  )
-        #        perlin1Course.setScale( self.consistency *stackSpread)
-        #        self.perlin1.addLevel( perlin1Course, stackSpread)
-        #        perlin1Fine = PerlinNoise2( self.heightMapSize, self.heightMapSize)
-        #        perlin1Fine.setScale( self.consistency / stackSpread)
-        #        self.perlin1.addLevel( perlin1Fine, 1 / stackSpread)
-        self.perlin1 = PerlinNoise2(0, 0, 256, seed = self.id)
+        self.perlin1 = PerlinNoise2(0, 0, 256, seed=self.id)
         self.perlin1.setScale(self.consistency)
 
         # perlin2 creates the noticeable noise in the terrain
@@ -477,35 +480,40 @@ class Terrain(NodePath):
         self.perlin2 = StackedPerlinNoise2()
         frequencySpread = 3.0
         amplitudeSpread = 3.4
-        perlin2a = PerlinNoise2(0, 0, 256,  seed = self.id*2)
+        perlin2a = PerlinNoise2(0, 0, 256, seed=self.id * 2)
         perlin2a.setScale(self.smoothness)
         self.perlin2.addLevel(perlin2a)
-        perlin2b = PerlinNoise2(0, 0, 256,  seed = self.id*3+3)
+        perlin2b = PerlinNoise2(0, 0, 256, seed=self.id * 3 + 3)
         perlin2b.setScale(self.smoothness / frequencySpread)
         self.perlin2.addLevel(perlin2b, 1 / amplitudeSpread)
-        perlin2c = PerlinNoise2(0, 0, 256, seed = self.id*4+4)
-        perlin2c.setScale(self.smoothness / (frequencySpread*frequencySpread))
-        self.perlin2.addLevel(perlin2c, 1 / (amplitudeSpread*amplitudeSpread))
-        perlin2d = PerlinNoise2(0, 0, 256,  seed = self.id*5+5)
-        perlin2d.setScale(self.smoothness / (math.pow(frequencySpread,3)))
-        self.perlin2.addLevel(perlin2d, 1 / (math.pow(amplitudeSpread,3)))
-        perlin2e = PerlinNoise2(0, 0, 256, seed = self.id*6+6)
-        perlin2e.setScale(self.smoothness / (math.pow(frequencySpread,4)))
-        self.perlin2.addLevel(perlin2e, 1 / (math.pow(amplitudeSpread,4)))
-        #        self.perlin2 = PerlinNoise2( self.heightMapSize, self.heightMapSize)
-        #        self.perlin2.setScale( self.smoothness )
+        perlin2c = PerlinNoise2(0, 0, 256, seed=self.id * 4 + 4)
+        perlin2c.setScale(self.smoothness / (frequencySpread * frequencySpread))
+        self.perlin2.addLevel(perlin2c, 1 / (amplitudeSpread * amplitudeSpread))
+        perlin2d = PerlinNoise2(0, 0, 256, seed=self.id * 5 + 5)
+        perlin2d.setScale(self.smoothness / (math.pow(frequencySpread, 3)))
+        self.perlin2.addLevel(perlin2d, 1 / (math.pow(amplitudeSpread, 3)))
+        perlin2e = PerlinNoise2(0, 0, 256, seed=self.id * 6 + 6)
+        perlin2e.setScale(self.smoothness / (math.pow(frequencySpread, 4)))
+        self.perlin2.addLevel(perlin2e, 1 / (math.pow(amplitudeSpread, 4)))
+
 
     def getHeight(self, x, y):
         """Returns the height at the specified terrain coordinates.
+
         The values returned should be between 0 and 1 and use the full range.
         Heights should be the smoothest and flatest at flatHeight.
 
         """
 
         # all of these should be in the range of 0 to 1
-        p1 = (self.perlin1(x, y) + 1) / 2
-        p2 = (self.perlin2(x, y) + 1) / 2
+        p1 = (self.perlin1(x, y) + 1) / 2 # low frequency
+        p2 = (self.perlin2(x, y) + 1) / 2 # high frequency
         fh = self.flatHeight
+
+        # p1 varies what kind of terrain is in the area, p1 alone would be smooth
+        # p2 introduces the visible noise and roughness
+        # when p1 is high the altitude will be high overall
+        # when p1 is close to fh most of the visible noise will be muted
         return (p1 - fh) / 2 + (p1 - fh) * (p2 - fh) / 4 + fh
 
     def getElevation(self, x, y):
@@ -556,13 +564,13 @@ class Terrain(NodePath):
         self.cTrav.addCollider(self.elevationColNp, self.elevationHandler)
 
     def setWireFrame(self, state):
-    
+
         self.wireFrame = state
         for pos, tile in self.tiles.items():
             tile.setWireFrame(state)
-    
+
     def toggleWireFrame(self):
-    
+
         self.setWireFrame(not self.wireFrame)
 
 ###############################################################################
@@ -570,7 +578,7 @@ class Terrain(NodePath):
 ###############################################################################
 
 class TerrainTexturer():
-    """Not yet complete or implemented."""
+    """Virtual Class"""
 
     def __init__(self, terrain):
         """initialize"""
@@ -578,7 +586,7 @@ class TerrainTexturer():
 
     def loadTexture(self, name):
         """A better texture loader"""
-        tex = loader.loadTexture('textures/'+name)
+        tex = loader.loadTexture('textures/' + name)
         self.defaultFilters(tex)
         return tex
 
@@ -695,7 +703,7 @@ class ShaderTexturer(DetailTexturer):
         #self.shader = Shader.load('shaders/filter-vlight.cg', Shader.SLCg)
         #self.terrain.setShaderInput("casterpos", Vec4(100.0,100.0,100.0,100.0))
         #self.terrain.setShaderInput("light", Vec4(100.0,100.0,100.0,100.0))
-        
+
         ### texture scaling
         texScale = self.terrain.tileSize / 32 * self.terrain.horizontalScale
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
