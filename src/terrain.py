@@ -467,8 +467,14 @@ class Terrain(NodePath):
         # where perlin 1 is low terrain will be mostly low and flat
         # where it is high terrain will be higher and slopes will be exagerrated
         # increase perlin1 to create larger areas of geographic consistency
-        self.perlin1 = PerlinNoise2(0, 0, 256, seed=self.id)
-        self.perlin1.setScale(self.consistency)
+        self.perlin1 = StackedPerlinNoise2()
+        perlin1a = PerlinNoise2(0, 0, 256, seed=self.id)
+        perlin1a.setScale(self.consistency)
+        self.perlin1.addLevel(perlin1a)
+        perlin1b = PerlinNoise2(0, 0, 256, seed=self.id*2+123)
+        perlin1b.setScale(self.consistency/2)
+        self.perlin1.addLevel(perlin1b,1/2)
+
 
         # perlin2 creates the noticeable noise in the terrain
         # without perlin2 everything would look unnaturally smooth and regular
