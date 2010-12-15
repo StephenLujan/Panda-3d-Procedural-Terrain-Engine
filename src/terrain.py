@@ -209,18 +209,18 @@ class Terrain(NodePath):
         self.name = name
 
         ##### tile physical properties
-        self.maxHeight = 450
+        self.maxHeight = 350
         self.tileSize = 64
         self.heightMapSize = self.tileSize + 1
 
         ##### heightmap properties
         # the overall smoothness/roughness of the terrain
-        self.smoothness = 45
+        self.smoothness = 55
         # how quickly altitude and roughness shift
         self.consistency = self.smoothness * 8
         self.waterHeight = 0.3 # out of a max of 1.0
         # for realism the flatHeight should be at or very close to waterHeight
-        self.flatHeight = self.waterHeight + 0.06
+        self.flatHeight = self.waterHeight + 0.07
         self.dice = RandomNumGen(TimeVal().getUsec())
         if id == 0:
             id = self.dice.randint(2, 1000000)
@@ -230,7 +230,7 @@ class Terrain(NodePath):
 
         ##### Terrain scale and tile distances
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 600
+        self.maxViewRange = 500
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize / 2
@@ -240,7 +240,7 @@ class Terrain(NodePath):
         self.focus = focus
         #scale the terrain vertically to its maximum height
         self.setSz(self.maxHeight)
-        self.horizontalScale = 2
+        self.horizontalScale = 1.5
         self.setSx(self.horizontalScale)
         self.setSy(self.horizontalScale)
 

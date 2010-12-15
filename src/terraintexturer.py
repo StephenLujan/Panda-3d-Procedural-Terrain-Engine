@@ -225,24 +225,26 @@ class ShaderTexturer(DetailTexturer):
         # this is half the blend area between each texture
         blendRadius = self.terrain.maxHeight * 0.11 + 0.5
         transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
-                                 self.terrain.maxHeight * 0.50,
+                                 self.terrain.maxHeight * 0.56,
                                  self.terrain.maxHeight * 0.80)
 
         # regionLimits ( max height, min height, slope max, slope min )
         self.region1 = Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0)
-        self.region2 = Vec4(transitionHeights.getZ() - blendRadius, transitionHeights.getX() - blendRadius, 0.45, 0)
-        self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getX(), 1.0, 0.2)
-        self.region4 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0)
+        self.region2 = Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX() - blendRadius, 0.30, 0)
+        self.region3 = Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX()- blendRadius, 1.0, 0.15)
+        self.region4 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getY() - blendRadius, 1.0, 0)
+        self.region5 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0)
 
         self.terrain.setShaderInput("region1ColorMap", self.tex1)
         self.terrain.setShaderInput("region2ColorMap", self.tex2)
         self.terrain.setShaderInput("region3ColorMap", self.tex3)
         self.terrain.setShaderInput("region4ColorMap", self.tex4)
         self.terrain.setShaderInput("detailTexture", self.detailTexture)
-        self.terrain.setShaderInput("region1Limits", self.region1)
-        self.terrain.setShaderInput("region2Limits", self.region2)
-        self.terrain.setShaderInput("region3Limits", self.region3)
-        self.terrain.setShaderInput("region4Limits", self.region4)
+        self.terrain.setShaderInput("region1Limits", self.region1) #color1
+        self.terrain.setShaderInput("region2Limits", self.region2) #color2
+        self.terrain.setShaderInput("region3Limits", self.region3) #color3
+        self.terrain.setShaderInput("region4Limits", self.region4) #color3
+        self.terrain.setShaderInput("region5Limits", self.region5) #color4
         self.terrain.setShaderInput('tscale', self.texScale)
 
         self.terrain.setShader(self.shader)
@@ -261,19 +263,6 @@ class ShaderTexturer(DetailTexturer):
         root.setTexture(self.ts2, self.tex2)
         root.setTexture(self.ts3, self.tex3)
         root.setTexture(self.ts4, self.tex4)
-        root.setTexture(self.ts4, self.tex4)
         root.setTexture(self.detailTS, self.detailTexture)
         root.setTexScale(self.detailTS, 120, 120)
-
-        #root.setShaderInput("region1ColorMap", self.tex1)
-        #root.setShaderInput("region2ColorMap", self.tex2)
-        #root.setShaderInput("region3ColorMap", self.tex3)
-        #root.setShaderInput("region4ColorMap", self.tex4)
-        #root.setShaderInput("region1Limits", self.region1)
-        #root.setShaderInput("region2Limits", self.region2)
-        #root.setShaderInput("region3Limits", self.region3)
-        #root.setShaderInput("region4Limits", self.region4)
-        #root.setShaderInput('tscale', self.texScale)
-        #
-        #root.setShader(self.shader)
 

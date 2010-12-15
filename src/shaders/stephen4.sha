@@ -88,6 +88,7 @@ void fshader( in  vfconn IN,
               in uniform float4 region2Limits : REGION2LIMITS,
               in uniform float4 region3Limits : REGION3LIMITS,
               in uniform float4 region4Limits : REGION4LIMITS,
+              in uniform float4 region5Limits : REGION5LIMITS,
               in uniform float4 k_waterlevel  : WATERLEVEL,
               in uniform sampler2D region1ColorMap : TEXUNIT0,
               in uniform sampler2D region2ColorMap : TEXUNIT1,
@@ -114,7 +115,8 @@ void fshader( in  vfconn IN,
     weights.x = calculateFinalWeight(height, slope, region1Limits);
     weights.y = calculateFinalWeight(height, slope, region2Limits);
     weights.z = calculateFinalWeight(height, slope, region3Limits);
-    weights.a = calculateFinalWeight(height, slope, region4Limits);
+    weights.z += calculateFinalWeight(height, slope, region4Limits);
+    weights.a = calculateFinalWeight(height, slope, region5Limits);
 
     //--- Color terrain proportionately to weights
     float normalizer = (weights.x + weights.y + weights.z + weights.a + 0.000001);
