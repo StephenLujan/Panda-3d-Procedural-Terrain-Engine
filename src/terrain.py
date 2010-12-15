@@ -207,22 +207,38 @@ class Terrain(NodePath):
         self.name = name
 
         ##### tile physical properties
-        self.maxHeight = 200
+        self.maxHeight = 450
         self.tileSize = 64
         self.heightMapSize = self.tileSize + 1
 
         ##### heightmap properties
-        self.smoothness = self.tileSize # the overall smoothness/roughness of the terrain
+        self.smoothness = 45 # the overall smoothness/roughness of the terrain
         self.consistency = self.smoothness * 8 # how quickly altitude and roughness shift
         self.waterHeight = 0.3 # out of a max of 1.0
         # for realism the flatHeight should be at or very close to waterHeight
-        self.flatHeight = self.waterHeight+0.03
+        self.flatHeight = self.waterHeight+0.06
         self.dice = RandomNumGen(TimeVal().getUsec())
         if id == 0:
             id = self.dice.randint(2,1000000)
         self.id = id
         #creates noise objects that will be used by the getHeight function
         self.generateNoiseObjects()
+
+        ##### Terrain scale and tile distances
+        # Don't show untiled terrain below this distance etc.
+        self.maxViewRange = 600
+        # Add half the tile size because distance is checked from the center,
+        # not from the closest edge.
+        self.minTileDistance = self.maxViewRange + self.tileSize/2
+        # make larger to avoid excess loading when milling about a small area
+        # make smaller to shrink some overhead
+        self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
+        self.focus = focus
+        #scale the terrain vertically to its maximum height
+        self.setSz(self.maxHeight)
+        self.horizontalScale = 2
+        self.setSx(self.horizontalScale)
+        self.setSy(self.horizontalScale)
 
         ##### rendering properties
         self.bruteForce = True
@@ -237,18 +253,6 @@ class Terrain(NodePath):
         #self.texturer = DetailTexturer(self)
         self.texturer.load()
 
-        ##### Terrain scale and tile distances
-        # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 600
-        # Add half the tile size because distance is checked from the center,
-        # not from the closest edge.
-        self.minTileDistance = self.maxViewRange + self.tileSize/2
-        # make larger to avoid excess loading when milling about a small area
-        # make smaller to shrink some overhead
-        self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
-        self.focus = focus
-        #scale the terrain vertically to its maximum height
-        self.setSz(self.maxHeight)
 
         #####
         # stores all terrain tiles that make up the terrain
@@ -260,7 +264,7 @@ class Terrain(NodePath):
         #self._setupSimpleTasks()
         self._setupThreadedTasks()
         #loads all terrain tiles in range immediately
-        self.preload(self.focus.getX(), self.focus.getY())
+        self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
     def _setupSimpleTasks(self):
         ##Add tasks to keep updating the terrain
@@ -308,8 +312,8 @@ class Terrain(NodePath):
     def tileBuilderTask(self, task):
         """This task adds and removes tiles as needed."""
 
-        self.makeNewTile(self.focus.getX(), self.focus.getY())
-        self.removeOldTiles(self.focus.getX(), self.focus.getY())
+        self.makeNewTile(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
+        self.removeOldTiles(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
         return task.again
 
@@ -319,8 +323,8 @@ class Terrain(NodePath):
 
         """
 
-        x = self.focus.getX()
-        y = self.focus.getY()
+        x = self.focus.getX() / self.horizontalScale
+        y = self.focus.getY() / self.horizontalScale
         center = self.tileSize * 0.5
 
         # switch to high, mid, and low LOD's at these distances
@@ -502,13 +506,12 @@ class Terrain(NodePath):
         p1 = (self.perlin1(x, y) + 1) / 2
         p2 = (self.perlin2(x, y) + 1) / 2
         fh = self.flatHeight
-        
         return (p1 - fh) / 2 + (p1 - fh) * (p2 - fh) / 4 + fh
 
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
 
-        return self.getHeight(x, y) * self.getSz()
+        return self.getHeight(x / self.horizontalScale, y / self.horizontalScale) * self.getSz()
 
         #        self.elevationRay.setOrigin(x,y,1000)
         #        self.cTrav.traverse(render)
@@ -694,7 +697,7 @@ class ShaderTexturer(DetailTexturer):
         #self.terrain.setShaderInput("light", Vec4(100.0,100.0,100.0,100.0))
         
         ### texture scaling
-        texScale = self.terrain.tileSize/32
+        texScale = self.terrain.tileSize / 32 * self.terrain.horizontalScale
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
         ### Load textures
@@ -745,7 +748,7 @@ class ShaderTexturer(DetailTexturer):
         #self.terrain.setShaderInput("light", Vec4(100.0,100.0,100.0,100.0))
 
         ### texture scaling
-        texScale = self.terrain.tileSize/32
+        texScale = self.terrain.tileSize / 32 * self.terrain.horizontalScale
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
         ### Load textures
@@ -764,12 +767,12 @@ class ShaderTexturer(DetailTexturer):
         # this is half the blend area between each texture
         blendRadius = self.terrain.maxHeight * 0.11 + 0.5
         transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
-                                 self.terrain.maxHeight * 0.52,
-                                 self.terrain.maxHeight * 0.82)
+                                 self.terrain.maxHeight * 0.50,
+                                 self.terrain.maxHeight * 0.80)
 
         # regionLimits ( max height, min height, slope max, slope min )
         self.region1 = Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0)
-        self.region2 = Vec4(transitionHeights.getZ() - blendRadius/2, transitionHeights.getX() - blendRadius, 0.45, 0)
+        self.region2 = Vec4(transitionHeights.getZ() - blendRadius, transitionHeights.getX() - blendRadius, 0.45, 0)
         self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getX(), 1.0, 0.2)
         self.region4 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0)
 
