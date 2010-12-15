@@ -28,6 +28,16 @@ from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from direct.task.Task import Task
 from operator import itemgetter
+from direct.showbase.RandomNumGen import *
+from panda3d.core import TimeVal
+
+""" Panda3d GeoMipTerrain tips:
+least detail = max detail level = log(block_size) / log(2)
+most detail = min detail level = 0
+Block size does not effect the detail level. It only limits the max detail level.
+Each block in a GeoMipTerrain can set its own detail level on update if
+bruteforce is disabled.
+"""
 
 ###############################################################################
 #   TerrainTile
@@ -60,8 +70,8 @@ class TerrainTile(GeoMipTerrain):
             GeoMipTerrain.setBruteforce(self, True)
         else:
             self.setBorderStitching(1)
-        self.setNear(self.terrain.near)
-        self.setFar(self.terrain.far)
+            self.setNear(self.terrain.near)
+            self.setFar(self.terrain.far)
         
         #self.generateNoiseObjects()
         #self.make()
@@ -82,7 +92,7 @@ class TerrainTile(GeoMipTerrain):
 
         GeoMipTerrain.setHeightfield(self, filename)
 
-    def setHeight(self):
+    def setHeightFromFile(self):
         """Set the heightfield to the the image file or generate a new one."""
 
         if (self.image.getXSize() < 1):
@@ -92,11 +102,16 @@ class TerrainTile(GeoMipTerrain):
                 self.image.read(Filename(self.mapName))
         self.setHeightField(Filename(self.mapName))
 
+    def setHeight(self):
+        """Sets the height to the image."""
+        self.setHeightField(self.image)
+
     def makeHeightMap(self):
         """Generate a new heightmap image to use."""
 
         self.image = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
         self.image.makeGrayscale()
+        # these may be redundant
         self.image.setNumChannels(1)
         self.image.setMaxval(65535)
 
@@ -104,7 +119,7 @@ class TerrainTile(GeoMipTerrain):
         #        min = 9999.0
         #        height = 0
 
-            # return the minimum and maximum, useful to normalize the heightmap
+        # return the minimum and maximum, useful to normalize the heightmap
         #        for x in range(self.xOffset, self.xOffset + self.image.getXSize()):
         #            for y in range(self.yOffset, self.yOffset + self.image.getYSize()):
         #                height = self.terrain.getHeight(x, y)
@@ -118,25 +133,18 @@ class TerrainTile(GeoMipTerrain):
 
         #print "generating heightmap for offsets: ",self.xOffset,self.yOffset
 
+        ySize = self.image.getYSize()
+        getHeight = self.terrain.getHeight
+        setGray = self.image.setGray
+
         for x in range(self.image.getXSize()):
-            for y in range(self.image.getYSize()):
-                height = self.terrain.getHeight(x + self.xOffset, y + self.yOffset)
-                #normalize height
-                #height = (height - min) / (max-min)
-                #feed pixel into image
-                #why is it necessary to invert the y axis I wonder?
-                self.image.setGray(x, self.image.getYSize()-1-y, height)
-                #this is just a test
-                #if height < normalMin:
-                #    normalMin = height
-                #if height > normalMax:
-                #    normalMax = height
-
-        self.postProcessImage()
-
-        #print ("Prenomalized max = " + str(max))
-        #print ("Prenomalized min = " + str(min))
-        self.image.write(Filename(self.mapName))
+            for y in range(ySize):
+                height = getHeight(x + self.xOffset, y + self.yOffset)
+                #  feed pixel into image
+                # why is it necessary to invert the y axis I wonder?
+                setGray(x, ySize-1-y, height)
+        #self.postProcessImage()
+        #self.image.write(Filename(self.mapName))
 
     def postProcessImage(self):
         """Perform filters and manipulations on the heightmap image."""
@@ -149,7 +157,6 @@ class TerrainTile(GeoMipTerrain):
     def make(self):
         """Build a finished renderable heightMap."""
 
-        #self.generateNoiseObjects()
         self.makeHeightMap()
         self.setHeight()
         #self.getRoot().setSz(self.maxHeight)
@@ -157,44 +164,82 @@ class TerrainTile(GeoMipTerrain):
 
 
 ###############################################################################
+#   CachingTerrainTile
+###############################################################################
+
+class CachingTerrainTile(TerrainTile):
+    def setHeightField(self, filename):
+        """Set the GeoMip heightfield from a heightmap image."""
+
+        GeoMipTerrain.setHeightfield(self, filename)
+
+    def setHeight(self):
+        """Set the heightfield to the the image file or generate a new one."""
+
+        if (self.image.getXSize() < 1):
+            self.image.read(Filename(self.mapName))
+            if (self.image.getXSize() < 1):
+                self.makeHeightMap()
+                self.image.read(Filename(self.mapName))
+        self.setHeightField(Filename(self.mapName))
+
+    def makeHeightMap(self):
+        """Generate a new heightmap image to use."""
+        TerrainTile.makeHeightMap(self)
+        self.image.write(Filename(self.mapName))
+
+
+###############################################################################
 #   Terrain
 ###############################################################################
 
 class Terrain(NodePath):
-    def __init__(self, name, focus, id = 321):
+    """A terrain contains a set of geomipmaps, and maintains their common properties."""
+
+    def __init__(self, name, focus, id = 0):
+        """The focus is the NodePath where the LOD is the greatest.
+            id is a seed for the map and unique name for any cached heightmap images
+
+        """
+
         NodePath.__init__(self, name)
 
         self.name = name
 
-        ### tile physical properties
+        ##### tile physical properties
         self.maxHeight = 200
-        self.tileSize = 128
+        self.tileSize = 64
         self.heightMapSize = self.tileSize + 1
-        self.consistency = 1000 # how quickly altitude and roughness shift
-        self.smoothness = 150 # the overall smoothness/roughness of the terrain
+
+        ##### heightmap properties
+        self.smoothness = self.tileSize # the overall smoothness/roughness of the terrain
+        self.consistency = self.smoothness * 8 # how quickly altitude and roughness shift
         self.waterHeight = 0.3 # out of a max of 1.0
         # for realism the flatHeight should be at or very close to waterHeight
         self.flatHeight = self.waterHeight+0.03
+        self.dice = RandomNumGen(TimeVal().getUsec())
+        if id == 0:
+            id = self.dice.randint(2,1000000)
         self.id = id
+        #creates noise objects that will be used by the getHeight function
+        self.generateNoiseObjects()
 
-        ### rendering properties
+        ##### rendering properties
         self.bruteForce = True
-        #alterblocksize of terrain tiles based on distance
-        #this works well with bruteforce terrain.
-        self.lodBlockSize = self.bruteForce
-        self.blockSize = 16
-        self.midBlockSize = 64
-        self.farBlockSize = 128
-        self.near = 40
-        self.far = 100
+        if self.bruteForce:
+            self.blockSize = self.tileSize
+        else:
+            self.blockSize = 16
+            self.near = 40
+            self.far = 100
         self.wireFrame = 0
         self.texturer = ShaderTexturer(self)
         #self.texturer = DetailTexturer(self)
         self.texturer.load()
 
-        ### tile generation
+        ##### Terrain scale and tile distances
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 1000
+        self.maxViewRange = 600
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize/2
@@ -202,45 +247,53 @@ class Terrain(NodePath):
         # make smaller to shrink some overhead
         self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
         self.focus = focus
-
-        self.generateNoiseObjects()
-
-        self.tiles = {}
-
-        #self.makeNewTiles(focus.getX(), focus.getY())
-
+        #scale the terrain vertically to its maximum height
         self.setSz(self.maxHeight)
+
+        #####
+        # stores all terrain tiles that make up the terrain
+        self.tiles = {}
+        #currently unused
         self.setupElevationRay()
+        #this is a placeholder for a tile currently under construction
+        self.dummyTile = TerrainTile(self, 0, 0)
+        #self._setupSimpleTasks()
+        self._setupThreadedTasks()
+        #loads all terrain tiles in range immediately
+        self.preload(self.focus.getX(), self.focus.getY())
 
-        #Add tasks to keep updating the terrain
-        #def setupTaskChain(self, chainName, numThreads=None, tickClock=None,
-        #       threadPriority=None, frameBudget=None, timeslicePriority=None)
+    def _setupSimpleTasks(self):
+        ##Add tasks to keep updating the terrain
+        #taskMgr.add(self.updateTask, "updateTiles", sort=9, priority=0)
+        taskMgr.add(self.tileBuilderTask, "loadTiles", sort=9, priority=0)
 
-        taskMgr.setupTaskChain('updateTilesChain', numThreads=1, tickClock=0,
-                               threadPriority=0, frameBudget=0.1,
-                               frameSync=False, timeslicePriority=True)
-        taskMgr.add(self.updateTask, "updateTiles", taskChain='updateTilesChain',
-                    sort=99, priority=0)
+    def _setupThreadedTasks(self):
+        ##Add tasks to keep updating the terrain
+        ##def setupTaskChain(self, chainName, numThreads=None, tickClock=None,
+        ##        threadPriority=None, frameBudget=None, timeslicePriority=None)
 
-        taskMgr.setupTaskChain('loadTilesChain', numThreads=2, tickClock=0,
-                               threadPriority=1, frameBudget=0.2,
-                               frameSync=False, timeslicePriority=True)
-        taskMgr.add(self.tileBuilderTask, "loadTiles", taskChain='loadTilesChain',
-                    sort=99, priority=0)
-
-        if self.bruteForce:
-            taskMgr.setupTaskChain('blockSizeUpdateChain', numThreads=1, tickClock=0,
-                                   threadPriority=0, frameBudget=0.1,
-                                   frameSync=False, timeslicePriority=True)
-            taskMgr.add(self.blockSizeUpdateTask, "blockSizeUpdate",
-                        taskChain='blockSizeUpdateChain', sort=99, priority=0)
-
-        #taskMgr.setupTaskChain('terrain', numThreads=3, tickClock=0,
+        #taskMgr.setupTaskChain('updateTilesChain', numThreads=1, tickClock=0,
         #                       threadPriority=0, frameBudget=0.1,
         #                       frameSync=False, timeslicePriority=True)
-        #taskMgr.add(self.updateTask, 'updateTiles', taskChain='terrain')
-        #taskMgr.add(self.tileBuilderTask, 'loadTiles', taskChain='terrain')
+        #taskMgr.add(self.updateTask, "updateTiles", taskChain='updateTilesChain',
+        #            sort=1, priority=0)
 
+        taskMgr.setupTaskChain('tileBuilderChain', numThreads=1, tickClock=0,
+                               threadPriority=1, frameBudget=0.2,
+                               frameSync=False, timeslicePriority=True)
+        taskMgr.add(self.tileBuilderTask, "loadTiles", taskChain='tileBuilderChain',
+                    sort=1, priority=0)
+
+        taskMgr.setupTaskChain('tileGenerationQueue', numThreads=3, tickClock=0,
+                            threadPriority=1, frameBudget=0.2,
+                            frameSync=False, timeslicePriority=True)
+
+        #if self.bruteForce:
+        #    taskMgr.setupTaskChain('blockSizeUpdateChain', numThreads=1, tickClock=0,
+        #                           threadPriority=0, frameBudget=0.1,
+        #                           frameSync=False, timeslicePriority=True)
+        #    taskMgr.add(self.blockSizeUpdateTask, "blockSizeUpdate",
+        #                taskChain='blockSizeUpdateChain', sort=1, priority=0)
 
     def updateTask(self, task):
         """This task updates each tile, which updates the LOD.
@@ -260,67 +313,104 @@ class Terrain(NodePath):
 
         return task.again
 
-    def blockSizeUpdateTask(self, task):
+    def blockLodUpdateTask(self, task):
+        """This task will alter the blocksize of each TerrainTile to control
+            the level of detail depending on their distances.
+
+        """
 
         x = self.focus.getX()
         y = self.focus.getY()
         center = self.tileSize * 0.5
 
+        # switch to high, mid, and low LOD's at these distances
+        # having a gap between the zones avoids switching back and forth too
+        # if the focus is moving erratically
+        hlEnd   = self.minTileDistance * 0.20 + center
+        mlStart = self.minTileDistance * 0.25 + center
+        mlEnd   = self.minTileDistance * 0.50 + center
+        llStart = self.minTileDistance * 0.55 + center
+
         for pos, tile in self.tiles.items():
             deltaX = x - tile.xOffset + center
             deltaY = y - tile.yOffset + center
             distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
-            if distance < self.minTileDistance * 0.20 + center:
-                self.setBlockSize(tile, self.blockSize)
-            elif distance < self.minTileDistance * 0.50 + center \
-                 and distance > self.minTileDistance * 0.25  + center:
-                self.setBlockSize(tile, self.midBlockSize)
-            elif distance > self.minTileDistance * 0.55  + center:
-                self.setBlockSize(tile, self.farBlockSize)
+            if distance < hlEnd:
+                tile.setMinDetailLevel(0)
+            elif distance < mlEnd and distance > mlStart:
+                tile.setMinDetailLevel(1)
+            elif distance > llStart:
+                tile.setMinDetailLevel(2)
 
         return task.again
 
-    def setBlockSize(self, tile, size):
+    def preload(self, xpos = 1, ypos = 1):
 
-        if tile.getBlockSize() == size:
-            return
+        xstart = (int(xpos) / self.tileSize) * self.tileSize
+        ystart = (int(ypos) / self.tileSize) * self.tileSize
+        radius = (int(self.maxTileDistance) / self.tileSize + 1) * self.tileSize
+        halfTile = self.tileSize * 0.5
+        maxDistanceSquared = (self.minTileDistance + self.maxTileDistance) / 2
+        maxDistanceSquared = maxDistanceSquared * maxDistanceSquared
 
-        tile.setBlockSize(size)
-        #tile.generate()
+        for x in range (xstart - radius, xstart + radius, self.tileSize):
+            for y in range (ystart - radius, ystart + radius, self.tileSize):
+                if not Vec2(x, y) in self.tiles:
+                    deltaX = xpos - (x + halfTile)
+                    deltaY = ypos - (y + halfTile)
+                    distanceSquared = deltaX * deltaX + deltaY * deltaY
 
+                    if distanceSquared < maxDistanceSquared:
+                        self._generateTile(x,y)
+                        #self.dispatchNewTileAt(x,y)
+        
     def makeNewTile(self, x, y):
-        """generate the closest terrain tile needed."""
+        """Generate the closest terrain tile needed."""
 
         xstart = (int(x) / self.tileSize) * self.tileSize
         ystart = (int(y) / self.tileSize) * self.tileSize
-        radius = (self.minTileDistance / self.tileSize + 2) * self.tileSize
+        radius = (self.minTileDistance / self.tileSize + 1) * self.tileSize
         halfTile = self.tileSize * 0.49
 
         #print xstart, ystart, radius
         vec = 0
-        minDistance = 99999.0
+        minFoundDistance = 99999999.0
+        minDistanceSq = self.minTileDistance * self.minTileDistance
 
         for checkX in range (xstart - radius, xstart + radius, self.tileSize):
             for checkY in range (ystart - radius, ystart + radius, self.tileSize):
-                deltaX = x - (checkX + halfTile)
-                deltaY = y - (checkY + halfTile)
-                distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
+                if not Vec2(checkX, checkY) in self.tiles:
+                    deltaX = x - (checkX + halfTile)
+                    deltaY = y - (checkY + halfTile)
+                    distanceSq = deltaX * deltaX + deltaY * deltaY
 
-                if distance < self.minTileDistance and distance < minDistance:
-                    if not Vec2(checkX, checkY) in self.tiles:
-                        minDistance = distance
+                    if distanceSq < minDistanceSq and distanceSq < minFoundDistance:
+                        minFoundDistance = distanceSq
                         vec = Vec2(checkX, checkY)
         if not vec == 0:
-            self.generateTile(vec.getX(), vec.getY())
+            #print distance," < ",self.minTileDistance," and ",distance," < ",minDistance
+            #self.generateTile(vec.getX(), vec.getY())
+            self.dispatchNewTileAt(vec.getX(), vec.getY())
 
-    def generateTile(self, x, y):
+    def dispatchNewTileAt(self, x, y):
+        """Dispatch a task to create a tile at the input coordinates."""
+        self.dummyTile.xOffset = x
+        self.dummyTile.yOffset = y
+        self.tiles[Vec2(x, y)] = self.dummyTile
+        taskMgr.add(self._generateTileTask, name = "generateTile",
+        extraArgs = [x, y], appendTask=True,
+        taskChain='tileGenerationQueue', sort=1, priority=1)
+
+    def _generateTileTask(self, x, y, task):
+        """Task wrapper for _generateTile. Probably redundant now..."""
+        self._generateTile(x,y)
+        return task.done
+
+    def _generateTile(self, x, y):
         """Creates a terrain tile at the input coordinates."""
 
         tile = TerrainTile(self, x, y)
-        if (self.lodBlockSize):
-            tile.setBlockSize(self.farBlockSize)
-        else:
-            tile.setBlockSize(self.blockSize)
+        tile.setBlockSize(self.blockSize)
         tile.make()
         #np = self.attachNewNode("tileNode")
         #np.reparentTo(self)
@@ -345,15 +435,17 @@ class Terrain(NodePath):
 
         center = self.tileSize * 0.5
         for pos, tile in self.tiles.items():
-            deltaX = x - tile.xOffset + center
-            deltaY = y - tile.yOffset + center
-            distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
-            if distance > self.maxTileDistance:
+            deltaX = x - (tile.xOffset + center)
+            deltaY = y - (tile.yOffset + center)
+            distance = deltaX * deltaX + deltaY * deltaY
+            if distance > self.maxTileDistance * self.maxTileDistance:
+                #print distance, " > ", self.maxTileDistance * self.maxTileDistance
                 self.removeTile(pos, tile)
 
     def removeTile(self, pos, tile):
         """Removes a specific tile from the Terrain"""
-
+        
+        self.tiles[pos].getRoot().detachNode()
         del self.tiles[pos]
         print "Tile removed from",pos
 
@@ -406,10 +498,12 @@ class Terrain(NodePath):
 
         """
 
-        return ((self.perlin1(x, y) + 1 - self.flatHeight) / 4 + \
-                ((self.perlin1(x, y) + 1 - self.flatHeight) * \
-                (self.perlin2(x, y) + 1 - self.flatHeight)) / 8) \
-                + self.flatHeight
+        # all of these should be in the range of 0 to 1
+        p1 = (self.perlin1(x, y) + 1) / 2
+        p2 = (self.perlin2(x, y) + 1) / 2
+        fh = self.flatHeight
+        
+        return (p1 - fh) / 2 + (p1 - fh) * (p2 - fh) / 4 + fh
 
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
@@ -676,7 +770,7 @@ class ShaderTexturer(DetailTexturer):
         # regionLimits ( max height, min height, slope max, slope min )
         self.region1 = Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0)
         self.region2 = Vec4(transitionHeights.getZ() - blendRadius/2, transitionHeights.getX() - blendRadius, 0.45, 0)
-        self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getX(), 1.0, 0.1)
+        self.region3 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getX(), 1.0, 0.2)
         self.region4 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0)
 
         self.terrain.setShaderInput("region1ColorMap", self.tex1)
