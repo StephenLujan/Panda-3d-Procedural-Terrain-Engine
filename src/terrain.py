@@ -230,7 +230,7 @@ class Terrain(NodePath):
 
         ##### Terrain scale and tile distances
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 500
+        self.maxViewRange = 400
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize / 2

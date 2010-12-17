@@ -14,6 +14,7 @@ from pandac.PandaModules import TextureStage
 from panda3d.core import Shader
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import Vec3
+from terrainshadergenerator import *
 
 ###############################################################################
 #   TerrainTexturer
@@ -80,7 +81,7 @@ class DetailTexturer(TerrainTexturer):
         self.monoTexture = tex
 
         self.detailTS = TextureStage('ts2')
-        tex = self.loadTexture("Detail.png")
+        tex = self.loadTexture("Detail4.jpg")
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.detailTexture = tex
@@ -199,7 +200,7 @@ class ShaderTexturer(DetailTexturer):
     def loadShader4(self):
         """Textures based on altitude and slope. My own version. Normal data appears broken."""
 
-        self.shader = Shader.load('shaders/stephen4.sha', Shader.SLCg)
+        
         #self.shader = Shader.load('shaders/9.sha', Shader.SLCg)
         #self.shader = Shader.load('shaders/filter-vlight.cg', Shader.SLCg)
         #self.terrain.setShaderInput("casterpos", Vec4(100.0,100.0,100.0,100.0))
@@ -229,24 +230,26 @@ class ShaderTexturer(DetailTexturer):
                                  self.terrain.maxHeight * 0.80)
 
         # regionLimits ( max height, min height, slope max, slope min )
-        self.region1 = Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0)
-        self.region2 = Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX() - blendRadius, 0.30, 0)
-        self.region3 = Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX()- blendRadius, 1.0, 0.15)
-        self.region4 = Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getY() - blendRadius, 1.0, 0)
-        self.region5 = Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0)
+        sg = TerrainShaderGenerator(self.terrain)
 
-        self.terrain.setShaderInput("region1ColorMap", self.tex1)
-        self.terrain.setShaderInput("region2ColorMap", self.tex2)
-        self.terrain.setShaderInput("region3ColorMap", self.tex3)
-        self.terrain.setShaderInput("region4ColorMap", self.tex4)
+        sg.addTex(self.tex1)
+        sg.addRegionToTex(Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0))
+
+        sg.addTex(self.tex2)
+        sg.addRegionToTex(Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX() - blendRadius, 0.30, 0))
+
+        sg.addTex(self.tex3)
+        sg.addRegionToTex(Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX()- blendRadius, 1.0, 0.15))
+        sg.addRegionToTex(Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getY() - blendRadius, 1.0, 0))
+
+        sg.addTex(self.tex4)
+        sg.addRegionToTex(Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0))
+        sg.createShader()
+
         self.terrain.setShaderInput("detailTexture", self.detailTexture)
-        self.terrain.setShaderInput("region1Limits", self.region1) #color1
-        self.terrain.setShaderInput("region2Limits", self.region2) #color2
-        self.terrain.setShaderInput("region3Limits", self.region3) #color3
-        self.terrain.setShaderInput("region4Limits", self.region4) #color3
-        self.terrain.setShaderInput("region5Limits", self.region5) #color4
         self.terrain.setShaderInput('tscale', self.texScale)
 
+        self.shader = Shader.load('shaders/stephen5.sha', Shader.SLCg)
         self.terrain.setShader(self.shader)
 
     def texturize(self, tile):
