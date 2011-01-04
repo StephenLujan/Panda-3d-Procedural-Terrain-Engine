@@ -232,17 +232,17 @@ class ShaderTexturer(DetailTexturer):
         # regionLimits ( max height, min height, slope max, slope min )
         sg = TerrainShaderGenerator(self.terrain)
 
-        sg.addTex(self.tex1)
+        sg.addTexture(self.tex1)
         sg.addRegionToTex(Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0))
 
-        sg.addTex(self.tex2)
+        sg.addTexture(self.tex2)
         sg.addRegionToTex(Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX() - blendRadius, 0.30, 0))
 
-        sg.addTex(self.tex3)
+        sg.addTexture(self.tex3)
         sg.addRegionToTex(Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX()- blendRadius, 1.0, 0.15))
         sg.addRegionToTex(Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getY() - blendRadius, 1.0, 0))
 
-        sg.addTex(self.tex4)
+        sg.addTexture(self.tex4)
         sg.addRegionToTex(Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0))
         sg.createShader()
 
