@@ -260,7 +260,7 @@ class World(DirectObject):
         self.accept("y", self.setKey, ["invert-y", 1])
         self.accept("shift", self.setKey, ["turbo", 1])
         self.accept("f11", self.screenShot)
-        #self.accept("space", self.terrain.make )
+        self.accept("space", self.terrain.initializeHeightMap )
         self.accept("l", self.terrain.toggleWireFrame )
         #self.accept("+", self.setKey, ["option+",1])
         #self.accept("-", self.setKey, ["option-",1])

@@ -206,27 +206,17 @@ class Terrain(NodePath):
 
         NodePath.__init__(self, name)
 
+        ### Basic Parameters
         self.name = name
+        # nodepath to center of the level of detail
+        self.focus = focus
+        # stores all terrain tiles that make up the terrain
+        self.tiles = {}
 
-        ##### tile physical properties
+        ##### Terrain Tile physical properties
         self.maxHeight = 350
         self.tileSize = 64
         self.heightMapSize = self.tileSize + 1
-
-        ##### heightmap properties
-        # the overall smoothness/roughness of the terrain
-        self.smoothness = 55
-        # how quickly altitude and roughness shift
-        self.consistency = self.smoothness * 8
-        self.waterHeight = 0.3 # out of a max of 1.0
-        # for realism the flatHeight should be at or very close to waterHeight
-        self.flatHeight = self.waterHeight + 0.07
-        self.dice = RandomNumGen(TimeVal().getUsec())
-        if id == 0:
-            id = self.dice.randint(2, 1000000)
-        self.id = id
-        #creates noise objects that will be used by the getHeight function
-        self.generateNoiseObjects()
 
         ##### Terrain scale and tile distances
         # Don't show untiled terrain below this distance etc.
@@ -237,14 +227,54 @@ class Terrain(NodePath):
         # make larger to avoid excess loading when milling about a small area
         # make smaller to shrink some overhead
         self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
-        self.focus = focus
-        #scale the terrain vertically to its maximum height
+        
+        # scale the terrain vertically to its maximum height
         self.setSz(self.maxHeight)
+        # scale horizontally to appearance/performance balance
         self.horizontalScale = 1.5
         self.setSx(self.horizontalScale)
         self.setSy(self.horizontalScale)
 
+        ##### heightmap properties
+        self.initializeHeightMap(id)
+
         ##### rendering properties
+        self.initializeRenderingProperties()
+
+        ##### task handling
+        #self._setupSimpleTasks()
+        self._setupThreadedTasks()
+
+        # newTile is a placeholder for a tile currently under construction
+        # this has to be initialized last because it requires values from self
+        self.newTile = TerrainTile(self, 0, 0)
+        # loads all terrain tiles in range immediately
+        self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
+
+    def initializeHeightMap(self, id = 0):
+        """ """
+
+        #Remove old tiles that will not conform to a new heightmap
+        for pos, tile in self.tiles.items():
+            self.removeTile(pos)
+
+        # the overall smoothness/roughness of the terrain
+        self.smoothness = 55
+        # how quickly altitude and roughness shift
+        self.consistency = self.smoothness * 8
+        # waterHeight is expressed as a multiplier to the max height
+        self.waterHeight = 0.3 
+        # for realism the flatHeight should be at or very close to waterHeight
+        self.flatHeight = self.waterHeight + 0.04
+        self.dice = RandomNumGen(TimeVal().getUsec())
+        if id == 0:
+            id = self.dice.randint(2, 1000000)
+        self.id = id
+        #creates noise objects that will be used by the getHeight function
+        self.generateNoiseObjects()
+
+
+    def initializeRenderingProperties(self):
         self.bruteForce = True
         if self.bruteForce:
             self.blockSize = self.tileSize
@@ -256,19 +286,6 @@ class Terrain(NodePath):
         self.texturer = ShaderTexturer(self)
         #self.texturer = DetailTexturer(self)
         self.texturer.load()
-
-
-        #####
-        # stores all terrain tiles that make up the terrain
-        self.tiles = {}
-        #currently unused
-        self.setupElevationRay()
-        #this is a placeholder for a tile currently under construction
-        self.dummyTile = TerrainTile(self, 0, 0)
-        #self._setupSimpleTasks()
-        self._setupThreadedTasks()
-        #loads all terrain tiles in range immediately
-        self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""
@@ -389,7 +406,7 @@ class Terrain(NodePath):
 
         #print xstart, ystart, radius
         vec = 0
-        minFoundDistance = 99999999.0
+        minFoundDistance = 9999999999.0
         minDistanceSq = self.minTileDistance * self.minTileDistance
 
         for checkX in range (xstart - radius, xstart + radius, self.tileSize):
@@ -409,9 +426,10 @@ class Terrain(NodePath):
 
     def dispatchNewTileAt(self, x, y):
         """Dispatch a task to create a tile at the input coordinates."""
-        self.dummyTile.xOffset = x
-        self.dummyTile.yOffset = y
-        self.tiles[Vec2(x, y)] = self.dummyTile
+        self.newTile.xOffset = x
+        self.newTile.yOffset = y
+        self.tiles[Vec2(x, y)] = self.newTile
+        #generateTile(x,y)
         taskMgr.add(self._generateTileTask, name="_generateTile",
                     extraArgs=[x, y], appendTask=True,
                     taskChain='tileGenerationQueue', sort=1, priority=1)
@@ -450,9 +468,9 @@ class Terrain(NodePath):
             distance = deltaX * deltaX + deltaY * deltaY
             if distance > self.maxTileDistance * self.maxTileDistance:
                 #print distance, " > ", self.maxTileDistance * self.maxTileDistance
-                self.removeTile(pos, tile)
+                self.removeTile(pos)
 
-    def removeTile(self, pos, tile):
+    def removeTile(self, pos):
         """Removes a specific tile from the Terrain."""
 
         self.tiles[pos].getRoot().detachNode()
@@ -516,7 +534,16 @@ class Terrain(NodePath):
         # p2 introduces the visible noise and roughness
         # when p1 is high the altitude will be high overall
         # when p1 is close to fh most of the visible noise will be muted
-        return (p1 - fh) / 2 + (p1 - fh) * (p2 - fh) / 4 + fh
+        return (p1 - fh + (p1 - fh) * (p2 - fh)) / 2 + fh
+        # if p1 = fh, the whole equation simplifies to...
+        # 1. (fh - fh + (fh - fh) * (p2 - fh)) / 2 + fh
+        # 2. ( 0 + 0 * (p2 - fh)) / 2 + fh
+        # 3. (0 + 0 ) / 2 + fh
+        # 4. fh
+        # The important part to understanding the equation is at step 2.
+        # The closer p1 is to fh, the smaller the mutiplier for p2 becomes.
+        # As p2 diminishes, so does the roughness.
+
 
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
