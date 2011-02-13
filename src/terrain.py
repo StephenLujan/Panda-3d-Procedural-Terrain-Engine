@@ -214,13 +214,13 @@ class Terrain(NodePath):
         self.tiles = {}
 
         ##### Terrain Tile physical properties
-        self.maxHeight = 350
+        self.maxHeight = 300
         self.tileSize = 64
         self.heightMapSize = self.tileSize + 1
 
         ##### Terrain scale and tile distances
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 400
+        self.maxViewRange = 200
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize / 2

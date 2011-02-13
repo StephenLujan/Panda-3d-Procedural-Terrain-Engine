@@ -41,6 +41,7 @@ from pandac.PandaModules import Vec4
 from pandac.PandaModules import WindowProperties
 from pandac.PandaModules import PStatClient
 from terrain import *
+from gui import *
 
 ###############################################################################
 
@@ -284,6 +285,8 @@ class World(DirectObject):
         self.accept("mouse3-up", self.setMouseBtn, [2, 0])
         self.accept("wheel_up", self.setMouseBtn, [3, 1])
         self.accept("wheel_down", self.setMouseBtn, [3, -1])
+        self.accept("mouse3", self.toggleMouseLook)
+        self.mouseLook = True
 
         # ---- tasks -------------------------------------
         # Ralph movement
@@ -310,6 +313,8 @@ class World(DirectObject):
 
         self.bugstring = ''
 
+        self.shaderControl = ShaderRegionControl(-0.65,-0.35,1,self.terrain)
+
 	###########################################################################
 
     def _setup_camera(self):
@@ -322,6 +327,9 @@ class World(DirectObject):
         #cam.setTagState('True', RenderState.make(sa))
 
     def move(self, task):
+        if not self.mouseLook:
+            return
+        
         elapsed = task.time - self.prevtime
         if self.firstmove > 0:
             self.pitch = -9.0
@@ -339,6 +347,7 @@ class World(DirectObject):
         # in case he falls off the map or runs into something.
         # this doesn't work now, with collision detection removed, needs fixing
         startpos = self.ralph.getPos()
+
 
         # use the mouse to look around and set Ralph's direction
         isMouseTurning = False
@@ -528,6 +537,13 @@ class World(DirectObject):
     # records the state of the mouse
     def setMouseBtn(self, btn, value):
         self.mousebtn[btn] = value
+
+    def toggleMouseLook(self):
+        self.mouseLook = not self.mouseLook
+        props = WindowProperties()
+        props.setCursorHidden(self.mouseLook)
+        base.win.requestProperties(props)
+        print "toggleMouseLook"
 
     def screenShot(self):
         base.screenshot()

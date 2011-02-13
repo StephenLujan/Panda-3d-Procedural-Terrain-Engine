@@ -205,7 +205,10 @@ class TerrainShaderGenerator:
         for tex in self.textures:
             self.terrain.setShaderInput('texUnit' + str(texNum), tex.tex)
             for region in tex.regions:
-                self.terrain.setShaderInput('region' + str(regionNum) + 'Limits', region)
+                key = 'region' + str(regionNum) + 'Limits'
+                value = region
+                #self.terrain.shaderRegions[key] = value
+                self.terrain.setShaderInput(key, value)
                 regionNum += 1
             texNum += 1
 
