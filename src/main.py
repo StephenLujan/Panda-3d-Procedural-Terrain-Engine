@@ -313,9 +313,28 @@ class World(DirectObject):
 
         self.bugstring = ''
 
-        self.shaderControl = ShaderRegionControl(-0.65,-0.35,1,self.terrain)
+        # Add button
+        self.v = [0]
+        self.shaderControl = ShaderRegionControl(-0.65,-0.35,self.v[0],self.terrain)
+        
+        self.buttons = []
+        iter = 0
+        while (self.terrain.getShaderInput('region' + str(iter) + 'Limits').getValueType()):
+            button = DirectRadioButton(text = 'Region '+ str(iter), variable=self.v,
+                value=[iter], scale=0.05, pos=(-1 + iter *0.3,0.04,0), command=self.switchShaderControl)
+            self.buttons.append(button)
+            print 'adding region '+ str(iter)
+            iter += 1
 
-	###########################################################################
+        for button in self.buttons:
+            button.setOthers(self.buttons)
+
+    ###########################################################################
+
+    # Callback function for radio buttons
+    def switchShaderControl(self,status=None):
+        self.shaderControl.destroy()
+        self.shaderControl = ShaderRegionControl(-0.65,-0.35,self.v[0],self.terrain)
 
     def _setup_camera(self):
         #sa = sa.setShader(loader.loadShader('shaders/stephen.sha'))
