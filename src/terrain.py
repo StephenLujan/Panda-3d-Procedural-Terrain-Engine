@@ -24,6 +24,7 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import PandaNode
 from pandac.PandaModules import Point3
 from pandac.PandaModules import Vec2
+from pstat_debug import pstat
 
 from terraintexturer import *
 
@@ -82,18 +83,19 @@ class TerrainTile(GeoMipTerrain):
 
         self.update(task)
         return task.again
-
+    #@pstat
     def setHeightField(self, filename):
         """Set the GeoMip heightfield from a heightmap image."""
 
         GeoMipTerrain.setHeightfield(self, filename)
 
-
+    #@pstat
     def setHeight(self):
         """Sets the height field to match the height map image."""
 
         self.setHeightField(self.image)
 
+    #@pstat
     def makeHeightMap(self):
         """Generate a new heightmap image.
 
@@ -148,6 +150,7 @@ class TerrainTile(GeoMipTerrain):
     def wireframe(self):
         self.getRoot().setRenderModeWireframe()
 
+    #@pstat
     def make(self):
         """Build a finished renderable heightMap."""
 
@@ -219,19 +222,21 @@ class Terrain(NodePath):
         self.heightMapSize = self.tileSize + 1
 
         ##### Terrain scale and tile distances
+        # distances are measured in tile's smallest unit
+        # conversion to world units may be necessary
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 300
+        self.maxViewRange = 500
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize / 2
         # make larger to avoid excess loading when milling about a small area
-        # make smaller to shrink some overhead
+        # make smaller to reduce geometry and other overhead
         self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
         
         # scale the terrain vertically to its maximum height
         self.setSz(self.maxHeight)
         # scale horizontally to appearance/performance balance
-        self.horizontalScale = 1.5
+        self.horizontalScale = 1.0
         self.setSx(self.horizontalScale)
         self.setSy(self.horizontalScale)
 
@@ -242,8 +247,8 @@ class Terrain(NodePath):
         self.initializeRenderingProperties()
 
         ##### task handling
-        #self._setupSimpleTasks()
-        self._setupThreadedTasks()
+        self._setupSimpleTasks()
+        #self._setupThreadedTasks()
 
         # newTile is a placeholder for a tile currently under construction
         # this has to be initialized last because it requires values from self
@@ -259,7 +264,7 @@ class Terrain(NodePath):
             self.removeTile(pos)
 
         # the overall smoothness/roughness of the terrain
-        self.smoothness = 55
+        self.smoothness = 80
         # how quickly altitude and roughness shift
         self.consistency = self.smoothness * 8
         # waterHeight is expressed as a multiplier to the max height
@@ -395,7 +400,7 @@ class Terrain(NodePath):
                     if distanceSquared < maxDistanceSquared:
                         self._generateTile(x, y)
                         #self.dispatchNewTileAt(x,y)
-
+    #@pstat
     def makeNewTile(self, x, y):
         """Generate the closest terrain tile needed."""
 
@@ -439,6 +444,7 @@ class Terrain(NodePath):
         self._generateTile(x, y)
         return task.done
 
+    #@pstat
     def _generateTile(self, x, y):
         """Creates a terrain tile at the input coordinates."""
 
@@ -458,6 +464,7 @@ class Terrain(NodePath):
         print "tile generated at", x, y
         return tile
 
+    #@pstat
     def removeOldTiles(self, x, y):
         """Remove distant tiles to free system resources."""
 

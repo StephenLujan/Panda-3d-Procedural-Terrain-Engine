@@ -4,16 +4,16 @@
 # This file contains all of the TerrainTexturers
 ###
 
-__author__="Stephen"
-__date__ ="$Dec 15, 2010 2:14:33 AM$"
+__author__ = "Stephen"
+__date__ = "$Dec 15, 2010 2:14:33 AM$"
 
 
+from panda3d.core import Shader
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
-from panda3d.core import Shader
-from pandac.PandaModules import Vec4
 from pandac.PandaModules import Vec3
+from pandac.PandaModules import Vec4
 from terrainshadergenerator import *
 
 ###############################################################################
@@ -244,13 +244,18 @@ class ShaderTexturer(DetailTexturer):
 
         sg.addTexture(self.tex4)
         sg.addRegionToTex(Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0))
+
         sg.createShader()
 
         self.terrain.setShaderInput("detailTexture", self.detailTexture)
         self.terrain.setShaderInput('tscale', self.texScale)
 
-        self.shader = Shader.load('shaders/stephen5.sha', Shader.SLCg)
+        #self.shader = Shader.load('shaders/stephen5.sha', Shader.SLCg)
+        self.shader = Shader.load('shaders/stephen6.sha', Shader.SLCg)
+        #self.shader = Shader.load('shaders/autoshader1.cg', Shader.SLCg)
         self.terrain.setShader(self.shader)
+
+
 
     def texturize(self, tile):
         """Apply textures and shaders to the inputted tile."""

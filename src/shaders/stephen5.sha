@@ -93,7 +93,9 @@ void fshader(   in  vfconn IN,
                 in uniform float4 region2Limits : REGION2LIMITS,
                 in uniform float4 region3Limits : REGION3LIMITS,
             in uniform sampler2D texUnit3 : TEXUNIT3,
-                in uniform float4 region4Limits : REGION4LIMITS            )
+                in uniform float4 region4Limits : REGION4LIMITS,
+            in uniform sampler2D texUnit4 : TEXUNIT4,
+                in uniform float4 region5Limits : REGION5LIMITS            )
 {
     // clipping
     //if ( IN.l_mpos.z < k_waterlevel.z) discard;
@@ -153,6 +155,15 @@ void fshader(   in  vfconn IN,
     {
         textureWeightTotal += textureWeight;
         terrainColor += textureWeight * tex2D(texUnit3, IN.l_texcoord0);
+    }
+
+
+    //texture4, region 5
+    textureWeight = calculateFinalWeight(height, slope, region5Limits);
+    if (textureWeight)
+    {
+        textureWeightTotal += textureWeight;
+        terrainColor += textureWeight * tex2D(texUnit4, IN.l_texcoord0);
     }
 
     // normalize color

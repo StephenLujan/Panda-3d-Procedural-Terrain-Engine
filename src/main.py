@@ -16,54 +16,65 @@ if __name__ == "__main__":
 
 import math
 import sys
-import direct.directbase.DirectStart
+
 from direct.actor.Actor import Actor
+import direct.directbase.DirectStart
+from direct.filter.CommonFilters import CommonFilters
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.DirectObject import DirectObject
 from direct.task.Task import Task
+from gui import *
 import os
 from panda3d.core import BoundingBox
+from panda3d.core import loadPrcFile
 from pandac.PandaModules import AmbientLight
 from pandac.PandaModules import CardMaker
 from pandac.PandaModules import CullFaceAttrib
 from pandac.PandaModules import DirectionalLight
 from pandac.PandaModules import Filename
 from pandac.PandaModules import Fog
+from pandac.PandaModules import LightRampAttrib
 from pandac.PandaModules import NodePath
+from pandac.PandaModules import PStatClient
 from pandac.PandaModules import PandaNode
 from pandac.PandaModules import Plane
 from pandac.PandaModules import PlaneNode
 from pandac.PandaModules import RenderState
+from pandac.PandaModules import Shader
+from pandac.PandaModules import ShaderPool
+from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextNode
+from pandac.PandaModules import Texture
+from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import WindowProperties
-from pandac.PandaModules import PStatClient
 from terrain import *
-from gui import *
+
+
 
 ###############################################################################
-
-SPEED = 0.5
 
 # Figure out what directory this program is in.
 MYDIR = os.path.abspath(sys.path[0])
 MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
 print('running from:' + MYDIR)
 
+loadPrcFile("settings.prc")
+
 # Function to put instructions on the screen.
 def addInstructions(pos, msg):
-	return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
+    return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
                         pos=(-1.3, pos), align=TextNode.ALeft, scale=.05)
 
 def addTextField(pos, msg):
-	return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
+    return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
                         pos=(-1.3, pos), align=TextNode.ALeft, scale=.05, mayChange=True)
 
 # Function to put title on the screen.
 def addTitle(text):
-	return OnscreenText(text=text, style=1, fg=(1, 1, 1, 1),
+    return OnscreenText(text=text, style=1, fg=(1, 1, 1, 1),
                         pos=(1.3, -0.95), align=TextNode.ARight, scale=.07)
 
 ##############################################################################
@@ -86,6 +97,7 @@ class WaterNode():
         world.waterNP.setShaderInput('wateranim', Vec4(0.03, -0.015, 64.0, 0)) # vx, vy, scale, skip
         # offset, strength, refraction factor (0=perfect mirror, 1=total refraction), refractivity
         world.waterNP.setShaderInput('waterdistort', Vec4(0.4, 4.0, 0.25, 0.45))
+        world.waterNP.setShaderInput('time', 0)
 
         # Reflection plane
         world.waterPlane = Plane(Vec3(0, 0, z + 1), Point3(0, 0, z))
@@ -143,12 +155,17 @@ class WaterNode():
 class World(DirectObject):
 
     def __init__(self):
+        base.win.setClearColor(Vec4(0, 0, 0, 1))
+        base.win.setClearColorActive(True)
+        taskMgr.doMethodLater(0.1, self.load, "Load Task")
+        self.bug_text = addTextField(-0.95, "Loading...")
 
+    def load(self, task):
         #print(str(base.win.getGsg().getMaxTextureStages()) + ' texture stages available')
         base.setFrameRateMeter(True)
         PStatClient.connect()
         self.keyMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "mouse":0, "turbo":0, "option+":0, "option-":0}
-        base.win.setClearColor(Vec4(0, 0, 0, 1))
+        #base.win.setClearColor(Vec4(0, 0, 0, 1))
         # Post the instructions
         self.title = addTitle("Animate Dream Terrain Engine")
         self.inst1 = addInstructions(0.95, "[ESC]: Quit")
@@ -160,11 +177,12 @@ class World(DirectObject):
         self.inst7 = addInstructions(0.65, "[d]: Run Ralph Right")
         self.inst8 = addInstructions(0.60, "[shift]: Turbo Mode")
         self.inst9 = addInstructions(0.55, "[space]: Regenerate Terrain")
+        self.inst10 = addInstructions(0.50, "[right-mouse]: Open Shader Controls")
+        self.inst10 = addInstructions(0.45, "[F11]: Screen Shot")
 
-        self.bug_text = addTextField(0.50, "")
-        self.loc_text = addTextField(0.45, "[LOC]: ")
-        self.hpr_text = addTextField(0.40, "[HPR]: ")
-        self.blend_text = addTextField(0.35, "Detail Texture Blend Mode: ")
+        self.loc_text = addTextField(0.35, "[LOC]: ")
+        self.hpr_text = addTextField(0.30, "[HPR]: ")
+        #self.blend_text = addTextField(0.25, "Detail Texture Blend Mode: ")
 
         # Set up the environment
         # GeoMipTerrain
@@ -176,13 +194,13 @@ class World(DirectObject):
         self.environ = self.terrain	# make available for original Ralph code below
         # some constants
         self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
-                                    * self.terrain.waterHeight, 1.0)
+                                 * self.terrain.waterHeight, 1.0)
 
         # water
         self.water = WaterNode(self, -1000, -1000, 2000, 2000, self._water_level.getZ())
         # add some lighting
-        ambient = Vec4(0.54, 0.5, 0.5, 1)
-        direct = Vec4(1.5, 1.5, 1.5, 1)
+        ambient = Vec4(0.45, 0.5, 0.55, 1)
+        direct = Vec4(1.7, 1.65, 1.6, 1)
         # ambient light
         alight = AmbientLight('alight')
         alight.setColor(ambient)
@@ -195,15 +213,23 @@ class World(DirectObject):
         #dlnp.setHpr(1.0, -0.6, -0.2)
         dlnp.setHpr(240.0, -20, 0)
         render.setLight(dlnp)
-        self.terrain.setShaderInput("light", dlnp)
 
         # make waterlevel and lights available to the terrain shader
-        self.terrain.setShaderInput('lightvec', Vec4(1.0, -0.6, -1.0, 1))
-        self.terrain.setShaderInput('lightcolor', direct)
-        self.terrain.setShaderInput('ambientlight', ambient)
+        render.setShaderInput('dlight0', dlnp)
+        render.setShaderInput('alight0', alnp)
         wl = self._water_level
         wl.setZ(wl.getZ()-0.05)	# add some leeway (gets rid of some mirroring artifacts)
         self.terrain.setShaderInput('waterlevel', self._water_level)
+
+        # load default shaders
+        cf = CommonFilters(base.win, base.cam)
+        #hdrtype:
+        render.setAttrib(LightRampAttrib.makeHdr0())
+        #perpixel:
+        render.setShaderAuto()
+        #bloomSize
+        cf.setBloom(size='medium')
+        #base.bufferViewer.toggleEnable()
 
         # skybox
         self.skybox = loader.loadModel('models/skybox.egg')
@@ -261,8 +287,8 @@ class World(DirectObject):
         self.accept("y", self.setKey, ["invert-y", 1])
         self.accept("shift", self.setKey, ["turbo", 1])
         self.accept("f11", self.screenShot)
-        self.accept("space", self.terrain.initializeHeightMap )
-        self.accept("l", self.terrain.toggleWireFrame )
+        self.accept("space", self.terrain.initializeHeightMap)
+        self.accept("l", self.terrain.toggleWireFrame)
         #self.accept("+", self.setKey, ["option+",1])
         #self.accept("-", self.setKey, ["option-",1])
         #self.accept("+", self.terrain.incrementDetailBlendMode )
@@ -313,28 +339,9 @@ class World(DirectObject):
 
         self.bugstring = ''
 
-        # Add button
-        self.v = [0]
-        self.shaderControl = ShaderRegionControl(-0.65,-0.35,self.v[0],self.terrain)
-        
-        self.buttons = []
-        iter = 0
-        while (self.terrain.getShaderInput('region' + str(iter) + 'Limits').getValueType()):
-            button = DirectRadioButton(text = 'Region '+ str(iter), variable=self.v,
-                value=[iter], scale=0.05, pos=(-1 + iter *0.3,0.04,0), command=self.switchShaderControl)
-            self.buttons.append(button)
-            print 'adding region '+ str(iter)
-            iter += 1
-
-        for button in self.buttons:
-            button.setOthers(self.buttons)
-
-    ###########################################################################
-
-    # Callback function for radio buttons
-    def switchShaderControl(self,status=None):
-        self.shaderControl.destroy()
-        self.shaderControl = ShaderRegionControl(-0.65,-0.35,self.v[0],self.terrain)
+        # Add gui
+        self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
+        self.shaderControl.hide()
 
     def _setup_camera(self):
         #sa = sa.setShader(loader.loadShader('shaders/stephen.sha'))
@@ -347,9 +354,22 @@ class World(DirectObject):
 
     def move(self, task):
         if not self.mouseLook:
-            return
-        
+            return Task.cont
+
         elapsed = task.time - self.prevtime
+
+        # Time for water distortions
+        #render.setShaderInput('time', task.time)
+        # move the skybox with the camera
+        campos = base.camera.getPos()
+        self.skybox.setPos(campos)
+        # update matrix of the reflection camera
+        mc = base.camera.getMat()
+        mf = self.waterPlane.getReflectionMat()
+        self.watercamNP.setMat(mc * mf)
+        self.waterNP.setShaderInput('time', task.time)
+
+        #return Task.cont
         if self.firstmove > 0:
             self.pitch = -9.0
             self.firstmove = 0
@@ -359,8 +379,7 @@ class World(DirectObject):
         y = base.camera.getY()
         z = 0.5 * self.ralphHeight + self.terrain.getElevation(x, y)
         rad1 = -self.pitch * math.pi / 180.0
-        self.zcam = self.ralphHead.getZ() + self.camDist * 0.25 * (
-                                                                   math.tan(rad1) + 3 * math.sin(rad1))
+        self.zcam = self.ralphHead.getZ() + self.camDist * 0.25 * (math.tan(rad1) + 3 * math.sin(rad1))
 
         # save Ralph's initial position so that we can restore it,
         # in case he falls off the map or runs into something.
@@ -522,9 +541,7 @@ class World(DirectObject):
                     if self.testCamDist > self.camDistTarg: self.testCamDist = self.camDistTarg
         else: self.camDist = 0 # 1st person view
 
-        #self.bugstring = '%03.1f  :  %03.1f' % (self.pitch, self.camDist)
-        # debug output
-        if self.bugstring != '': self.bug_text.setText('[BUG]: %s' % self.bugstring)
+        self.bug_text.setText(self.bugstring)
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \
                               (self.ralph.getX(), self.ralph.getY(), self.ralph.getZ()))
@@ -534,16 +551,6 @@ class World(DirectObject):
         #current texture blending mode
         #self.blend_text.setText('[blend mode]: %i ' % \
         #                      ( self.terrain.textureBlendMode ) )
-
-        # Time for water distortions
-        render.setShaderInput('time', task.time)
-        # move the skybox with the camera
-        campos = base.camera.getPos()
-        self.skybox.setPos(campos)
-        # update matrix of the reflection camera
-        mc = base.camera.getMat()
-        mf = self.waterPlane.getReflectionMat()
-        self.watercamNP.setMat(mc * mf)
 
         # Store the task time and continue.
         self.prevtime = task.time
@@ -561,6 +568,7 @@ class World(DirectObject):
         self.mouseLook = not self.mouseLook
         props = WindowProperties()
         props.setCursorHidden(self.mouseLook)
+        self.shaderControl.setHidden(self.mouseLook)
         base.win.requestProperties(props)
         print "toggleMouseLook"
 

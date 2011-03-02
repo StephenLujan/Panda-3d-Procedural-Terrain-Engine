@@ -1,0 +1,49 @@
+<head>
+
+<script src="RunPanda3D.js" language="javascript"></script>
+
+</head>
+<body>
+<style type="text/css">
+	#myoutercontainer { position:relative center; width:640;
+						margin-left: auto; margin-right: auto}
+	#myinnercontainer { position:absolute; top:50%; height:480; margin-top:-240;
+						}
+	embed
+	{
+		border-style:solid;
+		border-color:#98bf21;
+	}					
+	
+</style>
+<div id="myoutercontainer">
+	<div id="myinnercontainer">
+		<p>
+			<script language="javascript">
+				P3D_RunContent('data', 'myapp.p3d', 'id', 'economy',
+				'width', '640', 'height', '480',
+				'auto_start', '0',
+				'onpythonload', 'OnPythonLoad()',
+				'gameInfo', 'gameInfo',
+				'noplugin_href', 'http://www.panda3d.org/download.php?runtime',
+				
+				'noplugin_img', 'noplugin.jpg'
+				/*
+				'splash_img', 'noplugin.jpg',
+				'download_img', 'noplugin.jpg',
+				'unauth_img', 'noplugin.jpg',
+				'ready_img', 'noplugin.jpg',
+				'launch_img', 'noplugin.jpg',
+				'failed_img', 'noplugin.jpg',
+				'bgcolor', '0,0,0'
+				
+				http://www.panda3d.org/manual/index.php/Splash_window_tags
+				*/
+				)
+			</script>
+
+		</p>
+	</div>
+</div>
+
+</body>
