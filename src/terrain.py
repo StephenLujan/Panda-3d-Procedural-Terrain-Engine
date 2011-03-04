@@ -32,7 +32,6 @@ from pandac.PandaModules import PandaNode
 from pandac.PandaModules import Point3
 from pandac.PandaModules import Vec2
 from pstat_debug import pstat
-
 from terraintexturer import *
 
 """ Panda3d GeoMipTerrain tips:
@@ -264,7 +263,7 @@ class Terrain(NodePath):
         # loads all terrain tiles in range immediately
         self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
-    def initializeHeightMap(self, id = 0):
+    def initializeHeightMap(self, id=0):
         """ """
 
         #Remove old tiles that will not conform to a new heightmap
@@ -272,9 +271,9 @@ class Terrain(NodePath):
             self.removeTile(pos)
 
         # the overall smoothness/roughness of the terrain
-        self.smoothness = 80
+        self.smoothness = 160
         # how quickly altitude and roughness shift
-        self.consistency = self.smoothness * 8
+        self.consistency = self.smoothness * 15
         # waterHeight is expressed as a multiplier to the max height
         self.waterHeight = 0.3 
         # for realism the flatHeight should be at or very close to waterHeight
@@ -285,7 +284,23 @@ class Terrain(NodePath):
         self.id = id
         #creates noise objects that will be used by the getHeight function
         self.generateNoiseObjects()
+        
+        #normalize the range of possible heights to be bounded [0,1]
+        minmax = []
+        for x in range(2):
+            for y in range(2):
+                minmax.append(self.getPrenormalizedHeight(x,y))
+        min = 999
+        max = -999
+        for x in minmax:
+            if x < min:
+                min = x
+            if x > max:
+                max = x
+        self.normalizerSub = min
+        self.normalizerMult = 1.0/(max-min)
 
+        print "height normalized from [",min,",",max,"]"
 
     def initializeRenderingProperties(self):
         self.bruteForce = True
@@ -497,6 +512,13 @@ class Terrain(NodePath):
         del self.tiles[pos]
         print "Tile removed from", pos
 
+    def generateStackedPerlin(self, perlin, frequency, layers, frequencySpread, amplitudeSpread, id):
+
+        for x in range(layers):
+            layer = PerlinNoise2(0, 0, 256, seed= id * x + x)
+            layer.setScale(frequency / (math.pow(frequencySpread, x)))
+            perlin.addLevel(layer, 1 / (math.pow(amplitudeSpread, x)))
+
     def generateNoiseObjects(self):
         """Create perlin noise."""
 
@@ -506,50 +528,23 @@ class Terrain(NodePath):
         # where it is high terrain will be higher and slopes will be exagerrated
         # increase perlin1 to create larger areas of geographic consistency
         self.perlin1 = StackedPerlinNoise2()
-        perlin1a = PerlinNoise2(0, 0, 256, seed=self.id)
-        perlin1a.setScale(self.consistency)
-        self.perlin1.addLevel(perlin1a)
-        perlin1b = PerlinNoise2(0, 0, 256, seed=self.id*2+123)
-        perlin1b.setScale(self.consistency/2)
-        self.perlin1.addLevel(perlin1b,1/2)
-
+        self.generateStackedPerlin(self.perlin1, self.consistency, 4, 2, 2.5, self.id)
 
         # perlin2 creates the noticeable noise in the terrain
         # without perlin2 everything would look unnaturally smooth and regular
         # increase perlin2 to make the terrain smoother
         self.perlin2 = StackedPerlinNoise2()
-        frequencySpread = 3.0
-        amplitudeSpread = 3.4
-        perlin2a = PerlinNoise2(0, 0, 256, seed=self.id * 2)
-        perlin2a.setScale(self.smoothness)
-        self.perlin2.addLevel(perlin2a)
-        perlin2b = PerlinNoise2(0, 0, 256, seed=self.id * 3 + 3)
-        perlin2b.setScale(self.smoothness / frequencySpread)
-        self.perlin2.addLevel(perlin2b, 1 / amplitudeSpread)
-        perlin2c = PerlinNoise2(0, 0, 256, seed=self.id * 4 + 4)
-        perlin2c.setScale(self.smoothness / (frequencySpread * frequencySpread))
-        self.perlin2.addLevel(perlin2c, 1 / (amplitudeSpread * amplitudeSpread))
-        perlin2d = PerlinNoise2(0, 0, 256, seed=self.id * 5 + 5)
-        perlin2d.setScale(self.smoothness / (math.pow(frequencySpread, 3)))
-        self.perlin2.addLevel(perlin2d, 1 / (math.pow(amplitudeSpread, 3)))
-        perlin2e = PerlinNoise2(0, 0, 256, seed=self.id * 6 + 6)
-        perlin2e.setScale(self.smoothness / (math.pow(frequencySpread, 4)))
-        self.perlin2.addLevel(perlin2e, 1 / (math.pow(amplitudeSpread, 4)))
+        self.generateStackedPerlin(self.perlin2, self.smoothness, 8, 2, 2.2, self.id+10)
 
 
-    def getHeight(self, x, y):
+    def getPrenormalizedHeight(self, p1, p2):
         """Returns the height at the specified terrain coordinates.
 
-        The values returned should be between 0 and 1 and use the full range.
-        Heights should be the smoothest and flatest at flatHeight.
+        The input is a value from each of the noise functions
 
         """
 
-        # all of these should be in the range of 0 to 1
-        p1 = (self.perlin1(x, y) + 1) / 2 # low frequency
-        p2 = (self.perlin2(x, y) + 1) / 2 # high frequency
         fh = self.flatHeight
-
         # p1 varies what kind of terrain is in the area, p1 alone would be smooth
         # p2 introduces the visible noise and roughness
         # when p1 is high the altitude will be high overall
@@ -564,6 +559,18 @@ class Terrain(NodePath):
         # The closer p1 is to fh, the smaller the mutiplier for p2 becomes.
         # As p2 diminishes, so does the roughness.
 
+
+    def getHeight(self, x, y):
+        """Returns the height at the specified terrain coordinates.
+
+        The values returned should be between 0 and 1 and use the full range.
+        Heights should be the smoothest and flatest at flatHeight.
+
+        """
+        p1 = (self.perlin1(x, y) + 1) / 2 # low frequency
+        p2 = (self.perlin2(x, y) + 1) / 2 # high frequency
+
+        return (self.getPrenormalizedHeight(p1, p2)-self.normalizerSub)*self.normalizerMult
 
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
