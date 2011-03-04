@@ -1,6 +1,13 @@
 ###
 # This file contains the terrain engine for panda 3d.
-
+#
+# The TerrainTile is a customized instance of Panda3d's GeoMipTerrain.
+# The Terrain populates a dictionary of (vec2 coordinates, TerrainTiles).
+# The Terrain class also also holds all of the common properties TerrainTiles
+# can use, such as the height function, tile size, and the TerrainTexturer.
+# The TerrainTexturer is instanced on the terrain and used to load and store
+# textures and shaders to be applied to the Terrain.
+###
 __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
 
@@ -35,6 +42,7 @@ Block size does not effect the detail level. It only limits the max detail level
 Each block in a GeoMipTerrain can set its own detail level on update if
 bruteforce is disabled.
 """
+
 
 ###############################################################################
 #   TerrainTile
@@ -101,7 +109,7 @@ class TerrainTile(GeoMipTerrain):
 
         Panda3d GeoMipMaps require an image from which to build and update
         their height field. This function creates the correct image using the
-        tile's position and the Terrain's getHeight() function
+        tile's position and the Terrain's getHeight() function.
 
         """
 
@@ -288,9 +296,10 @@ class Terrain(NodePath):
             self.near = 40
             self.far = 100
         self.wireFrame = 0
+        #self.texturer = MonoTexturer(self)
         self.texturer = ShaderTexturer(self)
-        #self.texturer = DetailTexturer(self)
-        self.texturer.load()
+        #self.texturer.load()
+        self.texturer.texturize(self)
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""
@@ -298,6 +307,7 @@ class Terrain(NodePath):
         ##Add tasks to keep updating the terrain
         #taskMgr.add(self.updateTask, "updateTiles", sort=9, priority=0)
         taskMgr.add(self.tileBuilderTask, "loadTiles", sort=9, priority=0)
+
 
     def _setupThreadedTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""
@@ -330,7 +340,7 @@ class Terrain(NodePath):
         #                taskChain='blockSizeUpdateChain', sort=1, priority=0)
 
     def updateTask(self, task):
-        """Deprecated -- This task updates each tile, which updates the LOD."""
+        """This task updates each tile, which updates the LOD."""
 
         for pos, tile in self.tiles.items():
             tile.update(task)
@@ -431,6 +441,7 @@ class Terrain(NodePath):
 
     def dispatchNewTileAt(self, x, y):
         """Dispatch a task to create a tile at the input coordinates."""
+
         self.newTile.xOffset = x
         self.newTile.yOffset = y
         self.tiles[Vec2(x, y)] = self.newTile
@@ -441,6 +452,7 @@ class Terrain(NodePath):
 
     def _generateTileTask(self, x, y, task):
         """Task wrapper for _generateTile. Probably redundant now..."""
+
         self._generateTile(x, y)
         return task.done
 
@@ -451,6 +463,7 @@ class Terrain(NodePath):
         tile = TerrainTile(self, x, y)
         tile.setBlockSize(self.blockSize)
         tile.make()
+        tile.setAutoFlatten(GeoMipTerrain.AFMStrong)
         #np = self.attachNewNode("tileNode")
         #np.reparentTo(self)
         #tile.getRoot().reparentTo(np)
@@ -459,7 +472,7 @@ class Terrain(NodePath):
         self.tiles[Vec2(x, y)] = tile
 
         #texturize tile
-        self.texturer.texturize(tile)
+        #self.texturer.texturize(tile)
 
         print "tile generated at", x, y
         return tile
@@ -600,12 +613,9 @@ class Terrain(NodePath):
         self.cTrav.addCollider(self.elevationColNp, self.elevationHandler)
 
     def setWireFrame(self, state):
-
         self.wireFrame = state
         for pos, tile in self.tiles.items():
             tile.setWireFrame(state)
 
     def toggleWireFrame(self):
-
         self.setWireFrame(not self.wireFrame)
-

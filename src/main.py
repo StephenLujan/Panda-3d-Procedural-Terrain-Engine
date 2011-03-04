@@ -161,6 +161,8 @@ class World(DirectObject):
         self.bug_text = addTextField(-0.95, "Loading...")
 
     def load(self, task):
+        yield task.cont
+
         #print(str(base.win.getGsg().getMaxTextureStages()) + ' texture stages available')
         base.setFrameRateMeter(True)
         PStatClient.connect()
@@ -170,13 +172,13 @@ class World(DirectObject):
         self.title = addTitle("Animate Dream Terrain Engine")
         self.inst1 = addInstructions(0.95, "[ESC]: Quit")
         self.inst2 = addInstructions(0.90, "[mouse wheel]: Camera Zoom")
-        self.inst3 = addInstructions(0.85, "[y]: Y-axis Mouse Invert")
-        self.inst4 = addInstructions(0.80, "[w]: Run Ralph Forward")
-        self.inst5 = addInstructions(0.75, "[a]: Run Ralph Left")
-        self.inst6 = addInstructions(0.70, "[s]: Run Ralph Backward")
-        self.inst7 = addInstructions(0.65, "[d]: Run Ralph Right")
+        self.inst3 = addInstructions(0.85, "[Y]: Y-axis Mouse Invert")
+        self.inst4 = addInstructions(0.80, "[W]: Run Ralph Forward")
+        self.inst5 = addInstructions(0.75, "[A]: Run Ralph Left")
+        self.inst6 = addInstructions(0.70, "[S]: Run Ralph Backward")
+        self.inst7 = addInstructions(0.65, "[D]: Run Ralph Right")
         self.inst8 = addInstructions(0.60, "[shift]: Turbo Mode")
-        self.inst9 = addInstructions(0.55, "[space]: Regenerate Terrain")
+        self.inst9 = addInstructions(0.55, "[R]: Regenerate Terrain")
         self.inst10 = addInstructions(0.50, "[right-mouse]: Open Shader Controls")
         self.inst10 = addInstructions(0.45, "[F11]: Screen Shot")
 
@@ -184,20 +186,10 @@ class World(DirectObject):
         self.hpr_text = addTextField(0.30, "[HPR]: ")
         #self.blend_text = addTextField(0.25, "Detail Texture Blend Mode: ")
 
-        # Set up the environment
-        # GeoMipTerrain
-        self.terrain = Terrain('Terrain', base.camera)
-        # Store the root NodePath for convenience
-        #root = self.terrain.getRoot()
-        #root.reparentTo(render)
-        self.terrain.reparentTo(render)
-        self.environ = self.terrain	# make available for original Ralph code below
-        # some constants
-        self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
-                                 * self.terrain.waterHeight, 1.0)
 
-        # water
-        self.water = WaterNode(self, -1000, -1000, 2000, 2000, self._water_level.getZ())
+        self.bug_text.setText("loading lighting")
+        yield task.cont
+
         # add some lighting
         ambient = Vec4(0.45, 0.5, 0.55, 1)
         direct = Vec4(1.7, 1.65, 1.6, 1)
@@ -217,8 +209,34 @@ class World(DirectObject):
         # make waterlevel and lights available to the terrain shader
         render.setShaderInput('dlight0', dlnp)
         render.setShaderInput('alight0', alnp)
+
+        # Definitely need to make sure this loads before terrain
+        self.bug_text.setText("loading terrain...")
+        yield task.cont
+        yield task.cont
+        yield task.cont
+        self.terrain = Terrain('Terrain', base.camera)
+        
+        # Store the root NodePath for convenience
+        #root = self.terrain.getRoot()
+        #root.reparentTo(render)
+        self.terrain.reparentTo(render)
+        self.environ = self.terrain	# make available for original Ralph code below
+        
+        self.bug_text.setText("loading water...")
+        yield task.cont
+
+        # some constants
+        self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
+                                 * self.terrain.waterHeight, 1.0)
+        # water
+        self.water = WaterNode(self, -800, -800, 800, 800, self._water_level.z)
+        
+        self.bug_text.setText("loading filters")
+        yield task.cont
+
         wl = self._water_level
-        wl.setZ(wl.getZ()-0.05)	# add some leeway (gets rid of some mirroring artifacts)
+        wl.z = wl.z-0.05	# add some leeway (gets rid of some mirroring artifacts)
         self.terrain.setShaderInput('waterlevel', self._water_level)
 
         # load default shaders
@@ -231,14 +249,20 @@ class World(DirectObject):
         cf.setBloom(size='medium')
         #base.bufferViewer.toggleEnable()
 
+        self.bug_text.setText("loading sky...")
+        yield task.cont
+
         # skybox
-        self.skybox = loader.loadModel('models/skybox.egg')
+        self.skybox = loader.loadModel('models/skybox')
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
         self.skybox.setScale(1000)
         self.skybox.setBin('background', 1)
         self.skybox.setDepthWrite(0)
         self.skybox.setLightOff()
         self.skybox.reparentTo(render)
+
+        self.bug_text.setText("loading player...")
+        yield task.cont
 
         # Create the main character, Ralph
         # ralphStartPos = self.environ.find("**/start_point").getPos()
@@ -287,8 +311,9 @@ class World(DirectObject):
         self.accept("y", self.setKey, ["invert-y", 1])
         self.accept("shift", self.setKey, ["turbo", 1])
         self.accept("f11", self.screenShot)
-        self.accept("space", self.terrain.initializeHeightMap)
+        self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
+        #self.accept("f", self.terrain.flatten)
         #self.accept("+", self.setKey, ["option+",1])
         #self.accept("-", self.setKey, ["option-",1])
         #self.accept("+", self.terrain.incrementDetailBlendMode )
@@ -337,15 +362,16 @@ class World(DirectObject):
         props.setCursorHidden(True)
         base.win.requestProperties(props)
 
-        self.bugstring = ''
+        self.bug_text.setText("loading gui controls...")
+        yield task.cont
 
-        # Add gui
         self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
         self.shaderControl.hide()
 
+        self.bug_text.setText("")
+        yield task.cont
+
     def _setup_camera(self):
-        #sa = sa.setShader(loader.loadShader('shaders/stephen.sha'))
-        #sa = self.terrain.shaderAttribute
         cam = base.cam.node()
         cam.getLens().setNear(1)
         cam.getLens().setFar(5000)
@@ -358,18 +384,19 @@ class World(DirectObject):
 
         elapsed = task.time - self.prevtime
 
-        # Time for water distortions
-        #render.setShaderInput('time', task.time)
         # move the skybox with the camera
         campos = base.camera.getPos()
         self.skybox.setPos(campos)
+
+        # Update water
         # update matrix of the reflection camera
         mc = base.camera.getMat()
         mf = self.waterPlane.getReflectionMat()
         self.watercamNP.setMat(mc * mf)
         self.waterNP.setShaderInput('time', task.time)
+        self.waterNP.setX(self.ralph.getX())
+        self.waterNP.setY(self.ralph.getY())
 
-        #return Task.cont
         if self.firstmove > 0:
             self.pitch = -9.0
             self.firstmove = 0
@@ -385,7 +412,6 @@ class World(DirectObject):
         # in case he falls off the map or runs into something.
         # this doesn't work now, with collision detection removed, needs fixing
         startpos = self.ralph.getPos()
-
 
         # use the mouse to look around and set Ralph's direction
         isMouseTurning = False
@@ -541,7 +567,7 @@ class World(DirectObject):
                     if self.testCamDist > self.camDistTarg: self.testCamDist = self.camDistTarg
         else: self.camDist = 0 # 1st person view
 
-        self.bug_text.setText(self.bugstring)
+        #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \
                               (self.ralph.getX(), self.ralph.getY(), self.ralph.getZ()))

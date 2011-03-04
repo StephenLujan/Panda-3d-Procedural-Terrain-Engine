@@ -14,6 +14,7 @@ from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
+from direct.showbase import AppRunnerGlobal
 from terrainshadergenerator import *
 
 ###############################################################################
@@ -26,6 +27,7 @@ class TerrainTexturer():
     def __init__(self, terrain):
         """initialize"""
         self.terrain = terrain
+        self.load()
 
     def loadTexture(self, name):
         """A better texture loader"""
@@ -42,8 +44,8 @@ class TerrainTexturer():
     def load(self):
         """Load textures and shaders."""
 
-    def texturize(self, tile):
-        """Apply textures and shaders to the inputted tile."""
+    def texturize(self, input):
+        """Apply textures and shaders to the input."""
 
 ###############################################################################
 #   MonoTexturer
@@ -59,12 +61,11 @@ class MonoTexturer(TerrainTexturer):
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.monoTexture = tex
-    def texturize(self, tile):
-        """Apply textures and shaders to the inputted tile."""
+    def texturize(self, input):
+        """Apply textures and shaders to the input."""
 
-        root = tile.getRoot()
-        root.setTexture(self.ts, self.monoTexture)
-        root.setTexScale(ts, 10, 10)
+        input.setTexture(self.ts, self.monoTexture)
+        input.setTexScale(self.ts, 10, 10)
 
 ###############################################################################
 #   DetailTexturer
@@ -89,16 +90,14 @@ class DetailTexturer(TerrainTexturer):
         self.textureBlendMode = self.detailTS.MHeight
         self.detailTS.setMode(self.textureBlendMode)
 
-    def texturize(self, tile):
-        """Apply textures and shaders to the inputted tile."""
+    def texturize(self, input):
+        """Apply textures and shaders to the input."""
 
-        root = tile.getRoot()
+        input.setTexture(self.ts1, self.monoTexture)
+        input.setTexScale(self.ts1, 5, 5)
 
-        root.setTexture(self.ts1, self.monoTexture)
-        root.setTexScale(self.ts1, 5, 5)
-
-        root.setTexture(self.detailTS, self.detailTexture)
-        root.setTexScale(self.detailTS, 120, 120)
+        input.setTexture(self.detailTS, self.detailTexture)
+        input.setTexScale(self.detailTS, 120, 120)
 
 
     def setDetailBlendMode(self, num):
@@ -230,6 +229,7 @@ class ShaderTexturer(DetailTexturer):
                                  self.terrain.maxHeight * 0.80)
 
         # regionLimits ( max height, min height, slope max, slope min )
+
         sg = TerrainShaderGenerator(self.terrain)
 
         sg.addTexture(self.tex1)
@@ -245,32 +245,43 @@ class ShaderTexturer(DetailTexturer):
         sg.addTexture(self.tex4)
         sg.addRegionToTex(Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0))
 
-        sg.createShader()
+        #http://www.panda3d.org/forums/viewtopic.php?t=10222
+        if AppRunnerGlobal.appRunner is None:
+          RUNTYPE = 'python'
+        else:
+          print "dom", AppRunnerGlobal.appRunner.dom
+          if AppRunnerGlobal.appRunner.dom:
+            RUNTYPE = 'website'
+          else:
+            RUNTYPE = 'local'
+
+        if RUNTYPE == 'python':
+            file = 'shaders/stephen6.sha'
+            sg.saveShader(file)
+            self.shader = Shader.load(file, Shader.SLCg)
+        else:
+            self.shader = Shader.make(sg.createShader(), Shader.SLCg);
+
 
         self.terrain.setShaderInput("detailTexture", self.detailTexture)
         self.terrain.setShaderInput('tscale', self.texScale)
-
-        #self.shader = Shader.load('shaders/stephen5.sha', Shader.SLCg)
-        self.shader = Shader.load('shaders/stephen6.sha', Shader.SLCg)
-        #self.shader = Shader.load('shaders/autoshader1.cg', Shader.SLCg)
         self.terrain.setShader(self.shader)
 
 
 
-    def texturize(self, tile):
-        """Apply textures and shaders to the inputted tile."""
-        root = tile.getRoot()
+    def texturize(self, input):
+        """Apply textures and shaders to the input."""
 
-        #root.setTexture(self.detailTS, self.detailTexture)
-        #root.setTexScale(self.detailTS, 120, 120)
+        #input.setTexture(self.detailTS, self.detailTexture)
+        #input.setTexScale(self.detailTS, 120, 120)
 
         # enable use of the two separate tagged render states for our two cameras
-        #root.setTag('Normal', 'True')
-        #root.setTag('Clipped', 'True')
-        root.setTexture(self.ts1, self.tex1)
-        root.setTexture(self.ts2, self.tex2)
-        root.setTexture(self.ts3, self.tex3)
-        root.setTexture(self.ts4, self.tex4)
-        root.setTexture(self.detailTS, self.detailTexture)
-        root.setTexScale(self.detailTS, 120, 120)
+        #input.setTag('Normal', 'True')
+        #input.setTag('Clipped', 'True')
+        input.setTexture(self.ts1, self.tex1)
+        input.setTexture(self.ts2, self.tex2)
+        input.setTexture(self.ts3, self.tex3)
+        input.setTexture(self.ts4, self.tex4)
+        input.setTexture(self.detailTS, self.detailTexture)
+        input.setTexScale(self.detailTS, 120, 120)
 

@@ -233,10 +233,11 @@ class TerrainShaderGenerator:
                 regionNum += 1
             texNum += 1
 
-
-    def createShader(self, name='stephen6.sha'):
-
+    def createShader(self):
         self.feedThePanda()
-        string = _beginning + self.getParameters() + _middle + self.getCode() + _end
-        f = open('./shaders/' + name, 'w')
+        return _beginning + self.getParameters() + _middle + self.getCode() + _end
+
+    def saveShader(self, name='shaders/stephen6.sha'):
+        string = self.createShader()
+        f = open( name , 'w')
         f.write(string)
