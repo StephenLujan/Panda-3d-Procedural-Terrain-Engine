@@ -225,8 +225,8 @@ class ShaderTexturer(DetailTexturer):
         # this is half the blend area between each texture
         blendRadius = self.terrain.maxHeight * 0.11 + 0.5
         transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
-                                 self.terrain.maxHeight * 0.56,
-                                 self.terrain.maxHeight * 0.80)
+                                 self.terrain.maxHeight * 0.6,
+                                 self.terrain.maxHeight * 0.83)
 
         # regionLimits ( max height, min height, slope max, slope min )
 
