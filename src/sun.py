@@ -111,10 +111,24 @@ class Sun:
         sunsetStrength = noonOffset * noonOffset
 
         directColor = Vec4(2.4, 2.3, 2.1, 1) #bright for hdr
-        sunsetColor = Vec4(1.5, 1.1, 0.4, 0)
-        sunsetColor *= sunsetStrength
-        directColor *= 1-sunsetStrength
-        lightColor = directColor + sunsetColor
+        sunsetColor = Vec4(1.6, 1.1, 0.4, 1)
+
+        if sunsetStrength < 1.0:
+            directColor *= 1-sunsetStrength
+            sunsetColor *= sunsetStrength
+            print directColor, sunsetColor
+            lightColor = directColor + sunsetColor
+        else:
+            duskTime = 0.2
+            duskMultiplier = ((1.0+duskTime) - sunsetStrength) / duskTime
+            print duskMultiplier
+            if duskMultiplier < 0:
+                lightColor = Vec4(0,0,0,1)
+            else:
+                lightColor = sunsetColor * duskMultiplier
+            print lightColor
+
+        lightColor.w = 1
         self.dlight.setColor(lightColor)
 
         if self.finalQuad != None:
@@ -126,10 +140,10 @@ class Sun:
             self.finalQuad.setShaderInput('vlcolor', vlColor)
 
         angle = noonOffset * math.pi / 2
-        x = math.sin(angle)
+        y = math.sin(angle)
         z = math.cos(angle)
         #print "sun angle, x, z: ", angle, x, z
-        self.setPos(Vec3(x,0,z))
+        self.setPos(Vec3(0,y,z))
 
     def start(self):
         if self.finalQuad != None:
