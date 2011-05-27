@@ -10,6 +10,7 @@
 ###
 __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
+_MAXRANGE = 300
 
 import math
 from operator import itemgetter
@@ -204,8 +205,8 @@ class CachingTerrainTile(TerrainTile):
 
 class HeightMap():
     """HeightMap functionally maps any x and y to the appropriate height for realistic terrain."""
-    
-    def __init__(self, id = 0, flatHeight = 0.3):
+
+    def __init__(self, id=0, flatHeight=0.3):
 
         self.dice = RandomNumGen(TimeVal().getUsec())
         if id == 0:
@@ -225,7 +226,7 @@ class HeightMap():
         minmax = []
         for x in range(2):
             for y in range(2):
-                minmax.append(self.getPrenormalizedHeight(x,y))
+                minmax.append(self.getPrenormalizedHeight(x, y))
         min = 999
         max = -999
         for x in minmax:
@@ -234,14 +235,14 @@ class HeightMap():
             if x > max:
                 max = x
         self.normalizerSub = min
-        self.normalizerMult = 1.0/(max-min)
+        self.normalizerMult = 1.0 / (max-min)
 
-        print "height normalized from [",min,",",max,"]"
+        print "height normalized from [", min, ",", max, "]"
 
     def generateStackedPerlin(self, perlin, frequency, layers, frequencySpread, amplitudeSpread, id):
 
         for x in range(layers):
-            layer = PerlinNoise2(0, 0, 256, seed= id * x + x)
+            layer = PerlinNoise2(0, 0, 256, seed=id * x + x)
             layer.setScale(frequency / (math.pow(frequencySpread, x)))
             perlin.addLevel(layer, 1 / (math.pow(amplitudeSpread, x)))
 
@@ -260,7 +261,7 @@ class HeightMap():
         # without perlin2 everything would look unnaturally smooth and regular
         # increase perlin2 to make the terrain smoother
         self.perlin2 = StackedPerlinNoise2()
-        self.generateStackedPerlin(self.perlin2, self.smoothness, 8, 2, 2.2, self.id+10)
+        self.generateStackedPerlin(self.perlin2, self.smoothness, 8, 2, 2.2, self.id + 10)
 
 
     def getPrenormalizedHeight(self, p1, p2):
@@ -296,7 +297,7 @@ class HeightMap():
         p1 = (self.perlin1(x, y) + 1) / 2 # low frequency
         p2 = (self.perlin2(x, y) + 1) / 2 # high frequency
 
-        return (self.getPrenormalizedHeight(p1, p2)-self.normalizerSub)*self.normalizerMult
+        return (self.getPrenormalizedHeight(p1, p2)-self.normalizerSub) * self.normalizerMult
 
 ###############################################################################
 #   Terrain
@@ -331,14 +332,14 @@ class Terrain(NodePath):
         # distances are measured in tile's smallest unit
         # conversion to world units may be necessary
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = 500
+        self.maxViewRange = _MAXRANGE
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize / 2
         # make larger to avoid excess loading when milling about a small area
         # make smaller to reduce geometry and other overhead
         self.maxTileDistance = self.minTileDistance * 1.3 + self.tileSize
-        
+
         # scale the terrain vertically to its maximum height
         self.setSz(self.maxHeight)
         # scale horizontally to appearance/performance balance
@@ -385,6 +386,7 @@ class Terrain(NodePath):
         self.wireFrame = 0
         #self.texturer = MonoTexturer(self)
         self.texturer = ShaderTexturer(self)
+        #self.texturer = DetailTexturer(self)
         #self.texturer.load()
         self.texturer.texturize(self)
 
@@ -425,6 +427,17 @@ class Terrain(NodePath):
         #                           frameSync=False, timeslicePriority=True)
         #    taskMgr.add(self.blockSizeUpdateTask, "blockSizeUpdate",
         #                taskChain='blockSizeUpdateChain', sort=1, priority=0)
+
+    def lightTask(self, task):
+        """This task moves point and directional lights.
+
+        For larger projects this should be externalized.
+
+        """
+
+        self.pointLight = vec3(0, 5, 0)#self.focus.getPos() + vec3(0,5,0)
+        self.setShaderInput("LightPosition", self.pointLight)
+        return task.again
 
     def updateTask(self, task):
         """This task updates each tile, which updates the LOD."""

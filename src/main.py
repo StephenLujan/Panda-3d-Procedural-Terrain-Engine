@@ -25,32 +25,24 @@ from direct.showbase.DirectObject import DirectObject
 from direct.task.Task import Task
 from gui import *
 import os
-from panda3d.core import BoundingBox
 from panda3d.core import loadPrcFile
 from pandac.PandaModules import AmbientLight
-from pandac.PandaModules import CardMaker
-from pandac.PandaModules import CullFaceAttrib
 from pandac.PandaModules import DirectionalLight
 from pandac.PandaModules import Filename
-from pandac.PandaModules import Fog
 from pandac.PandaModules import LightRampAttrib
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import PStatClient
 from pandac.PandaModules import PandaNode
-from pandac.PandaModules import Plane
-from pandac.PandaModules import PlaneNode
+from pandac.PandaModules import PointLight
 from pandac.PandaModules import RenderState
-from pandac.PandaModules import Shader
-from pandac.PandaModules import ShaderPool
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextNode
-from pandac.PandaModules import Texture
-from pandac.PandaModules import TextureStage
-from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import WindowProperties
+from sun import *
 from terrain import *
+from waterNode import *
 
 
 
@@ -80,76 +72,6 @@ def addTitle(text):
 ##############################################################################
 
 
-class WaterNode():
-
-    def __init__(self, world, x1, y1, x2, y2, z):
-        print('setting up water plane at z=' + str(z))
-
-        # Water surface
-        maker = CardMaker('water')
-        maker.setFrame(x1, x2, y1, y2)
-
-        world.waterNP = render.attachNewNode(maker.generate())
-        world.waterNP.setHpr(0, -90, 0)
-        world.waterNP.setPos(0, 0, z)
-        world.waterNP.setTransparency(TransparencyAttrib.MAlpha)
-        world.waterNP.setShader(loader.loadShader('shaders/water.sha'))
-        world.waterNP.setShaderInput('wateranim', Vec4(0.03, -0.015, 64.0, 0)) # vx, vy, scale, skip
-        # offset, strength, refraction factor (0=perfect mirror, 1=total refraction), refractivity
-        world.waterNP.setShaderInput('waterdistort', Vec4(0.4, 4.0, 0.25, 0.45))
-        world.waterNP.setShaderInput('time', 0)
-
-        # Reflection plane
-        world.waterPlane = Plane(Vec3(0, 0, z + 1), Point3(0, 0, z))
-        planeNode = PlaneNode('waterPlane')
-        planeNode.setPlane(world.waterPlane)
-
-        # Buffer and reflection camera
-        buffer = base.win.makeTextureBuffer('waterBuffer', 512, 512)
-        buffer.setClearColor(Vec4(0, 0, 0, 1))
-
-        cfa = CullFaceAttrib.makeReverse()
-        rs = RenderState.make(cfa)
-
-        world.watercamNP = base.makeCamera(buffer)
-        world.watercamNP.reparentTo(render)
-
-        #sa = ShaderAttrib.make()
-        #sa = sa.setShader(loader.loadShader('shaders/splut3Clipped.sha') )
-
-        cam = world.watercamNP.node()
-        cam.getLens().setFov(base.camLens.getFov())
-        cam.getLens().setNear(1)
-        cam.getLens().setFar(5000)
-        cam.setInitialState(rs)
-        cam.setTagStateKey('Clipped')
-        #cam.setTagState('True', RenderState.make(sa))
-
-        # ---- water textures ---------------------------------------------
-
-        # reflection texture, created in realtime by the 'water camera'
-        tex0 = buffer.getTexture()
-        tex0.setWrapU(Texture.WMClamp)
-        tex0.setWrapV(Texture.WMClamp)
-        ts0 = TextureStage('reflection')
-        world.waterNP.setTexture(ts0, tex0)
-
-        # distortion texture
-        tex1 = loader.loadTexture('textures/water.png')
-        ts1 = TextureStage('distortion')
-        world.waterNP.setTexture(ts1, tex1)
-
-        # ---- Fog --- broken
-        min = Point3(x1, y1, -999.0)
-        max = Point3(x2, y2, z)
-        boundry = BoundingBox(min, max)
-        world.waterFog = Fog('waterFog')
-        world.waterFog.setBounds(boundry)
-        colour = (0.2, 0.5, 0.8)
-        world.waterFog.setColor(*colour)
-        world.waterFog.setExpDensity(0.05)
-        render.attachNewNode(world.waterFog)
-        #render.setFog(world.waterFog)
 
 ###############################################################################
 class World(DirectObject):
@@ -163,10 +85,66 @@ class World(DirectObject):
     def load(self, task):
         yield task.cont
 
-        #print(str(base.win.getGsg().getMaxTextureStages()) + ' texture stages available')
-        base.setFrameRateMeter(True)
         PStatClient.connect()
-        self.keyMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "mouse":0, "turbo":0, "option+":0, "option-":0}
+
+        self.bug_text.setText("loading Display...")
+        yield task.cont
+        self._loadDisplay()
+
+        self.bug_text.setText("loading lighting")
+        yield task.cont
+        self._loadLighting()
+
+        # Definitely need to make sure this loads before terrain
+        self.bug_text.setText("loading terrain...")
+        yield task.cont
+        yield task.cont
+        yield task.cont
+        self._loadTerrain()
+
+        self.bug_text.setText("loading water...")
+        yield task.cont
+        self._loadWater()
+
+        self.bug_text.setText("loading filters")
+        yield task.cont
+        self._loadFilters()
+
+        self.bug_text.setText("loading sky...")
+        yield task.cont
+        self._loadSky()
+
+        self.bug_text.setText("loading player...")
+        yield task.cont
+        self._loadPlayer()
+
+        self.bug_text.setText("loading miscellanious")
+        yield task.cont
+
+        taskMgr.add(self.move, "moveTask")
+
+        # Game state variables
+        self.prevtime = 0
+        self.isMoving = False
+        self.firstmove = 1
+
+        # disable std. mouse
+        base.disableMouse()
+        props = WindowProperties()
+        props.setCursorHidden(True)
+        base.win.requestProperties(props)
+
+        self.bug_text.setText("loading gui controls...")
+        yield task.cont
+
+        self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
+        self.shaderControl.hide()
+
+        self.bug_text.setText("")
+        yield task.cont
+
+    def _loadDisplay(self):
+        base.setFrameRateMeter(True)
         #base.win.setClearColor(Vec4(0, 0, 0, 1))
         # Post the instructions
         self.title = addTitle("Animate Dream Terrain Engine")
@@ -186,84 +164,49 @@ class World(DirectObject):
         self.hpr_text = addTextField(0.30, "[HPR]: ")
         #self.blend_text = addTextField(0.25, "Detail Texture Blend Mode: ")
 
-
-        self.bug_text.setText("loading lighting")
-        yield task.cont
-
-        # add some lighting
-        ambient = Vec4(0.45, 0.5, 0.55, 1)
-        direct = Vec4(1.7, 1.65, 1.6, 1)
-        # ambient light
-        alight = AmbientLight('alight')
-        alight.setColor(ambient)
-        alnp = render.attachNewNode(alight)
-        render.setLight(alnp)
-        # directional ("the sun")
-        dlight = DirectionalLight('dlight')
-        dlight.setColor(direct)
-        dlnp = render.attachNewNode(dlight)
-        #dlnp.setHpr(1.0, -0.6, -0.2)
-        dlnp.setHpr(240.0, -20, 0)
-        render.setLight(dlnp)
-
-        # make waterlevel and lights available to the terrain shader
-        render.setShaderInput('dlight0', dlnp)
-        render.setShaderInput('alight0', alnp)
-
-        # Definitely need to make sure this loads before terrain
-        self.bug_text.setText("loading terrain...")
-        yield task.cont
-        yield task.cont
-        yield task.cont
+    def _loadTerrain(self):
         self.terrain = Terrain('Terrain', base.camera)
-        
-        # Store the root NodePath for convenience
-        #root = self.terrain.getRoot()
-        #root.reparentTo(render)
         self.terrain.reparentTo(render)
         self.environ = self.terrain	# make available for original Ralph code below
-        
-        self.bug_text.setText("loading water...")
-        yield task.cont
 
+    def _loadWater(self):
         # some constants
         self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
                                  * self.terrain.waterHeight, 1.0)
         # water
         self.water = WaterNode(self, -800, -800, 800, 800, self._water_level.z)
-        
-        self.bug_text.setText("loading filters")
-        yield task.cont
 
+    def _loadFilters(self):
         wl = self._water_level
         wl.z = wl.z-0.05	# add some leeway (gets rid of some mirroring artifacts)
         self.terrain.setShaderInput('waterlevel', self._water_level)
 
         # load default shaders
         cf = CommonFilters(base.win, base.cam)
+        #bloomSize
+        cf.setBloom(size='medium')
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr0())
         #perpixel:
         render.setShaderAuto()
-        #bloomSize
-        cf.setBloom(size='medium')
         #base.bufferViewer.toggleEnable()
 
-        self.bug_text.setText("loading sky...")
-        yield task.cont
-
+    def _loadSky(self):
         # skybox
-        self.skybox = loader.loadModel('models/skybox')
+        self.skybox = loader.loadModel('models/skydome')
+        self.skybox.setTexture(loader.loadTexture('models/early.png'))
+        self.skybox.setShaderOff(1)
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
         self.skybox.setScale(1000)
         self.skybox.setBin('background', 1)
-        self.skybox.setDepthWrite(0)
-        self.skybox.setLightOff()
+        self.skybox.setDepthWrite(False)
+        self.skybox.setDepthTest(False)
         self.skybox.reparentTo(render)
+        self.skybox.setLightOff(1)
+        self.skybox.setShaderOff(1)
+        self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
 
-        self.bug_text.setText("loading player...")
-        yield task.cont
-
+    def _loadPlayer(self):
         # Create the main character, Ralph
         # ralphStartPos = self.environ.find("**/start_point").getPos()
         ralphStartPosX = 50
@@ -302,7 +245,16 @@ class World(DirectObject):
         # parameter to enable inverting the mouse y-axis ( +1 is normal, -1 inverts)
         self.mouseNotInvertY = 1
 
+        # Create a ralphHead object for the camera to point at
+        self.ralphHead = NodePath(PandaNode("ralphHead"))
+        self.ralphHead.reparentTo(render)
+
+        # create a test camera node for zooming out from 1st person
+        self.testcam = NodePath(PandaNode("testcam"))
+        self.testcam.reparentTo(render)
+
         # Accept the control keys for movement
+        self.keyMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "mouse":0, "turbo":0, "option+":0, "option-":0}
         self.accept("escape", sys.exit)
         self.accept("w", self.setKey, ["forward", 1])
         self.accept("a", self.setKey, ["left", 1])
@@ -339,37 +291,34 @@ class World(DirectObject):
         self.accept("mouse3", self.toggleMouseLook)
         self.mouseLook = True
 
-        # ---- tasks -------------------------------------
-        # Ralph movement
-        taskMgr.add(self.move, "moveTask")
+    def _loadLighting(self):
+        ambient = Vec4(0.55, 0.65, 1.0, 1) #bright for hdr
+        #ambient = Vec4(0.25, 0.3, 0.35, 1)
+        direct = Vec4(2.0, 1.9, 1.8, 1) #bright for hdr
+        #direct = Vec4(0.7, 0.65, 0.6, 1)
+        # ambient light
+        alight = AmbientLight('alight')
+        alight.setColor(ambient)
+        alnp = render.attachNewNode(alight)
+        render.setLight(alnp)
+        render.setShaderInput('alight0', alnp)
 
-        # Game state variables
-        self.prevtime = 0
-        self.isMoving = False
-        self.firstmove = 1
+        self.sun = Sun()
 
-        # Create a ralphHead object for the camera to point at
-        self.ralphHead = NodePath(PandaNode("ralphHead"))
-        self.ralphHead.reparentTo(render)
+    def _loadPointLight():
+        self.lightpivot = render.attachNewNode("lightpivot")
+        self.lightpivot.hprInterval(10, Point3(360, 0, 0)).loop()
+        plight = PointLight('plight')
+        plight.setColor(Vec4(1, 1, 1, 1))
+        plight.setAttenuation(Vec3(0.7, 0.05, 0))
+        plnp = self.lightpivot.attachNewNode(plight)
+        plnp.setPos(10, 0, 0)
+        render.setLight(plnp)
 
-        # create a test camera node for zooming out from 1st person
-        self.testcam = NodePath(PandaNode("testcam"))
-        self.testcam.reparentTo(render)
-
-        # disable std. mouse
-        base.disableMouse()
-        props = WindowProperties()
-        props.setCursorHidden(True)
-        base.win.requestProperties(props)
-
-        self.bug_text.setText("loading gui controls...")
-        yield task.cont
-
-        self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
-        self.shaderControl.hide()
-
-        self.bug_text.setText("")
-        yield task.cont
+        # create a sphere to denote the light
+        sphere = loader.loadModel("models/sphere")
+        sphere.reparentTo(plnp)
+        render.setShaderInput("plight0", plnp)
 
     def _setup_camera(self):
         cam = base.cam.node()
@@ -379,6 +328,7 @@ class World(DirectObject):
         #cam.setTagState('True', RenderState.make(sa))
 
     def move(self, task):
+#        self.lightpivot.setPos(self.ralphHead.getPos() + Vec3(0, 0, 4))
         if not self.mouseLook:
             return Task.cont
 

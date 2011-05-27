@@ -114,7 +114,7 @@ _end = '''
         terrainColor /= textureWeightTotal;
         // detail texture
         float2 detailTexCoord= input.l_tex_coord*8.0;
-        terrainColor*= tex2D(detailTexture, detailTexCoord) *1.1;
+        terrainColor*= tex2D(detailTexture, detailTexCoord) *1.15;
         attr_color = terrainColor;
 
         // Correct the surface normal for interpolation effects
