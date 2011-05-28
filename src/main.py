@@ -17,6 +17,19 @@ if __name__ == "__main__":
 import math
 import sys
 
+import os
+from panda3d.core import loadPrcFile
+from pandac.PandaModules import Filename
+
+# Figure out what directory this program is in.
+MYDIR = os.path.abspath(sys.path[0])
+MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
+print('running from:' + MYDIR)
+
+loadPrcFile("config/config.prc")
+
+###############################################################################
+
 from direct.actor.Actor import Actor
 import direct.directbase.DirectStart
 from direct.filter.CommonFilters import CommonFilters
@@ -24,11 +37,8 @@ from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.DirectObject import DirectObject
 from direct.task.Task import Task
 from gui import *
-import os
-from panda3d.core import loadPrcFile
 from pandac.PandaModules import AmbientLight
 from pandac.PandaModules import DirectionalLight
-from pandac.PandaModules import Filename
 from pandac.PandaModules import LightRampAttrib
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import PStatClient
@@ -44,16 +54,7 @@ from sun import *
 from terrain import *
 from waterNode import *
 
-
-
 ###############################################################################
-
-# Figure out what directory this program is in.
-MYDIR = os.path.abspath(sys.path[0])
-MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
-print('running from:' + MYDIR)
-
-loadPrcFile("settings.prc")
 
 # Function to put instructions on the screen.
 def addInstructions(pos, msg):
@@ -328,7 +329,7 @@ class World(DirectObject):
         #cam.setTagState('True', RenderState.make(sa))
 
     def move(self, task):
-#        self.lightpivot.setPos(self.ralphHead.getPos() + Vec3(0, 0, 4))
+        #self.lightpivot.setPos(self.ralphHead.getPos() + Vec3(0, 0, 4))
         if not self.mouseLook:
             return Task.cont
 
@@ -532,7 +533,7 @@ class World(DirectObject):
         self.prevtime = task.time
         return Task.cont
 
-    # records the state of the keyboard
+# records the state of the keyboard
     def setKey(self, key, value):
         self.keyMap[key] = value
 
@@ -557,8 +558,8 @@ w = World()
 
 def setResolution():
     wp = WindowProperties()
-    wp.setSize(1024, 768) # there will be more resolutions
-    #wp.setFullscreen(True)
+    wp.setSize(1920, 1080)
+    wp.setFullscreen(True)
     base.win.requestProperties(wp)
 
 #setResolution()

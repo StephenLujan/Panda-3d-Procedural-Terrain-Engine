@@ -75,6 +75,7 @@ void vshader(
         output.l_tex_coord = vtx_texcoord0;
         //output.l_normal =  mul(trans_model_to_world, vtx_normal); //vec3(1.0,0.0,1.0);
         output.l_normal = vtx_normal.xyz;
+        output.l_normal.z /= 400;
         output.l_normal = normalize(output.l_normal);
         output.l_worldpos = mul(trans_model_to_world, vtx_position);
 }

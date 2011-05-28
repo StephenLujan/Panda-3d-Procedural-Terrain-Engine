@@ -37,7 +37,7 @@ class Sun:
 
         self.sun = base.cam.attachNewNode('sun')
         loader.loadModel("models/sphere").reparentTo(self.sun)
-        self.sun.setScale(0.1)
+        self.sun.setScale(0.07)
         self.sun.setTwoSided(True)
         self.sun.setColorScale(1.0, 1.0, 1.0, 1.0, 10001)
         self.sun.setLightOff(1)
@@ -111,8 +111,8 @@ class Sun:
         noonOffset = (1200.0 - time) / 600.0
         sunsetStrength = noonOffset * noonOffset
 
-        directColor = Vec4(2.4, 2.3, 2.1, 1) #bright for hdr
-        sunsetColor = Vec4(1.6, 1.1, 0.4, 1)
+        directColor = Vec4(2.3, 2.1, 2.0, 1) #bright for hdr
+        sunsetColor = Vec4(1.6, 0.9, 0.5, 1)
 
         if sunsetStrength < 1.0:
             directColor *= 1-sunsetStrength
@@ -121,13 +121,17 @@ class Sun:
             lightColor = directColor + sunsetColor
 
         else:
-            duskTime = 0.2
+            maxSunsetStrength = (1.0 + 1.0/6.0) * (1.0 + 1.0/6.0)
+            duskTime = maxSunsetStrength - 1.0
             duskMultiplier = ((1.0 + duskTime) - sunsetStrength) / duskTime
             #print duskMultiplier
             if duskMultiplier < 0:
                 lightColor = Vec4(0, 0, 0, 1)
             else:
                 lightColor = sunsetColor * duskMultiplier
+                
+        lightColor.w = 1
+        self.dlight.setColor(lightColor)
 
         directColor = Vec4(1.0, 1.0, 1.0, 1) #bright for hdr
         sunsetColor = Vec4(1.0, 0.9, 0.7, 1)
@@ -135,11 +139,10 @@ class Sun:
         sunsetColor *= sunsetStrength
         #print directColor, sunsetColor
         lightColor = directColor + sunsetColor
-        self.sun.setColorScale(lightColor, 10001)
+        self.sun.setColorScale(lightColor, 1000)
         
 
-        lightColor.w = 1
-        self.dlight.setColor(lightColor)
+        
 
         if self.finalQuad != None:
             directColor = Vec4(1, 0.99, 0.88, 0.03)
@@ -169,7 +172,7 @@ class Sun:
         self.finalQuad.setShaderInput('casterpos', Vec4(casterpos.getX() * 0.5 + 0.5, (casterpos.getY() * 0.5 + 0.5), 0, 0))
 
         if self.time > 2000:
-            self.time = 200
-        self.setTime(self.time + 0.5)
+            self.time = 400
+        self.setTime(self.time + 1)
         return task.cont
 
