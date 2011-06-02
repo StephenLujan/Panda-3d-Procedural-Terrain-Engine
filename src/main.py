@@ -47,6 +47,7 @@ from pandac.PandaModules import PointLight
 from pandac.PandaModules import RenderState
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextNode
+from pandac.PandaModules import Fog
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import WindowProperties
@@ -204,8 +205,18 @@ class World(DirectObject):
         self.skybox.setDepthTest(False)
         self.skybox.reparentTo(render)
         self.skybox.setLightOff(1)
-        self.skybox.setShaderOff(1)
+        self.skybox.setFogOff(1)
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
+
+    def _loadFog(self):
+        colour = (0.5,0.8,0.8)
+        linfog = Fog("distanceFog")
+        linfog.setColor(*colour)
+        max = self.terrain.maxViewRange
+        linfog.setLinearRange(0,max)
+        linfog.setLinearFallback(max/10, max/2, max)
+        render.attachNewNode(linfog)
+        render.setFog(linfog)
 
     def _loadPlayer(self):
         # Create the main character, Ralph
@@ -553,9 +564,6 @@ class World(DirectObject):
         base.screenshot()
         print 'screenshot taken.'
 
-print('instancing world...')
-w = World()
-
 def setResolution():
     wp = WindowProperties()
     wp.setSize(1920, 1080)
@@ -563,6 +571,9 @@ def setResolution():
     base.win.requestProperties(wp)
 
 #setResolution()
+
+print('instancing world...')
+w = World()
 
 print('calling run()...')
 run()
