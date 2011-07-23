@@ -50,7 +50,7 @@ from pandac.PandaModules import TextNode
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import WindowProperties
-from sun import *
+from sky import *
 from terrain import *
 from waterNode import *
 
@@ -163,6 +163,7 @@ class World(DirectObject):
 
         self.loc_text = addTextField(0.35, "[LOC]: ")
         self.hpr_text = addTextField(0.30, "[HPR]: ")
+        self.time_text = addTextField(0.25, "[Time]: ")
         #self.blend_text = addTextField(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
@@ -193,19 +194,8 @@ class World(DirectObject):
         #base.bufferViewer.toggleEnable()
 
     def _loadSky(self):
-        # skybox
-        self.skybox = loader.loadModel('models/skydome')
-        self.skybox.setTexture(loader.loadTexture('models/early.png'))
-        self.skybox.setShaderOff(1)
-        # make big enough to cover whole terrain, else there'll be problems with the water reflections
-        self.skybox.setScale(1000)
-        self.skybox.setBin('background', 1)
-        self.skybox.setDepthWrite(False)
-        self.skybox.setDepthTest(False)
-        self.skybox.reparentTo(render)
-        self.skybox.setLightOff(1)
-        self.skybox.setShaderOff(1)
-        self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
+        self.sky = Sky()
+        self.sky.start()
 
     def _loadPlayer(self):
         # Create the main character, Ralph
@@ -219,7 +209,7 @@ class World(DirectObject):
         self.ralph.reparentTo(render)
         self.ralph.setScale(.25)
         self.ralph.setPos(ralphStartPosX, ralphStartPosY, ralphStartPosZ)
-        self.skybox.setPos(ralphStartPosX, ralphStartPosY, ralphStartPosZ)
+        #self.skybox.setPos(ralphStartPosX, ralphStartPosY, ralphStartPosZ)
         self.ralphHeight = 1.4  # to locate the top of Ralph's head for the camera to point at
 
         self.terrain.focus = self.ralph
@@ -304,8 +294,6 @@ class World(DirectObject):
         render.setLight(alnp)
         render.setShaderInput('alight0', alnp)
 
-        self.sun = Sun()
-
     def _loadPointLight():
         self.lightpivot = render.attachNewNode("lightpivot")
         self.lightpivot.hprInterval(10, Point3(360, 0, 0)).loop()
@@ -335,9 +323,7 @@ class World(DirectObject):
 
         elapsed = task.time - self.prevtime
 
-        # move the skybox with the camera
         campos = base.camera.getPos()
-        self.skybox.setPos(campos)
 
         # Update water
         # update matrix of the reflection camera
@@ -525,6 +511,8 @@ class World(DirectObject):
         # camera heading + pitch output
         self.hpr_text.setText('[HPR]: %03.1f, %03.1f,%03.1f ' % \
                               (base.camera.getH(), base.camera.getP(), base.camera.getR()))
+                              
+        self.time_text.setText('[Time]: %03.1f' %self.sky.time)
         #current texture blending mode
         #self.blend_text.setText('[blend mode]: %i ' % \
         #                      ( self.terrain.textureBlendMode ) )

@@ -160,7 +160,7 @@ class Sun:
 
     def start(self):
         if self.finalQuad != None:
-            self.updateTask = taskMgr.add(self.update, 'sky-update')
+            self.updateTask = taskMgr.add(self.update, 'sun-update')
 
     def stop(self):
         if self.updateTask != None:
@@ -171,8 +171,5 @@ class Sun:
         base.camLens.project(self.sun.getPos(base.cam), casterpos)
         self.finalQuad.setShaderInput('casterpos', Vec4(casterpos.getX() * 0.5 + 0.5, (casterpos.getY() * 0.5 + 0.5), 0, 0))
 
-        if self.time > 2000:
-            self.time = 400
-        self.setTime(self.time + 1)
         return task.cont
 
