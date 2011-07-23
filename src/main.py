@@ -91,10 +91,10 @@ class World(DirectObject):
         self.bug_text.setText("loading Display...")
         yield task.cont
         self._loadDisplay()
-
-        self.bug_text.setText("loading lighting")
+        
+        self.bug_text.setText("loading sky...")
         yield task.cont
-        self._loadLighting()
+        self._loadSky()
 
         # Definitely need to make sure this loads before terrain
         self.bug_text.setText("loading terrain...")
@@ -110,10 +110,6 @@ class World(DirectObject):
         self.bug_text.setText("loading filters")
         yield task.cont
         self._loadFilters()
-
-        self.bug_text.setText("loading sky...")
-        yield task.cont
-        self._loadSky()
 
         self.bug_text.setText("loading player...")
         yield task.cont
@@ -188,7 +184,7 @@ class World(DirectObject):
         #bloomSize
         cf.setBloom(size='medium')
         #hdrtype:
-        render.setAttrib(LightRampAttrib.makeHdr0())
+        render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
         render.setShaderAuto()
         #base.bufferViewer.toggleEnable()
@@ -281,18 +277,6 @@ class World(DirectObject):
         self.accept("wheel_down", self.setMouseBtn, [3, -1])
         self.accept("mouse3", self.toggleMouseLook)
         self.mouseLook = True
-
-    def _loadLighting(self):
-        ambient = Vec4(0.55, 0.65, 1.0, 1) #bright for hdr
-        #ambient = Vec4(0.25, 0.3, 0.35, 1)
-        direct = Vec4(2.0, 1.9, 1.8, 1) #bright for hdr
-        #direct = Vec4(0.7, 0.65, 0.6, 1)
-        # ambient light
-        alight = AmbientLight('alight')
-        alight.setColor(ambient)
-        alnp = render.attachNewNode(alight)
-        render.setLight(alnp)
-        render.setShaderInput('alight0', alnp)
 
     def _loadPointLight():
         self.lightpivot = render.attachNewNode("lightpivot")

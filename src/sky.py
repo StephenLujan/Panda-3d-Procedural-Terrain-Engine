@@ -5,6 +5,7 @@ from sun import *
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
+from pandac.PandaModules import AmbientLight
 
 class SkyBox():
     def __init__(self):
@@ -27,7 +28,7 @@ class SkyBox():
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
         
         self.dayColor = Vec4(.55,.65,.95,1.0)
-        self.nightColor = Vec4(.0,.0,.1,1.0)
+        self.nightColor = Vec4(.0,.0,.15,1.0)
         self.sunsetColor = Vec4(.45,.45,.85,1.0)
         
     def setTime(self, time):
@@ -125,6 +126,13 @@ class Sky():
         self.sun = Sun()
         self.clouds = CloudLayer()
         self.setTime(500.0)
+        
+        ambient = Vec4(0.45, 0.55, 0.9, 1) #bright for hdr
+        alight = AmbientLight('alight')
+        alight.setColor(ambient)
+        alnp = render.attachNewNode(alight)
+        render.setLight(alnp)
+        render.setShaderInput('alight0', alnp)
         
     def setTime(self, time):
         self.time = time
