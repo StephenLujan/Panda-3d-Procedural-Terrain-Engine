@@ -50,13 +50,25 @@ class Creature(NodePath):
         no angular acceleration... 
         its really not that noticeable outside of ragdolls
         """
+        heading = self.body.getH()
         maxAngularVelocity = self.maxAngularVelocity * elapsed
-        deltaH = desiredHeading - self.body.getH()
+        deltaH = desiredHeading - heading
+        
+        # Make sure we're taking turning the quick way. If we're turning more
+        # than 180.0 we should be turning the other direction.
+        if deltaH > 180.0:
+            heading+= 360.0
+            deltaH = desiredHeading - heading
+        elif deltaH < -180.0:
+            heading-= 360.0
+            deltaH = desiredHeading - heading
+        
+        #limit turning speed
         if deltaH > maxAngularVelocity:
             deltaH = maxAngularVelocity
         elif deltaH < -maxAngularVelocity:
             deltaH = -maxAngularVelocity
-        self.body.setH(self.body.getH() + deltaH)
+        self.body.setH(heading + deltaH)
 
     def animate(self):
         # If Ralph is moving, loop the run animation.
@@ -83,20 +95,6 @@ class Creature(NodePath):
         self.animate()
         self.setPos(startpos + self.velocity * elapsed * self.turbo)
         self.setZ(self.heightFunction(self.getX(),self.getY()))
-        
-    def seekVec(self, target, elapsed):
-        desiredVelocity = target - self.getPos()
-        desiredVelocity.z = 0
-        if desiredVelocity.length() > self.maxSpeed:
-            desiredVelocity.normalize()
-            desiredVelocity *= self.maxSpeed
-            
-        desiredHeading = math.degrees( math.atan2(desiredVelocity.y, desiredVelocity.x) ) + 90; 
-        
-        self.move(desiredVelocity, desiredHeading, elapsed)
-        
-    def seekNP(self, target, elapsed):
-        self.seekVec(target.getPos(),elapsed)
                 
 class Player(Creature):
     def __init__(self, heightFunction,  startPosition = Vec3(0,0,0)):
@@ -127,7 +125,10 @@ class Player(Creature):
                 Creature.move(self, Vec3(0,0,0), 0, elapsed)
                 return
         
-        
+        # the body is parented to the Player
+        # heading will direct the velocity of the Player
+        # direction will turn the body relative to the Player
+        # the heading of the Player is already altered by the camera
         heading += direction
         desiredVelocity = Vec3(math.sin(heading/180.0 * math.pi) , math.cos(heading/180.0 * math.pi), 0) * self.maxSpeed
         if self.controls["forward"] == 1:
@@ -138,7 +139,27 @@ class Ai(Creature):
     def __init__(self, heightFunction, startPosition = Vec3(0,0,0)):
         Creature.__init__(self, heightFunction, startPosition)
         self.seekTarget = None
+        self.arrivalRadius = 1
         
     def update(self, elapsed):
         if self.seekTarget:
             self.seekNP(self.seekTarget, elapsed)
+            
+    def seekVec(self, target, elapsed):
+        desiredVelocity = target - self.getPos()
+        desiredVelocity.z = 0
+        distance = desiredVelocity.length()
+        
+        if distance > self.maxSpeed:
+            desiredVelocity.normalize()
+            desiredVelocity *= self.maxSpeed
+            
+        desiredHeading = math.degrees( math.atan2(desiredVelocity.y, desiredVelocity.x) ) + 90; 
+        
+        if distance < 1:
+            desiredVelocity = Vec3(0,0,0)
+        
+        self.move(desiredVelocity, desiredHeading, elapsed)
+        
+    def seekNP(self, target, elapsed):
+        self.seekVec(target.getPos(),elapsed)

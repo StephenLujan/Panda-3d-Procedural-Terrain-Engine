@@ -10,7 +10,7 @@
 ###
 __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
-_MAXRANGE = 400
+_MAXRANGE = 300
 
 import math
 from operator import itemgetter
