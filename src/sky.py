@@ -14,6 +14,7 @@ class SkyBox():
         skynode = base.cam.attachNewNode('skybox')
         self.skybox = loader.loadModel("models/skybox")
         self.skybox.reparentTo(skynode)
+
         #self.skybox = loader.loadModel('models/rgbCube')
         
         self.skybox.setTextureOff(1)
@@ -108,8 +109,9 @@ class CloudLayer():
         elif time < 2000.0:
             s = (2000.0 - time) / 150.0
             sc( self.sunsetColor * s + self.nightColor * (1.0 - s))
-        
-        self.clouds.setTexOffset(self.ts1, time/600.0, time/600.0);
+
+        self.speed = 0.005
+        self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
         
     def setPos(self, pos):
         #pos.normalize()
@@ -117,7 +119,7 @@ class CloudLayer():
         #self.clouds.lookAt(base.cam)
         
     def update(self):
-        self.setPos(base.cam.getPos()+Vec3(0,0,0))
+        self.setPos(base.cam.getPos()+Vec3(0,0,-600))
         
         
 class Sky():
@@ -125,7 +127,9 @@ class Sky():
         self.skybox = SkyBox()
         self.sun = Sun()
         self.clouds = CloudLayer()
+        self.dayLength = 30 #in seconds
         self.setTime(500.0)
+        self.previousTime = 0
         
         ambient = Vec4(0.45, 0.55, 0.9, 1) #bright for hdr
         alight = AmbientLight('alight')
@@ -148,8 +152,15 @@ class Sky():
             taskMgr.remove(self.updateTask)
             
     def update(self, task):
+        elapsed = task.time - self.previousTime
+        timeMultiplier = 2400.0 / self.dayLength
+        self.previousTime = task.time
         self.clouds.update()
-        if self.time > 2200:
-            self.time = 300
-        self.setTime(self.time + 5)
+        #  start the next day at midnight
+        #if self.time >= 2400.0:
+        #    self.time -= 2400.0
+        #  skip some night hours to make it interesting
+        if self.time > 2200.0:
+            self.time = 300.0
+        self.setTime(self.time + elapsed * timeMultiplier)
         return task.cont

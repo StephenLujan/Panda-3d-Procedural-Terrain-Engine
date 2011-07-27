@@ -14,7 +14,7 @@ class MyCamera(Camera):
         self.camNode = base.cam
         self.cam = self.camNode.node()
         self.cam.getLens().setNear(1)
-        self.cam.getLens().setFar(5000)
+        self.cam.getLens().setFar(10000)
         self.cam.setTagStateKey('Normal')
         
 class FollowCamera(MyCamera):

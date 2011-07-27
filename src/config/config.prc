@@ -22,11 +22,16 @@ allow-portal-cull 1
 audio-library-name null
 
 #constrained to a harmonic of 60fps (that is, 60, 30, 20, 15, 12, and so on)
-sync-video 1
+sync-video 0
 
 # windowed
-win-size 800 600
+#win-size 800 600
+# HD
+win-size 1280 720
 
 # fullscreen
 #win-size 1920 1080
 #fullscreen #t
+
+# The distance below which terrain is guaranteed to be loaded and rendered
+#max-view-range 500

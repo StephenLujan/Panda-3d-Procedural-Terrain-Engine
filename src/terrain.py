@@ -10,7 +10,7 @@
 ###
 __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
-_MAXRANGE = 300
+_MAXRANGE = 100
 
 import math
 from operator import itemgetter
@@ -35,12 +35,19 @@ from pandac.PandaModules import Vec2
 from pstat_debug import pstat
 from terraintexturer import *
 
-""" Panda3d GeoMipTerrain tips:
+""" 
+    Panda3d GeoMipTerrain tips:
 least detail = max detail level = log(block_size) / log(2)
 most detail = min detail level = 0
 Block size does not effect the detail level. It only limits the max detail level.
 Each block in a GeoMipTerrain can set its own detail level on update if
 bruteforce is disabled.
+
+    Performance Note:
+In creating new tiles GeoMipTerrain.generate() is the biggest performance hit,
+taking up about 5/7 of the time spent in Terrain._generateTile().
+Most of the remainder is spent in Terrain.getHeight(). Everything else involved
+in adding and removing tiles is trivial in practice.
 """
 
 
@@ -97,13 +104,13 @@ class TerrainTile(GeoMipTerrain):
 
         GeoMipTerrain.setHeightfield(self, filename)
 
-    #@pstat
+    @pstat
     def setHeight(self):
         """Sets the height field to match the height map image."""
 
         self.setHeightField(self.image)
 
-    #@pstat
+    @pstat
     def makeHeightMap(self):
         """Generate a new heightmap image.
 
@@ -116,37 +123,22 @@ class TerrainTile(GeoMipTerrain):
         self.image = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
         self.image.makeGrayscale()
         # these may be redundant
-        self.image.setNumChannels(1)
+        #self.image.setNumChannels(1)
         self.image.setMaxval(65535)
 
-        #        max = -9999.0
-        #        min = 9999.0
-        #        height = 0
 
-        # return the minimum and maximum, useful to normalize the heightmap
-        #        for x in range(self.xOffset, self.xOffset + self.image.getXSize()):
-        #            for y in range(self.yOffset, self.yOffset + self.image.getYSize()):
-        #                height = self.terrain.getHeight(x, y)
-        #                if height < min:
-        #                    min = height
-        #                if height > max:
-        #                    max = height
-
-        #normalMax = -9999.0
-        #normalMax = 9999.0
-
-        #print "generating heightmap for offsets: ",self.xOffset,self.yOffset
-
-        ySize = self.image.getYSize()
+        ySize = self.image.getYSize()-1
         getHeight = self.terrain.getHeight
         setGray = self.image.setGray
+        xo = self.xOffset
+        yo = self.yOffset
 
         for x in range(self.image.getXSize()):
-            for y in range(ySize):
-                height = getHeight(x + self.xOffset, y + self.yOffset)
+            for y in range(ySize+1):
+                height = getHeight(x + xo, y + yo)
                 #  feed pixel into image
                 # why is it necessary to invert the y axis I wonder?
-                setGray(x, ySize-1-y, height)
+                setGray(x, ySize-y, height)
         #self.postProcessImage()
         #self.image.write(Filename(self.mapName))
 
@@ -158,7 +150,7 @@ class TerrainTile(GeoMipTerrain):
     def wireframe(self):
         self.getRoot().setRenderModeWireframe()
 
-    #@pstat
+    @pstat
     def make(self):
         """Build a finished renderable heightMap."""
 
@@ -179,6 +171,8 @@ class CachingTerrainTile(TerrainTile):
     If it is not possible it will create new images and save them to disk.
 
     """
+
+
     def setHeightField(self, filename):
         """Set the GeoMip heightfield from a heightmap image."""
 
@@ -227,8 +221,8 @@ class HeightMap():
         for x in range(2):
             for y in range(2):
                 minmax.append(self.getPrenormalizedHeight(x, y))
-        min = 999
-        max = -999
+        min = 9999
+        max = -9999
         for x in minmax:
             if x < min:
                 min = x
@@ -286,7 +280,7 @@ class HeightMap():
         # The closer p1 is to fh, the smaller the mutiplier for p2 becomes.
         # As p2 diminishes, so does the roughness.
 
-
+    #@pstat
     def getHeight(self, x, y):
         """Returns the height at the specified terrain coordinates.
 
@@ -306,7 +300,7 @@ class HeightMap():
 class Terrain(NodePath):
     """A terrain contains a set of geomipmaps, and maintains their common properties."""
 
-    def __init__(self, name, focus, id=0):
+    def __init__(self, name, focus, id=0, maxRange = _MAXRANGE):
         """Create a new terrain centered on the focus.
 
         The focus is the NodePath where the LOD is the greatest.
@@ -332,7 +326,7 @@ class Terrain(NodePath):
         # distances are measured in tile's smallest unit
         # conversion to world units may be necessary
         # Don't show untiled terrain below this distance etc.
-        self.maxViewRange = _MAXRANGE
+        self.maxViewRange = maxRange
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
         self.minTileDistance = self.maxViewRange + self.tileSize / 2
@@ -377,6 +371,7 @@ class Terrain(NodePath):
 
     def initializeRenderingProperties(self):
         self.bruteForce = True
+        #self.bruteForce = False
         if self.bruteForce:
             self.blockSize = self.tileSize
         else:
