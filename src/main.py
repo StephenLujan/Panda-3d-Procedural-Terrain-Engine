@@ -19,6 +19,7 @@ import sys
 
 import os
 from panda3d.core import loadPrcFile
+from panda3d.core import ConfigVariableInt
 from pandac.PandaModules import Filename
 
 # Figure out what directory this program is in.
@@ -167,7 +168,7 @@ class World(DirectObject):
         #self.blend_text = addTextField(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
-        self.terrain = Terrain('Terrain', base.camera)
+        self.terrain = Terrain('Terrain', base.camera, maxRange = ConfigVariableInt("max-view-range").getValue())
         self.terrain.reparentTo(render)
         self.environ = self.terrain	# make available for original Ralph code below
 

@@ -30,3 +30,6 @@ win-size 800 600
 # fullscreen
 #win-size 1920 1080
 #fullscreen #t
+
+# The distance below which terrain is guarenteed to be loaded and rendered
+max-view-range 500
