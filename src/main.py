@@ -116,6 +116,10 @@ class World(DirectObject):
         yield task.cont
         #self._loadFog()
 
+        self.bug_text.setText("loading player...")
+        yield task.cont
+        self._loadPlayer()
+        
         self.bug_text.setText("loading water...")
         yield task.cont
         self._loadWater()
@@ -123,10 +127,6 @@ class World(DirectObject):
         self.bug_text.setText("loading filters")
         yield task.cont
         self._loadFilters()
-
-        self.bug_text.setText("loading player...")
-        yield task.cont
-        self._loadPlayer()
 
         self.bug_text.setText("loading miscellanious")
         yield task.cont
@@ -168,11 +168,15 @@ class World(DirectObject):
         self.inst8 = addText(0.60, "[shift]: Turbo Mode")
         self.inst9 = addText(0.55, "[R]: Regenerate Terrain")
         self.inst10 = addText(0.50, "[right-mouse]: Open Shader Controls")
-        self.inst10 = addText(0.45, "[F11]: Screen Shot")
+        self.inst11 = addText(0.45, "[1-8]: Set time to # * 3")
+        self.inst12 = addText(0.40, "[N]: Toggle Night Skipping")
+        self.inst13 = addText(0.35, "[P]: Pause day night cycle")
+        self.inst14 = addText(0.3, "[F11]: Screen Shot")
+        
 
-        self.loc_text = addText(0.35, "[LOC]: ", True)
-        self.hpr_text = addText(0.30, "[HPR]: ", True)
-        self.time_text = addText(0.25, "[Time]: ", True)
+        self.loc_text = addText(0.20, "[LOC]: ", True)
+        self.hpr_text = addText(0.15, "[HPR]: ", True)
+        self.time_text = addText(0.10, "[Time]: ", True)
         #self.blend_text = addText(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
@@ -234,6 +238,16 @@ class World(DirectObject):
         self.accept("y", self.setControl, ["invert-y", 1])
         self.accept("shift", self.setControl, ["turbo", 1])
         self.accept("f11", self.screenShot)
+        self.accept("1", self.sky.setTime, [300.0])
+        self.accept("2", self.sky.setTime, [600.0])
+        self.accept("3", self.sky.setTime, [900.0])
+        self.accept("4", self.sky.setTime, [1200.0])
+        self.accept("5", self.sky.setTime, [1500.0])
+        self.accept("6", self.sky.setTime, [1800.0])
+        self.accept("7", self.sky.setTime, [2100.0])
+        self.accept("8", self.sky.setTime, [0.0])
+        self.accept("n", self.sky.toggleNightSkip )
+        self.accept("p", self.sky.pause )
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
         #self.accept("f", self.terrain.flatten)

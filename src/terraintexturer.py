@@ -57,6 +57,17 @@ class TerrainTexturer():
     def texturize(self, input):
         """Apply textures and shaders to the input."""
 
+    def indexToHeight(self, input):
+        """Maps a decimal [0.0, 1.0] to [waterHeight, maxHeight]"""
+        wh = self.terrain.waterHeight * self.terrain.maxHeight
+        return input * (self.terrain.maxHeight - wh) + wh
+
+    def heightToIndex(self, input):
+        """Maps the height above sea level to a decimal index."""
+        wh = self.terrain.waterHeight * self.terrain.maxHeight
+        return (input - wh) / (self.terrain.maxHeight - wh)
+
+
 ###############################################################################
 #   MonoTexturer
 ###############################################################################
@@ -179,28 +190,23 @@ class ShaderTexturer(DetailTexturer):
 
 
         ### Load the boundries for each texture
-        # this is half the blend area between each texture
-        blendRadius = self.terrain.maxHeight * 0.1 + 0.5
-        transitionHeights = Vec3(self.terrain.maxHeight * self.terrain.waterHeight,
-                                 self.terrain.maxHeight * 0.65,
-                                 self.terrain.maxHeight * 0.83)
-
-        # regionLimits ( max height, min height, slope max, slope min )
+        # regionLimits ( min height, max height, min slope, max slope )
 
         sg = TerrainShaderGenerator(self.terrain)
 
         sg.addTexture(self.tex1)
-        sg.addRegionToTex(Vec4(transitionHeights.getX() + blendRadius, -999.0, 1, 0))
+        sg.addRegionToTex(Vec4(-9999.0, self.indexToHeight(0.1), 0.0, 1.0))
 
         sg.addTexture(self.tex2)
-        sg.addRegionToTex(Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX() - blendRadius, 0.30, 0))
+        sg.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), 0.0, 0.45))
 
         sg.addTexture(self.tex3)
-        sg.addRegionToTex(Vec4(transitionHeights.getY() + blendRadius, transitionHeights.getX()- blendRadius, 1.0, 0.15))
-        sg.addRegionToTex(Vec4(transitionHeights.getZ() + blendRadius, transitionHeights.getY() - blendRadius, 1.0, 0))
+        sg.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.15, 1.0))
+        #second region forces tex 2 and 4 to blend a bit at their boundries regardless of slope
+        sg.addRegionToTex(Vec4(self.indexToHeight(0.4), self.indexToHeight(0.9), 0.0, 1.0))
 
         sg.addTexture(self.tex4)
-        sg.addRegionToTex(Vec4(999.0, transitionHeights.getZ() - blendRadius, 1.0, 0))
+        sg.addRegionToTex(Vec4(self.indexToHeight(0.72), 9999.0, 0.0, 1.0))
 
         if RUNTYPE == 'python':
             file = 'shaders/stephen6.sha'

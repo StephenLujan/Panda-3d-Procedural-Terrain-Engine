@@ -10,9 +10,9 @@ from sun import *
 
 class ColoredByTime():
     def __init__(self):
-        self.schedule = ((450, self.nightColor), (550, self.sunsetColor),
+        self.schedule = ((450, self.nightColor), (600, self.sunsetColor),
                          (950, self.dayColor), (1450, self.dayColor),
-                         (1850, self.sunsetColor), (1950, self.nightColor))
+                         (1800, self.sunsetColor), (1950, self.nightColor))
 
     def interpolateColor (self, start, end, time, startColor, endColor):
         ratio = (time - start) / (end - start + 0.000001)
@@ -50,8 +50,8 @@ class SkyBox(ColoredByTime):
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
         
         self.dayColor = Vec4(.55, .65, .95, 1.0)
-        self.nightColor = Vec4(.0, .05, .2, 1.0)
-        self.sunsetColor = Vec4(.45, .5, .75, 1.0)
+        self.nightColor = Vec4(.05, .05, .25, 1.0)
+        self.sunsetColor = Vec4(.45, .5, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.skybox.setColor
 
@@ -116,8 +116,8 @@ class CloudLayer(ColoredByTime):
 
         self.speed = 0.0005
         self.dayColor = Vec4(1.0, 1.0, 1.0, 1.0)
-        self.nightColor = Vec4(.0, .0, .0, 1.0)
-        self.sunsetColor = Vec4(0.8, .65, .7, 1.0)
+        self.nightColor = Vec4(-0.5, -0.3, .1, 1.0)
+        self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.clouds.setColor
 
@@ -146,6 +146,8 @@ class Sky():
         self.dayLength = 100 #in seconds
         self.setTime(800.0)
         self.previousTime = 0
+        self.nightSkip = False
+        self.paused = False
         
         ambient = Vec4(0.45, 0.55, 0.9, 1) #bright for hdr
         alight = AmbientLight('alight')
@@ -170,14 +172,24 @@ class Sky():
             
     def update(self, task):
         elapsed = task.time - self.previousTime
-        timeMultiplier = 2400.0 / self.dayLength
         self.previousTime = task.time
+
         self.clouds.update()
-        #  start the next day at midnight
-        #if self.time >= 2400.0:
-        #    self.time -= 2400.0
-        #  skip some night hours to make it interesting
-        if self.time > 2100.0:
-            self.time = 350.0
+
+        if self.paused:
+            return task.cont
+        if self.nightSkip:
+            if self.time > 2000.0:
+                self.time = 400.0
+        else:
+            if self.time > 2400.0:
+                self.time -= 2400.0
+        timeMultiplier = 2400.0 / self.dayLength
         self.setTime(self.time + elapsed * timeMultiplier)
         return task.cont
+
+    def toggleNightSkip(self):
+        self.nightSkip = not self.nightSkip
+
+    def pause(self):
+        self.paused = not self.paused

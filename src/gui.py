@@ -58,13 +58,13 @@ class ShaderRegionControl():
         self.currentRegion = Vec4(terrain.getShaderInput('region' + str(self.regionNumber) + 'Limits').getVector())
         #print "shader control panel for region ", regionNumber, ": ", str(self.currentRegion)
 
-        self.minHeight = self.currentRegion[1]
+        self.minHeight = self.currentRegion[0]
         self.minHeightSlide = SlideControl(0, 0.6, parent = self.frame, range = (-0.1 * terrain.maxHeight, 1.1 * terrain.maxHeight), value = self.minHeight, name = "Min Height", function = self.setMinHeight, ysize = 1.5, xsize = 1.5)
-        self.maxHeight = self.currentRegion[0]
+        self.maxHeight = self.currentRegion[1]
         self.maxHeightSlide = SlideControl(0, 0.2, parent = self.frame, range = (-0.1 * terrain.maxHeight, 1.1 * terrain.maxHeight), value = self.maxHeight, name = "Max Height", function = self.setMaxHeight, ysize = 1.5, xsize = 1.5)
-        self.minSlope = self.currentRegion[3]
+        self.minSlope = self.currentRegion[2]
         self.minSlopeSlide = SlideControl(0, -0.2, parent = self.frame, range = (0,1), value = self.minSlope, name = "Min Slope", function = self.setMinSlope, ysize = 1.5, xsize = 1.5)
-        self.maxSlope = self.currentRegion[2]
+        self.maxSlope = self.currentRegion[3]
         self.maxSlopeSlide = SlideControl(0, -0.6, parent = self.frame, range = (0,1), value = self.maxSlope, name = "Max Slope", function = self.setMaxSlope, ysize = 1.5, xsize = 1.5)
 
         self.resize(self.size)
@@ -86,7 +86,7 @@ class ShaderRegionControl():
         self.setShaderInput()
 
     def regionBounds(self):
-        return (self.maxHeight, self.minHeight, self.maxSlope, self.minSlope)
+        return (self.minHeight, self.maxHeight, self.minSlope, self.maxSlope)
 
     def setShaderInput(self):
         key = 'region' + str(self.regionNumber) + 'Limits'

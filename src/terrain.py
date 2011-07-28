@@ -318,7 +318,7 @@ class Terrain(NodePath):
         self.tiles = {}
 
         ##### Terrain Tile physical properties
-        self.maxHeight = 300
+        self.maxHeight = 300.0
         self.tileSize = 64
         self.heightMapSize = self.tileSize + 1
 

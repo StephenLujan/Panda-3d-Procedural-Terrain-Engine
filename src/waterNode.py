@@ -92,6 +92,6 @@ class WaterNode():
         mf = self.waterPlane.getReflectionMat()
         self.watercamNP.setMat(mc * mf)
         self.waterNP.setShaderInput('time', task.time)
-        self.waterNP.setX(base.camera.getX())
-        self.waterNP.setY(base.camera.getY())
+        self.waterNP.setX(self.world.ralph.getX())
+        self.waterNP.setY(self.world.ralph.getY())
         return task.cont

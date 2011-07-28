@@ -9,7 +9,7 @@ _beginning = '''
 // Should use per-pixel lighting, hdr1, and medium bloom
 // input alight0, dlight0
 
-float calculateWeight( float value, float max, float min )
+float calculateWeight( float value, float min, float max )
 {
     if (value > max)
         return 0.0;
