@@ -5,10 +5,9 @@
 </head>
 <body>
 <style type="text/css">
-	#myoutercontainer { position:relative center; width:800;
+	#myoutercontainer { position:relative center; width:973;
 						margin-left: auto; margin-right: auto}
-	#myinnercontainer { position:absolute; top:50%; height:480; margin-top:-300;
-						}
+
 	embed
 	{
 		border-style:solid;
@@ -17,11 +16,19 @@
 	
 </style>
 <div id="myoutercontainer">
-	<div id="myinnercontainer">
-		<p>
 			<script language="javascript">
+				// Apparently it's recommended to leave 41 horizontal pixels for 
+				// browser chrome assuming no vertical scroll bar will exist.
+				// It's also recommended to leave 190 vertical pixels for OS
+				// and browser bars. The lowest vertical resolution still
+				// prevalent is probably 1280x720 aka HD. The lowest horizontal 
+				// resolution still prevalent is probably 1024x768.
+				// 1024-41 = 983   720-190 = 530
+				// I'll drop an extra 10 pixels for a nice border and take 
+				// 973 by 520 as a result. That's a nice wide 1.871 ratio.
+				
 				P3D_RunContent('data', 'myapp.p3d', 'id', 'Terrain',
-				'width', '800', 'height', '600',
+				'width', '973', 'height', '520',
 				'auto_start', '0',
 				'onpythonload', 'OnPythonLoad()',
 				'gameInfo', 'gameInfo',
@@ -41,9 +48,6 @@
 				*/
 				)
 			</script>
-
-		</p>
-	</div>
 </div>
 
 </body>
