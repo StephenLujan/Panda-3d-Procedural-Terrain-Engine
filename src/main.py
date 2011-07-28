@@ -58,27 +58,26 @@ from waterNode import *
 
 ###############################################################################
 
-# Function to put instructions on the screen.
-
+# Function returns the width / height ratio of the window or screen
 def getScreenRatio():
     props = WindowProperties(base.win.getProperties())
     return float(props.getXSize()) / float(props.getYSize())
 
-def addInstructions(pos, msg):
+# Function to add instructions and other information along either side
+def addText(pos, msg, changeable=False, alignLeft=True, scale=0.05):
     x = -getScreenRatio() + 0.03
+    if alignLeft:
+        align = TextNode.ALeft
+    else:
+        align = TextNode.ARight
+        x *= -1.0
     return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
-                        pos=(x, pos), align=TextNode.ALeft, scale=.05)
-
-def addTextField(pos, msg):
-    x = -getScreenRatio() + 0.03
-    return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
-                        pos=(x, pos), align=TextNode.ALeft, scale=.05, mayChange=True)
+                        pos=(x, pos), align=align, scale=scale,
+                        mayChange=changeable)
 
 # Function to put title on the screen.
 def addTitle(text):
-    x = getScreenRatio() - 0.03
-    return OnscreenText(text=text, style=1, fg=(1, 1, 1, 1),
-                        pos=(x, -0.95), align=TextNode.ARight, scale=.07)
+    addText(-0.95, text, False, False, 0.07)
 
 ##############################################################################
 
@@ -91,7 +90,7 @@ class World(DirectObject):
         base.win.setClearColor(Vec4(0, 0, 0, 1))
         base.win.setClearColorActive(True)
         taskMgr.doMethodLater(0.1, self.load, "Load Task")
-        self.bug_text = addTextField(-0.95, "Loading...")
+        self.bug_text = addText(-0.95, "Loading...", True)
 
     def load(self, task):
         yield task.cont
@@ -159,22 +158,22 @@ class World(DirectObject):
         #base.win.setClearColor(Vec4(0, 0, 0, 1))
         # Post the instructions
         self.title = addTitle("Animate Dream Terrain Engine")
-        self.inst1 = addInstructions(0.95, "[ESC]: Quit")
-        self.inst2 = addInstructions(0.90, "[mouse wheel]: Camera Zoom")
-        self.inst3 = addInstructions(0.85, "[Y]: Y-axis Mouse Invert")
-        self.inst4 = addInstructions(0.80, "[W]: Run Ralph Forward")
-        self.inst5 = addInstructions(0.75, "[A]: Run Ralph Left")
-        self.inst6 = addInstructions(0.70, "[S]: Run Ralph Backward")
-        self.inst7 = addInstructions(0.65, "[D]: Run Ralph Right")
-        self.inst8 = addInstructions(0.60, "[shift]: Turbo Mode")
-        self.inst9 = addInstructions(0.55, "[R]: Regenerate Terrain")
-        self.inst10 = addInstructions(0.50, "[right-mouse]: Open Shader Controls")
-        self.inst10 = addInstructions(0.45, "[F11]: Screen Shot")
+        self.inst1 = addText(0.95, "[ESC]: Quit")
+        self.inst2 = addText(0.90, "[mouse wheel]: Camera Zoom")
+        self.inst3 = addText(0.85, "[Y]: Y-axis Mouse Invert")
+        self.inst4 = addText(0.80, "[W]: Run Ralph Forward")
+        self.inst5 = addText(0.75, "[A]: Run Ralph Left")
+        self.inst6 = addText(0.70, "[S]: Run Ralph Backward")
+        self.inst7 = addText(0.65, "[D]: Run Ralph Right")
+        self.inst8 = addText(0.60, "[shift]: Turbo Mode")
+        self.inst9 = addText(0.55, "[R]: Regenerate Terrain")
+        self.inst10 = addText(0.50, "[right-mouse]: Open Shader Controls")
+        self.inst10 = addText(0.45, "[F11]: Screen Shot")
 
-        self.loc_text = addTextField(0.35, "[LOC]: ")
-        self.hpr_text = addTextField(0.30, "[HPR]: ")
-        self.time_text = addTextField(0.25, "[Time]: ")
-        #self.blend_text = addTextField(0.25, "Detail Texture Blend Mode: ")
+        self.loc_text = addText(0.35, "[LOC]: ", True)
+        self.hpr_text = addText(0.30, "[HPR]: ", True)
+        self.time_text = addText(0.25, "[Time]: ", True)
+        #self.blend_text = addText(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
         self.terrain = Terrain('Terrain', base.camera, maxRange=ConfigVariableInt("max-view-range").getValue())
@@ -532,7 +531,7 @@ class World(DirectObject):
         # camera heading + pitch output
         self.hpr_text.setText('[HPR]: %03.1f, %03.1f,%03.1f ' % \
                               (base.camera.getH(), base.camera.getP(), base.camera.getR()))
-                              
+
         self.time_text.setText('[Time]: %02i:%02i' % (self.sky.time / 100, self.sky.time % 100 * 60 / 100))
         #current texture blending mode
         #self.blend_text.setText('[blend mode]: %i ' % \
