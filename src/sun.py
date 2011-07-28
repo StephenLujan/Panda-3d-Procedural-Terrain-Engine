@@ -44,7 +44,7 @@ class Sun:
         self.sun.setShaderOff(1)
         self.sun.setFogOff(1)
         self.sun.setCompass()
-        self.sun.setBin('background', 10)
+        self.sun.setBin('background', 2)
         self.sun.setDepthWrite(False)
         self.sun.setDepthTest(False)
         # Workaround an annoyance in Panda. No idea why it's needed.

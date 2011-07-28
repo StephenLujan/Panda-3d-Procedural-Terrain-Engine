@@ -17,11 +17,11 @@ class Creature(NodePath):
         self.startPosition = startPosition
         self.setPos(startPosition)
         #  movement
-        self.acceleration = 15
+        self.acceleration = 25
         self.velocity = Vec3(0,0,0)
-        self.maxSpeed = 8
+        self.maxSpeed = 10
         self.speed = 0
-        self.maxAngularVelocity = 180
+        self.maxAngularVelocity = 360
         self.turbo = 1
         
         self.body = Actor("models/ralph",
@@ -81,7 +81,7 @@ class Creature(NodePath):
         else:
             if self.isMoving:
                 self.body.stop()
-                self.body.pose("walk",-5)
+                self.body.pose("walk",9)
                 self.isMoving = False 
             
     def move(self, desiredVelocity, desiredHeading, elapsed):
@@ -92,8 +92,8 @@ class Creature(NodePath):
         
         self.accelerate(desiredVelocity, elapsed)
         self.turnBody(desiredHeading, elapsed)
-        self.animate()
         self.setPos(startpos + self.velocity * elapsed * self.turbo)
+        self.animate()
         self.setZ(self.heightFunction(self.getX(),self.getY()))
                 
 class Player(Creature):

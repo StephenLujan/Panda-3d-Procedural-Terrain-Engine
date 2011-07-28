@@ -16,26 +16,27 @@ from pandac.PandaModules import Vec4
 
 class WaterNode():
     def __init__(self, world, x1, y1, x2, y2, z):
+        self.world = world
         print('setting up water plane at z=' + str(z))
 
         # Water surface
         maker = CardMaker('water')
         maker.setFrame(x1, x2, y1, y2)
 
-        world.waterNP = render.attachNewNode(maker.generate())
-        world.waterNP.setHpr(0, -90, 0)
-        world.waterNP.setPos(0, 0, z)
-        world.waterNP.setTransparency(TransparencyAttrib.MAlpha)
-        world.waterNP.setShader(loader.loadShader('shaders/water.sha'))
-        world.waterNP.setShaderInput('wateranim', Vec4(0.03, -0.015, 64.0, 0)) # vx, vy, scale, skip
+        self.waterNP = render.attachNewNode(maker.generate())
+        self.waterNP.setHpr(0, -90, 0)
+        self.waterNP.setPos(0, 0, z)
+        self.waterNP.setTransparency(TransparencyAttrib.MAlpha)
+        self.waterNP.setShader(loader.loadShader('shaders/water.sha'))
+        self.waterNP.setShaderInput('wateranim', Vec4(0.03, -0.015, 64.0, 0)) # vx, vy, scale, skip
         # offset, strength, refraction factor (0=perfect mirror, 1=total refraction), refractivity
-        world.waterNP.setShaderInput('waterdistort', Vec4(0.4, 4.0, 0.25, 0.45))
-        world.waterNP.setShaderInput('time', 0)
+        self.waterNP.setShaderInput('waterdistort', Vec4(0.4, 4.0, 0.25, 0.45))
+        self.waterNP.setShaderInput('time', 0)
 
         # Reflection plane
-        world.waterPlane = Plane(Vec3(0, 0, z + 1), Point3(0, 0, z))
+        self.waterPlane = Plane(Vec3(0, 0, z + 1), Point3(0, 0, z))
         planeNode = PlaneNode('waterPlane')
-        planeNode.setPlane(world.waterPlane)
+        planeNode.setPlane(self.waterPlane)
 
         # Buffer and reflection camera
         buffer = base.win.makeTextureBuffer('waterBuffer', 512, 512)
@@ -44,13 +45,13 @@ class WaterNode():
         cfa = CullFaceAttrib.makeReverse()
         rs = RenderState.make(cfa)
 
-        world.watercamNP = base.makeCamera(buffer)
-        world.watercamNP.reparentTo(render)
+        self.watercamNP = base.makeCamera(buffer)
+        self.watercamNP.reparentTo(render)
 
         #sa = ShaderAttrib.make()
         #sa = sa.setShader(loader.loadShader('shaders/splut3Clipped.sha') )
 
-        cam = world.watercamNP.node()
+        cam = self.watercamNP.node()
         cam.getLens().setFov(base.camLens.getFov())
         cam.getLens().setNear(1)
         cam.getLens().setFar(5000)
@@ -65,21 +66,32 @@ class WaterNode():
         tex0.setWrapU(Texture.WMClamp)
         tex0.setWrapV(Texture.WMClamp)
         ts0 = TextureStage('reflection')
-        world.waterNP.setTexture(ts0, tex0)
+        self.waterNP.setTexture(ts0, tex0)
 
         # distortion texture
         tex1 = loader.loadTexture('textures/water.png')
         ts1 = TextureStage('distortion')
-        world.waterNP.setTexture(ts1, tex1)
+        self.waterNP.setTexture(ts1, tex1)
 
         # ---- Fog --- broken
         min = Point3(x1, y1, -999.0)
         max = Point3(x2, y2, z)
         boundry = BoundingBox(min, max)
-        world.waterFog = Fog('waterFog')
-        world.waterFog.setBounds(boundry)
+        self.waterFog = Fog('waterFog')
+        self.waterFog.setBounds(boundry)
         colour = (0.2, 0.5, 0.8)
-        world.waterFog.setColor(*colour)
-        world.waterFog.setExpDensity(0.05)
-        render.attachNewNode(world.waterFog)
+        self.waterFog.setColor(*colour)
+        self.waterFog.setExpDensity(0.05)
+        render.attachNewNode(self.waterFog)
         #render.setFog(world.waterFog)
+        taskMgr.add(self.update, "waterTask")
+
+    def update(self, task):
+        # update matrix of the reflection camera
+        mc = base.camera.getMat()
+        mf = self.waterPlane.getReflectionMat()
+        self.watercamNP.setMat(mc * mf)
+        self.waterNP.setShaderInput('time', task.time)
+        self.waterNP.setX(base.camera.getX())
+        self.waterNP.setY(base.camera.getY())
+        return task.cont

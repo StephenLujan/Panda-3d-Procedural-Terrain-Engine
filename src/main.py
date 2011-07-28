@@ -47,7 +47,6 @@ from pandac.PandaModules import PointLight
 from pandac.PandaModules import RenderState
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextNode
-from pandac.PandaModules import Fog
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from pandac.PandaModules import WindowProperties
@@ -113,6 +112,10 @@ class World(DirectObject):
         yield task.cont
         self._loadTerrain()
 
+        self.bug_text.setText("loading fog...")
+        yield task.cont
+        #self._loadFog()
+
         self.bug_text.setText("loading water...")
         yield task.cont
         self._loadWater()
@@ -173,15 +176,17 @@ class World(DirectObject):
         #self.blend_text = addText(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
-        self.terrain = Terrain('Terrain', base.camera, maxRange=ConfigVariableInt("max-view-range").getValue())
+        maxRange=ConfigVariableInt("max-view-range").getValue()
+        if maxRange:
+            self.terrain = Terrain('Terrain', base.camera, maxRange=ConfigVariableInt("max-view-range").getValue())
+        else:
+            self.terrain = Terrain('Terrain', base.camera)
         self.terrain.reparentTo(render)
         self.environ = self.terrain	# make available for original Ralph code below
 
     def _loadWater(self):
-        # some constants
         self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
                                  * self.terrain.waterHeight, 1.0)
-        # water
         size = self.terrain.maxViewRange * 1.5
         self.water = WaterNode(self, -size, -size, size, size, self._water_level.z)
 
@@ -203,16 +208,6 @@ class World(DirectObject):
     def _loadSky(self):
         self.sky = Sky()
         self.sky.start()
-
-    def _loadFog(self):
-        colour = (0.5, 0.8, 0.8)
-        linfog = Fog("distanceFog")
-        linfog.setColor(*colour)
-        max = self.terrain.maxViewRange
-        linfog.setLinearRange(0, max)
-        linfog.setLinearFallback(max / 10, max / 2, max)
-        render.attachNewNode(linfog)
-        render.setFog(linfog)
 
     def _loadPlayer(self):
         # Create the main character, Ralph
@@ -297,15 +292,6 @@ class World(DirectObject):
             return Task.cont
 
         elapsed = task.time - self.prevtime
-        
-        # Update water
-        # update matrix of the reflection camera
-        mc = base.camera.getMat()
-        mf = self.waterPlane.getReflectionMat()
-        self.watercamNP.setMat(mc * mf)
-        self.waterNP.setShaderInput('time', task.time)
-        self.waterNP.setX(self.ralph.body.getX())
-        self.waterNP.setY(self.ralph.body.getY())        
 
         # use the mouse to look around and set Ralph's direction
         md = base.win.getPointer(0)
