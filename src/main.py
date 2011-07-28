@@ -228,7 +228,7 @@ class World(DirectObject):
                 
         self.controlMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "turbo":0, "option+":0, "option-":0, "zoom in":0, "zoom out": 0}
         self.ralph.controls = self.controlMap
-        self.camera = FollowCamera(self.ralph, self.controlMap)
+        self.camera = FollowCamera(self.ralph, self.controlMap, self.terrain)
         self.mouseInvertY = False
         self.accept("escape", sys.exit)
         self.accept("w", self.setControl, ["forward", 1])
