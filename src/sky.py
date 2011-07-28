@@ -13,6 +13,7 @@ class SkyBox():
         skynode = base.cam.attachNewNode('skybox')
         self.skybox = loader.loadModel("models/skybox")
         self.skybox.reparentTo(skynode)
+
         #self.skybox = loader.loadModel('models/rgbCube')
         
         self.skybox.setTextureOff(1)
@@ -71,11 +72,11 @@ class CloudLayer():
         self.clouds.setTransparency(TransparencyAttrib.MAlpha)
         self.clouds.reparentTo(render)
         self.clouds.setTexOffset(self.ts1, 0, 1);
-        self.clouds.setTexScale(self.ts1, 4, 1);
+        self.clouds.setTexScale(self.ts1, 8, 2);
         #self.clouds.setTexRotate(self.ts1, degrees);
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
-        self.clouds.setScale(4000)
-        self.clouds.setSz(1000)
+        self.clouds.setScale(5000)
+        self.clouds.setSz(2000)
         self.clouds.setBin('background', 1)
         self.clouds.setDepthWrite(False)
         self.clouds.setDepthTest(False)
@@ -107,8 +108,9 @@ class CloudLayer():
         elif time < 2000.0:
             s = (2000.0 - time) / 150.0
             sc( self.sunsetColor * s + self.nightColor * (1.0 - s))
-        
-        self.clouds.setTexOffset(self.ts1, time/600.0, time/600.0);
+
+        self.speed = 0.005
+        self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
         
     def setPos(self, pos):
         #pos.normalize()
@@ -116,7 +118,7 @@ class CloudLayer():
         #self.clouds.lookAt(base.cam)
         
     def update(self):
-        self.setPos(base.cam.getPos()+Vec3(0,0,0))
+        self.setPos(base.cam.getPos()+Vec3(0,0,-600))
         
         
 class Sky():
@@ -124,7 +126,9 @@ class Sky():
         self.skybox = SkyBox()
         self.sun = Sun()
         self.clouds = CloudLayer()
+        self.dayLength = 30 #in seconds
         self.setTime(500.0)
+        self.previousTime = 0
         
     def setTime(self, time):
         self.time = time
@@ -140,8 +144,15 @@ class Sky():
             taskMgr.remove(self.updateTask)
             
     def update(self, task):
+        elapsed = task.time - self.previousTime
+        timeMultiplier = 2400.0 / self.dayLength
+        self.previousTime = task.time
         self.clouds.update()
-        if self.time > 2200:
-            self.time = 300
-        self.setTime(self.time + 5)
+        #  start the next day at midnight
+        #if self.time >= 2400.0:
+        #    self.time -= 2400.0
+        #  skip some night hours to make it interesting
+        if self.time > 2200.0:
+            self.time = 300.0
+        self.setTime(self.time + elapsed * timeMultiplier)
         return task.cont

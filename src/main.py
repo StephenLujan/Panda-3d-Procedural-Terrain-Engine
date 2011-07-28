@@ -18,8 +18,8 @@ import math
 import sys
 
 import os
-from panda3d.core import loadPrcFile
 from panda3d.core import ConfigVariableInt
+from panda3d.core import loadPrcFile
 from pandac.PandaModules import Filename
 
 # Figure out what directory this program is in.
@@ -59,18 +59,26 @@ from waterNode import *
 ###############################################################################
 
 # Function to put instructions on the screen.
+
+def getScreenRatio():
+    props = WindowProperties(base.win.getProperties())
+    return float(props.getXSize()) / float(props.getYSize())
+
 def addInstructions(pos, msg):
+    x = -getScreenRatio() + 0.03
     return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
-                        pos=(-1.3, pos), align=TextNode.ALeft, scale=.05)
+                        pos=(x, pos), align=TextNode.ALeft, scale=.05)
 
 def addTextField(pos, msg):
+    x = -getScreenRatio() + 0.03
     return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
-                        pos=(-1.3, pos), align=TextNode.ALeft, scale=.05, mayChange=True)
+                        pos=(x, pos), align=TextNode.ALeft, scale=.05, mayChange=True)
 
 # Function to put title on the screen.
 def addTitle(text):
+    x = getScreenRatio() - 0.03
     return OnscreenText(text=text, style=1, fg=(1, 1, 1, 1),
-                        pos=(1.3, -0.95), align=TextNode.ARight, scale=.07)
+                        pos=(x, -0.95), align=TextNode.ARight, scale=.07)
 
 ##############################################################################
 
@@ -98,6 +106,10 @@ class World(DirectObject):
         yield task.cont
         self._loadLighting()
 
+        self.bug_text.setText("loading sky...")
+        yield task.cont
+        self._loadSky()
+
         # Definitely need to make sure this loads before terrain
         self.bug_text.setText("loading terrain...")
         yield task.cont
@@ -112,10 +124,6 @@ class World(DirectObject):
         self.bug_text.setText("loading filters")
         yield task.cont
         self._loadFilters()
-
-        self.bug_text.setText("loading sky...")
-        yield task.cont
-        self._loadSky()
 
         self.bug_text.setText("loading player...")
         yield task.cont
@@ -169,7 +177,7 @@ class World(DirectObject):
         #self.blend_text = addTextField(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
-        self.terrain = Terrain('Terrain', base.camera, maxRange = ConfigVariableInt("max-view-range").getValue())
+        self.terrain = Terrain('Terrain', base.camera, maxRange=ConfigVariableInt("max-view-range").getValue())
         self.terrain.reparentTo(render)
         self.environ = self.terrain	# make available for original Ralph code below
 
@@ -178,7 +186,8 @@ class World(DirectObject):
         self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
                                  * self.terrain.waterHeight, 1.0)
         # water
-        self.water = WaterNode(self, -800, -800, 800, 800, self._water_level.z)
+        size = self.terrain.maxViewRange * 1.5
+        self.water = WaterNode(self, -size, -size, size, size, self._water_level.z)
 
     def _loadFilters(self):
         wl = self._water_level
@@ -200,12 +209,12 @@ class World(DirectObject):
         self.sky.start()
 
     def _loadFog(self):
-        colour = (0.5,0.8,0.8)
+        colour = (0.5, 0.8, 0.8)
         linfog = Fog("distanceFog")
         linfog.setColor(*colour)
         max = self.terrain.maxViewRange
-        linfog.setLinearRange(0,max)
-        linfog.setLinearFallback(max/10, max/2, max)
+        linfog.setLinearRange(0, max)
+        linfog.setLinearFallback(max / 10, max / 2, max)
         render.attachNewNode(linfog)
         render.setFog(linfog)
 
@@ -324,7 +333,7 @@ class World(DirectObject):
     def _setup_camera(self):
         cam = base.cam.node()
         cam.getLens().setNear(1)
-        cam.getLens().setFar(5000)
+        cam.getLens().setFar(10000)
         cam.setTagStateKey('Normal')
         #cam.setTagState('True', RenderState.make(sa))
 
@@ -524,7 +533,7 @@ class World(DirectObject):
         self.hpr_text.setText('[HPR]: %03.1f, %03.1f,%03.1f ' % \
                               (base.camera.getH(), base.camera.getP(), base.camera.getR()))
                               
-        self.time_text.setText('[Time]: %03.1f' %self.sky.time)
+        self.time_text.setText('[Time]: %02i:%02i' % (self.sky.time / 100, self.sky.time % 100 * 60 / 100))
         #current texture blending mode
         #self.blend_text.setText('[blend mode]: %i ' % \
         #                      ( self.terrain.textureBlendMode ) )
