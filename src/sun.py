@@ -133,7 +133,7 @@ class Sun:
         lightColor.w = 1
         self.dlight.setColor(lightColor)
 
-        directColor = Vec4(1.0, 1.0, 1.0, 1) #bright for hdr
+        directColor = Vec4(1.0, 1.0, 1.0, 1)
         sunsetColor = Vec4(1.0, 0.9, 0.7, 1)
         directColor *= 1-sunsetStrength
         sunsetColor *= sunsetStrength
@@ -145,7 +145,7 @@ class Sun:
         
 
         if self.finalQuad != None:
-            directColor = Vec4(1, 0.99, 0.88, 0.03)
+            directColor = Vec4(1, 0.99, 0.80, 0.03)
             sunsetColor = Vec4(1, 0.65, 0.25, 0.025)
             sunsetColor *= sunsetStrength
             directColor *= 1-sunsetStrength

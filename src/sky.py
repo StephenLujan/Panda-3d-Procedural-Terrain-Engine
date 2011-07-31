@@ -10,9 +10,9 @@ from sun import *
 
 class ColoredByTime():
     def __init__(self):
-        self.schedule = ((450, self.nightColor), (600, self.sunsetColor),
-                         (950, self.dayColor), (1450, self.dayColor),
-                         (1800, self.sunsetColor), (1950, self.nightColor))
+        self.schedule = ((400, self.nightColor), (600, self.sunsetColor),
+                         (800, self.dayColor), (1600, self.dayColor),
+                         (1800, self.sunsetColor), (2000, self.nightColor))
 
     def interpolateColor (self, start, end, time, startColor, endColor):
         ratio = (time - start) / (end - start + 0.000001)
