@@ -10,6 +10,8 @@
 ###
 __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
+# Terrain distance is now controlled by config.prc.
+# This is just a modest value as a fallback if nothing is read from the prc.
 _MAXRANGE = 100
 
 import math
@@ -215,7 +217,9 @@ class HeightMap():
         self.flatHeight = flatHeight
         #creates noise objects that will be used by the getHeight function
         self.generateNoiseObjects()
+        self.normalize()
 
+    def normalize(self):
         #normalize the range of possible heights to be bounded [0,1]
         minmax = []
         for x in range(2):
@@ -384,6 +388,7 @@ class Terrain(NodePath):
         #self.texturer = DetailTexturer(self)
         #self.texturer.load()
         self.texturer.texturize(self)
+        self.setShaderInput("zMultiplier", )
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""

@@ -143,13 +143,13 @@ class Sky():
         self.sun = Sun()
         self.clouds = CloudLayer()
         #self.fog = DistanceFog()
-        self.dayLength = 100 #in seconds
+        self.dayLength = 120 #in seconds
         self.setTime(800.0)
         self.previousTime = 0
         self.nightSkip = False
         self.paused = False
         
-        ambient = Vec4(0.45, 0.55, 0.9, 1) #bright for hdr
+        ambient = Vec4(0.55, 0.65, 1.0, 1) #bright for hdr
         alight = AmbientLight('alight')
         alight.setColor(ambient)
         alnp = render.attachNewNode(alight)

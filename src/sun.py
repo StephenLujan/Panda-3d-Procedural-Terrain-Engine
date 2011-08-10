@@ -111,8 +111,8 @@ class Sun:
         noonOffset = (1200.0 - time) / 600.0
         sunsetStrength = noonOffset * noonOffset
 
-        directColor = Vec4(2.3, 2.1, 2.0, 1) #bright for hdr
-        sunsetColor = Vec4(1.6, 0.9, 0.5, 1)
+        directColor = Vec4(2.7, 2.5, 2.1, 1) #bright for hdr
+        sunsetColor = Vec4(1.8, 1.1, 0.6, 1)
 
         if sunsetStrength < 1.0:
             directColor *= 1-sunsetStrength
