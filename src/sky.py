@@ -32,15 +32,14 @@ class SkyBox(ColoredByTime):
         #self.skybox = loader.loadModel('models/skydome')
         #self.skybox.setTexture(loader.loadTexture('models/early.png'))
         skynode = base.cam.attachNewNode('skybox')
-        self.skybox = loader.loadModel("models/skybox")
+        self.skybox = loader.loadModel('models/rgbCube')
         self.skybox.reparentTo(skynode)
-
-        #self.skybox = loader.loadModel('models/rgbCube')
         
         self.skybox.setTextureOff(1)
         self.skybox.setShaderOff(1)
+        self.skybox.setTwoSided(True)
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
-        self.skybox.setScale(100)
+        self.skybox.setScale(5000)
         self.skybox.setBin('background', 1)
         self.skybox.setDepthWrite(False)
         self.skybox.setDepthTest(False)
@@ -86,7 +85,7 @@ class CloudLayer(ColoredByTime):
         #maker.setFrame(-1, 1, -2, 2)
         #self.clouds = render.attachNewNode(maker.generate())
         
-        self.clouds = loader.loadModel("models/skydome")
+        self.clouds = loader.loadModel("models/sphere")
         tex1 = loader.loadTexture('textures/clouds_loop.png')
         tex1.setMagfilter(Texture.FTLinearMipmapLinear)
         tex1.setMinfilter(Texture.FTLinearMipmapLinear)
@@ -100,14 +99,15 @@ class CloudLayer(ColoredByTime):
         self.clouds.setTransparency(TransparencyAttrib.MAlpha)
         self.clouds.reparentTo(render)
         self.clouds.setTexOffset(self.ts1, 0, 1);
-        self.clouds.setTexScale(self.ts1, 8, 2);
+        self.clouds.setTexScale(self.ts1, 20, 5);
         #self.clouds.setTexRotate(self.ts1, degrees);
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
         self.clouds.setScale(5000)
-        self.clouds.setSz(1000)
+        #self.clouds.setSz(1000)
         self.clouds.setBin('background', 3)
         self.clouds.setDepthWrite(False)
         self.clouds.setDepthTest(False)
+        self.clouds.setTwoSided(True)
         self.clouds.setLightOff(1)
         self.clouds.setShaderOff(1)
         self.clouds.setFogOff(1)
@@ -123,7 +123,8 @@ class CloudLayer(ColoredByTime):
 
     def setTime(self, time):
         self.colorize(time)
-        self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
+        #self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
+        self.clouds.setHpr(0,time/90.0 ,90)
         #self.clouds.setTexOffset(self.ts1, time/600.0, time/600.0);
         
     def setPos(self, pos):
@@ -132,10 +133,9 @@ class CloudLayer(ColoredByTime):
         #self.clouds.lookAt(base.cam)
         
     def update(self):
-        self.setPos(base.cam.getPos() + Vec3(0, 0, -500))
+        self.setPos(base.cam.getPos() + Vec3(0, 0, -4500))
         #self.setPos(base.cam.getPos()+Vec3(0,0,0))
 
-        
         
 class Sky():
     def __init__(self):
