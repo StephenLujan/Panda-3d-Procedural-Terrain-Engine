@@ -133,7 +133,7 @@ class CloudLayer(ColoredByTime):
         #self.clouds.lookAt(base.cam)
         
     def update(self):
-        self.setPos(base.cam.getPos() + Vec3(0, 0, -4500))
+        self.setPos(base.cam.getPos(render) + Vec3(0, 0, -4500))
         #self.setPos(base.cam.getPos()+Vec3(0,0,0))
 
         
