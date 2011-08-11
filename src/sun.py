@@ -50,7 +50,6 @@ class Sun:
         # Workaround an annoyance in Panda. No idea why it's needed.
         self.sun.node().setBounds(OmniBoundingVolume())     
 
-
         direct = Vec4(2.0, 1.9, 1.8, 1) #bright for hdr
         #direct = Vec4(0.7, 0.65, 0.6, 1)
         self.dlight = DirectionalLight('dlight')
@@ -106,13 +105,12 @@ class Sun:
             self.dlight.setColor(Vec4(0, 0, 0, 0))
             return
 
-
         self.sun.show()
         noonOffset = (1200.0 - time) / 600.0
         sunsetStrength = noonOffset * noonOffset
 
-        directColor = Vec4(2.3, 2.1, 2.0, 1) #bright for hdr
-        sunsetColor = Vec4(1.6, 0.9, 0.5, 1)
+        directColor = Vec4(2.7, 2.5, 2.1, 1) #bright for hdr
+        sunsetColor = Vec4(1.8, 1.1, 0.6, 1)
 
         if sunsetStrength < 1.0:
             directColor *= 1-sunsetStrength
@@ -139,10 +137,7 @@ class Sun:
         sunsetColor *= sunsetStrength
         #print directColor, sunsetColor
         lightColor = directColor + sunsetColor
-        self.sun.setColorScale(lightColor, 1000)
-        
-
-        
+        self.sun.setColorScale(lightColor, 1000)        
 
         if self.finalQuad != None:
             directColor = Vec4(1, 0.99, 0.80, 0.03)

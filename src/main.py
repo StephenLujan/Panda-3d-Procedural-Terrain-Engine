@@ -329,7 +329,7 @@ class World(DirectObject):
         #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \
-                              (self.ralph.body.getX(), self.ralph.body.getY(), self.ralph.body.getZ()))
+                              (self.ralph.getX(), self.ralph.getY(), self.ralph.getZ()))
         # camera heading + pitch output
         self.hpr_text.setText('[HPR]: %03.1f, %03.1f,%03.1f ' % \
                               (base.camera.getH(), base.camera.getP(), base.camera.getR()))

@@ -156,7 +156,7 @@ class DetailTexturer(TerrainTexturer):
 ###############################################################################
 #   ShaderTexturer
 ###############################################################################
-class ShaderTexturer(DetailTexturer):
+class ShaderTexturer(TerrainTexturer):
     """Adds a shader to TerrainTiles.
 
     The texturer loads and stores several textures and a detail texture for use
@@ -166,23 +166,26 @@ class ShaderTexturer(DetailTexturer):
     def load(self):
         """texture + detail texture"""
 
-        DetailTexturer.loadDetail(self)
         self.loadShader()
         #self.loadNormalTest()
 
     def loadShader(self):
         """Textures based on altitude and slope. My own version. Normal data appears broken."""
-
+    
         ### texture scaling
         texScale = self.terrain.tileSize / 32 * self.terrain.horizontalScale
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
         ### Load textures
+        self.normalMap = self.loadTexture("Detail_N.png")
+        self.detailTex = self.loadTexture("Detail4.jpg")
         self.tex1 = self.loadTexture("dirt.jpg")
         self.tex2 = self.loadTexture("grass.jpg")
         self.tex3 = self.loadTexture("rock.jpg")
         self.tex4 = self.loadTexture("snow.jpg")
 
+        self.normalTS = TextureStage('normalMap')
+        self.detailTS = TextureStage('normalMap')
         self.ts1 = TextureStage('tex1')
         self.ts2 = TextureStage('tex2')
         self.ts3 = TextureStage('tex3')
@@ -198,10 +201,10 @@ class ShaderTexturer(DetailTexturer):
         sg.addRegionToTex(Vec4(-9999.0, self.indexToHeight(0.1), 0.0, 1.0))
 
         sg.addTexture(self.tex2)
-        sg.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), 0.0, 0.45))
+        sg.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), 0.0, 0.35))
 
         sg.addTexture(self.tex3)
-        sg.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.15, 1.0))
+        sg.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.10, 1.0))
         #second region forces tex 2 and 4 to blend a bit at their boundries regardless of slope
         sg.addRegionToTex(Vec4(self.indexToHeight(0.4), self.indexToHeight(0.9), 0.0, 1.0))
 
@@ -216,7 +219,8 @@ class ShaderTexturer(DetailTexturer):
             self.shader = Shader.make(sg.createShader(), Shader.SLCg);
 
 
-        self.terrain.setShaderInput("detailTexture", self.detailTexture)
+        self.terrain.setShaderInput("normalMap", self.normalMap)
+        self.terrain.setShaderInput("detailTex", self.detailTex)
         self.terrain.setShaderInput('tscale', self.texScale)
         self.terrain.setShader(self.shader)
 
@@ -245,7 +249,7 @@ class ShaderTexturer(DetailTexturer):
     def texturize(self, input):
         """Apply textures and shaders to the input."""
 
-
+        return
         # enable use of the two separate tagged render states for our two cameras
         #input.setTag('Normal', 'True')
         #input.setTag('Clipped', 'True')
