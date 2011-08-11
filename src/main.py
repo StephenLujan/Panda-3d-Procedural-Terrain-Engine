@@ -146,9 +146,11 @@ class World(DirectObject):
 
         self.bug_text.setText("loading gui controls...")
         yield task.cont
-
-        self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
-        self.shaderControl.hide()
+        try: self.terrain.texturer.shader
+        except: print "Terrain texturer has no shader to control."
+        else:
+            self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
+            self.shaderControl.hide()
 
         self.bug_text.setText("")
         yield task.cont
@@ -350,7 +352,9 @@ class World(DirectObject):
         self.mouseLook = not self.mouseLook
         props = WindowProperties()
         props.setCursorHidden(self.mouseLook)
-        self.shaderControl.setHidden(self.mouseLook)
+        try: self.shaderControl
+        except: print "No shader control found."
+        else: self.shaderControl.setHidden(self.mouseLook)
         base.win.requestProperties(props)
         print "toggleMouseLook"
 

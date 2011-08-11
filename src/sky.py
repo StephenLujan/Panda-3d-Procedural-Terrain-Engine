@@ -156,6 +156,18 @@ class Sky():
         render.setLight(alnp)
         render.setShaderInput('alight0', alnp)
         
+    def addDirectLight(self):
+        """Adds just a direct light as an alternative to adding a Sun."""
+        
+        direct = Vec4(2.0, 1.9, 1.8, 1) #bright for hdr
+        #direct = Vec4(0.7, 0.65, 0.6, 1)
+        self.dlight = DirectionalLight('dlight')
+        self.dlight.setColor(direct)
+        dlnp = render.attachNewNode(self.dlight)
+        render.setLight(dlnp)
+        render.setShaderInput('dlight0', dlnp)
+        return dlnp
+        
     def setTime(self, time):
         self.time = time
         self.skybox.setTime(time)
