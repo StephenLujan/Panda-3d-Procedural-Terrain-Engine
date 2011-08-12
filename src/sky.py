@@ -86,11 +86,11 @@ class CloudLayer(ColoredByTime):
         #self.clouds = render.attachNewNode(maker.generate())
         
         self.clouds = loader.loadModel("models/sphere")
-        tex1 = loader.loadTexture('textures/clouds_loop.png')
+        tex1 = loader.loadTexture('textures/clouds.png')
         tex1.setMagfilter(Texture.FTLinearMipmapLinear)
         tex1.setMinfilter(Texture.FTLinearMipmapLinear)
         tex1.setAnisotropicDegree(2)
-        tex1.setWrapU(Texture.WMMirror)
+        tex1.setWrapU(Texture.WMRepeat)
         tex1.setWrapV(Texture.WMRepeat)
         #tex1.setWrapU(Texture.WMClamp)
         #tex1.setWrapV(Texture.WMClamp)
@@ -98,8 +98,8 @@ class CloudLayer(ColoredByTime):
         self.clouds.setTexture(self.ts1, tex1)
         self.clouds.setTransparency(TransparencyAttrib.MAlpha)
         self.clouds.reparentTo(render)
-        self.clouds.setTexOffset(self.ts1, 0, 1);
-        self.clouds.setTexScale(self.ts1, 20, 5);
+        self.clouds.setTexOffset(self.ts1, 0, 0);
+        self.clouds.setTexScale(self.ts1, 10, 3);
         #self.clouds.setTexRotate(self.ts1, degrees);
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
         self.clouds.setScale(5000)
@@ -112,9 +112,9 @@ class CloudLayer(ColoredByTime):
         self.clouds.setShaderOff(1)
         self.clouds.setFogOff(1)
         self.clouds.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
-        #self.clouds.setHpr(0,90,0)
-
-        self.speed = 0.0005
+		
+        self.time = 0
+        self.speed = 1.0
         self.dayColor = Vec4(1.0, 1.0, 1.0, 1.0)
         self.nightColor = Vec4(-0.5, -0.3, .1, 1.0)
         self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
@@ -124,15 +124,18 @@ class CloudLayer(ColoredByTime):
     def setTime(self, time):
         self.colorize(time)
         #self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
-        self.clouds.setHpr(0,time/90.0 ,90)
+        #self.clouds.setHpr(0,time/45.0 ,90)
         #self.clouds.setTexOffset(self.ts1, time/600.0, time/600.0);
         
     def setPos(self, pos):
         #pos.normalize()
+
         self.clouds.setPos(pos)
         #self.clouds.lookAt(base.cam)
         
-    def update(self):
+    def update(self, elapsed):
+        self.time += elapsed
+        self.clouds.setHpr(0, self.time * self.speed, 90)
         self.setPos(base.cam.getPos(render) + Vec3(0, 0, -4500))
         #self.setPos(base.cam.getPos()+Vec3(0,0,0))
 
@@ -186,7 +189,7 @@ class Sky():
         elapsed = task.time - self.previousTime
         self.previousTime = task.time
 
-        self.clouds.update()
+        self.clouds.update(elapsed)
 
         if self.paused:
             return task.cont
