@@ -8,6 +8,8 @@ from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Fog
 from sun import *
 
+from panda3d.core import PNMImage
+
 class ColoredByTime():
     def __init__(self):
         self.schedule = ((400, self.nightColor), (600, self.sunsetColor),
@@ -49,7 +51,7 @@ class SkyBox(ColoredByTime):
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
         
         self.dayColor = Vec4(.55, .65, .95, 1.0)
-        self.nightColor = Vec4(.05, .05, .25, 1.0)
+        self.nightColor = Vec4(.05, .05, .3, 1.0)
         self.sunsetColor = Vec4(.45, .5, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.skybox.setColor
@@ -86,20 +88,24 @@ class CloudLayer(ColoredByTime):
         #self.clouds = render.attachNewNode(maker.generate())
         
         self.clouds = loader.loadModel("models/sphere")
-        tex1 = loader.loadTexture('textures/clouds_loop.png')
+        tex1 = loader.loadTexture('textures/clouds.jpg')
         tex1.setMagfilter(Texture.FTLinearMipmapLinear)
         tex1.setMinfilter(Texture.FTLinearMipmapLinear)
         tex1.setAnisotropicDegree(2)
-        tex1.setWrapU(Texture.WMMirror)
+        tex1.setWrapU(Texture.WMRepeat)
         tex1.setWrapV(Texture.WMRepeat)
+        tex1.setFormat(Texture.FAlpha )
         #tex1.setWrapU(Texture.WMClamp)
         #tex1.setWrapV(Texture.WMClamp)
         self.ts1 = TextureStage('clouds')
+        #self.ts1.setMode(TextureStage.MBlend)
+        self.ts1.setColor(Vec4(1, 1, 1, 1))
+        self.clouds.setTransparency(TransparencyAttrib.MDual)
         self.clouds.setTexture(self.ts1, tex1)
-        self.clouds.setTransparency(TransparencyAttrib.MAlpha)
+
         self.clouds.reparentTo(render)
         self.clouds.setTexOffset(self.ts1, 0, 1);
-        self.clouds.setTexScale(self.ts1, 20, 5);
+        self.clouds.setTexScale(self.ts1, 16, 5);
         #self.clouds.setTexRotate(self.ts1, degrees);
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
         self.clouds.setScale(5000)
