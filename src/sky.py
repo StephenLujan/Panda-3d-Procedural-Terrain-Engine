@@ -130,7 +130,7 @@ class CloudLayer(ColoredByTime):
     def setTime(self, time):
         self.colorize(time)
         #self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
-        self.clouds.setHpr(0,time/90.0 ,90)
+        self.clouds.setHpr(0,time/60.0 ,90)
         #self.clouds.setTexOffset(self.ts1, time/600.0, time/600.0);
         
     def setPos(self, pos):

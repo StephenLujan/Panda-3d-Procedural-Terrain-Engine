@@ -55,6 +55,7 @@ from terrain import *
 from waterNode import *
 from creature import *
 from camera import *
+import splashCard
 
 ###############################################################################
 
@@ -79,6 +80,10 @@ def addText(pos, msg, changeable=False, alignLeft=True, scale=0.05):
 def addTitle(text):
     addText(-0.95, text, False, False, 0.07)
 
+def showFrame():
+    for i in range(4):
+        base.graphicsEngine.renderFrame()
+
 ##############################################################################
 
 
@@ -87,49 +92,50 @@ def addTitle(text):
 class World(DirectObject):
 
     def __init__(self):
-        base.win.setClearColor(Vec4(0, 0, 0, 1))
-        base.win.setClearColorActive(True)
-        taskMgr.doMethodLater(0.1, self.load, "Load Task")
-        self.bug_text = addText(-0.95, "Loading...", True)
+        # set here your favourite background color - this will be used to fade to
+
+        bgcolor=(0, 0, 0, 1)
+        base.setBackgroundColor(*bgcolor)
+        self.splash = splashCard.splashCard('textures/loading.png', bgcolor)
+        taskMgr.doMethodLater(0.01, self.load, "Load Task")
+        self.bug_text = addText(-0.95, "Loading...", True, scale = 0.1)
 
     def load(self, task):
-        yield task.cont
+        #yield task.cont
 
         PStatClient.connect()
 
         self.bug_text.setText("loading Display...")
-        yield task.cont
+        showFrame()
         self._loadDisplay()
 
         self.bug_text.setText("loading sky...")
-        yield task.cont
+        showFrame()
         self._loadSky()
 
         # Definitely need to make sure this loads before terrain
         self.bug_text.setText("loading terrain...")
-        yield task.cont
-        yield task.cont
-        yield task.cont
+        showFrame()
         self._loadTerrain()
 
         self.bug_text.setText("loading fog...")
-        yield task.cont
+        showFrame()
         #self._loadFog()
 
         self.bug_text.setText("loading player...")
-        yield task.cont
+        showFrame()
         self._loadPlayer()
         
         self.bug_text.setText("loading water...")
-        yield task.cont
+        showFrame()
         self._loadWater()
 
         self.bug_text.setText("loading filters")
-        yield task.cont
+        showFrame()
         self._loadFilters()
 
         self.bug_text.setText("loading miscellanious")
-        yield task.cont
+        showFrame()
         
         taskMgr.add(self.move, "moveTask")
 
@@ -145,13 +151,15 @@ class World(DirectObject):
         base.win.requestProperties(props)
 
         self.bug_text.setText("loading gui controls...")
-        yield task.cont
+        showFrame()
 
         self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
         self.shaderControl.hide()
 
         self.bug_text.setText("")
-        yield task.cont
+        showFrame()
+        self.splash.destroy()
+        self.splash = None
 
     def _loadDisplay(self):
         base.setFrameRateMeter(True)
