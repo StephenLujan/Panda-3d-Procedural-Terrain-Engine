@@ -180,11 +180,12 @@ class World(DirectObject):
         self.inst12 = addText(0.40, "[N]: Toggle Night Skipping")
         self.inst13 = addText(0.35, "[P]: Pause day night cycle")
         self.inst14 = addText(0.3, "[F11]: Screen Shot")
+        #self.inst15 = addText(0.25, "[T]: Special Test")
         
 
-        self.loc_text = addText(0.20, "[LOC]: ", True)
-        self.hpr_text = addText(0.15, "[HPR]: ", True)
-        self.time_text = addText(0.10, "[Time]: ", True)
+        self.loc_text = addText(0.15, "[LOC]: ", True)
+        self.hpr_text = addText(0.10, "[HPR]: ", True)
+        self.time_text = addText(0.05, "[Time]: ", True)
         #self.blend_text = addText(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
@@ -210,7 +211,7 @@ class World(DirectObject):
         # load default shaders
         cf = CommonFilters(base.win, base.cam)
         #bloomSize
-        cf.setBloom(size='medium')
+        cf.setBloom(size='medium', desat= 0.7, intensity = 2.5, mintrigger = 0.7, maxtrigger = 0.95)
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
@@ -258,6 +259,7 @@ class World(DirectObject):
         self.accept("p", self.sky.pause )
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
+        self.accept("t", self.terrain.test)
         #self.accept("f", self.terrain.flatten)
         #self.accept("+", self.setControl, ["option+",1])
         #self.accept("-", self.setControl, ["option-",1])

@@ -51,7 +51,7 @@ class SkyBox(ColoredByTime):
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
         
         self.dayColor = Vec4(.55, .65, .95, 1.0)
-        self.nightColor = Vec4(.05, .05, .3, 1.0)
+        self.nightColor = Vec4(.1, .1, .3, 1.0)
         self.sunsetColor = Vec4(.45, .5, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.skybox.setColor
@@ -105,7 +105,7 @@ class CloudLayer(ColoredByTime):
 
         self.clouds.reparentTo(render)
         self.clouds.setTexOffset(self.ts1, 0, 1);
-        self.clouds.setTexScale(self.ts1, 16, 5);
+        self.clouds.setTexScale(self.ts1, 25, 10);
         #self.clouds.setTexRotate(self.ts1, degrees);
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
         self.clouds.setScale(5000)
@@ -121,7 +121,7 @@ class CloudLayer(ColoredByTime):
         #self.clouds.setHpr(0,90,0)
 
         self.speed = 0.0005
-        self.dayColor = Vec4(1.0, 1.0, 1.0, 1.0)
+        self.dayColor = Vec4(0.98, 0.98, 0.95, 1.0)
         self.nightColor = Vec4(-0.5, -0.3, .1, 1.0)
         self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
         ColoredByTime.__init__(self)
@@ -155,7 +155,7 @@ class Sky():
         self.nightSkip = False
         self.paused = False
         
-        ambient = Vec4(0.55, 0.65, 1.0, 1) #bright for hdr
+        ambient = Vec4(0.65, 0.75, 1.1, 1) #bright for hdr
         alight = AmbientLight('alight')
         alight.setColor(ambient)
         alnp = render.attachNewNode(alight)

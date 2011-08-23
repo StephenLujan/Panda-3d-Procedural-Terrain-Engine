@@ -651,3 +651,6 @@ class Terrain(NodePath):
 
     def toggleWireFrame(self):
         self.setWireFrame(not self.wireFrame)
+
+    def test(self):
+        self.texturer.test()

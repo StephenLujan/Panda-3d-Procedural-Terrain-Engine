@@ -4,13 +4,41 @@
 # This file contains a shader generator specific to the terrain
 ###
 
-_header = '''
+
+class TerrainShaderTexture:
+
+    def __init__(self, tex):
+
+        self.tex = tex
+        self.regions = []
+
+    def addRegion(self, region):
+
+        self.regions.append(region)
+
+
+
+class TerrainShaderGenerator:
+
+    def __init__(self, terrain):
+
+        self.terrain = terrain
+        self.textures = []
+        self.normalMapping = True
+        self.glare = False
+
+    def bulkCode(self):
+
+        self._header = '''
 //Cg
 // Should use per-pixel lighting, hdr1, and medium bloom
 // input alight0, dlight0
 
 '''
-_beginning = '''
+        self._header += 'const float slopeScale = '
+        self._header += str(self.terrain.maxHeight / self.terrain.horizontalScale) + ';'
+        self._header += '\nconst float normalStrength = 2.0;'
+        self._beginning = '''
 
 float3 absoluteValue(float3 input)
 {
@@ -51,6 +79,11 @@ float calculateFinalWeight( float height, float slope, float4 limits )
 {
     return calculateWeight(height, limits.x, limits.y)
            * calculateWeight(slope, limits.z, limits.a);
+}
+
+float3 reflectVector( float3 input, float3 normal)
+{
+    return ( -2 * dot(input,normal) * normal + input );
 }
 
 struct vfconn
@@ -100,6 +133,7 @@ void vshader(
 
         output.l_eye_position = mul(trans_model_to_view, vtx_position);
         output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
+        output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
 }
 
 void fshader(
@@ -116,10 +150,9 @@ void fshader(
         in uniform sampler2D detailTex  : DETAILTEX,
 '''
 
-_middle = '''
+        self._middle = '''
 ) {
         //set up texture calculations
-        float4 result;
         // Fetch all textures.
         float slope = 1.0 - dot( input.l_normal, vec3(0,0,1));
         float height = input.l_world_pos.z;
@@ -130,25 +163,33 @@ _middle = '''
 '''
 
 
-_end = '''
+        self._end = '''
         // normalize color
         terrainColor /= textureWeightTotal;
         attr_color = terrainColor;
+        //attr_color =  float4(1.0,1.0,1.0,1.0); //lighting test
 
         // detail texture
-        float2 detailCoord= input.l_tex_coord*8.0;
-        attr_color *= tex2D(detailTex, detailCoord) * 1.2;
-
+        float2 detailCoordSmall = input.l_tex_coord * 17.0;
+        float2 detailCoordBig = input.l_tex_coord * 5.0;
+        float2 detailCoordHuge = input.l_tex_coord * 1.6;
+        attr_color *= 1.5 * (tex2D(detailTex, detailCoordSmall) * tex2D(detailTex, detailCoordBig) * tex2D(detailTex, detailCoordHuge));
+'''
+        if self.normalMapping:
+            self._end += '''
         // normal mapping
-        float3 normalModifier= (tex2D(normalMap, detailCoord) * 2) - 1;
-        input.l_normal *= normalModifier.z;
+        float3 normalModifier = (tex2D(normalMap, detailCoordSmall) * 4.0 + tex2D(normalMap, detailCoordBig) * 4.0 + tex2D(normalMap, detailCoordHuge) * 4.0) - 6.0;
+        input.l_normal *= normalModifier.z/normalStrength;
         input.l_normal.x += normalModifier.x;
         input.l_normal.y += normalModifier.y;
         input.l_normal = normalize(input.l_normal);
+'''
 
+        self._end += '''
         // Begin view-space light calculations
         float ldist,lattenv,langle;
-        float4 lcolor,lspec,lvec,lpoint,latten,ldir,leye,lhalf;	 float4 tot_ambient = float4(0,0,0,0);
+        float4 lcolor,lspec,lvec,lpoint,latten,ldir,leye,lhalf;
+        float4 tot_ambient = float4(0,0,0,0);
         float4 tot_diffuse = float4(0,0,0,0);
         // Ambient Light 0
         lcolor = alight_alight0;
@@ -157,55 +198,47 @@ _end = '''
         lcolor = dlight_dlight0_rel_world[0];
         lspec  = dlight_dlight0_rel_world[1];
         lvec   = dlight_dlight0_rel_world[2];
-        lcolor *= saturate(dot(input.l_normal.xyz, lvec.xyz));
+        //lvec.xyz = normalize(lvec.xyz);
+        float dlight_angle = saturate(dot(input.l_normal.xyz, lvec.xyz));
+        dlight_angle *= sqrt(dlight_angle);
+'''
+        if self.glare:
+            self._end += '''
+        //glare direct sun... should glare on reflection over normal instead.
+        dlight_angle -= 0.002 * dlight_angle / (dlight_angle-1.005);
+'''
+        self._end += '''
+        lcolor *= dlight_angle;
+
         tot_diffuse += lcolor;
         // Begin view-space light summation
-        result = float4(0,0,0,0.5);
+        float4 result = float4(0,0,0,0.5);
         result += tot_ambient * attr_color;
         result += tot_diffuse * attr_color;
+        result *= attr_colorscale;
         // End view-space light calculations
 
         // Debug view slopes
         //result.rgb = slope * float3(1.0,1.0,1.0) * 2.0;
         // Debug view surface normals
-        //result.rgb = absoluteValue(input.l_normal) * 2.0;
+        //result.rgb = absoluteValue(input.l_normal) * 1.3;
         // Debug view eye normals
         //result.rgb = input.l_eye_normal.xyz * 2.0;
+        // Debug view Light only
+        //result = tot_diffuse + tot_ambient;
         // Debug view DLight only
-        //result = tot_diffuse;
+        // result = tot_diffuse;
 
-        result *= attr_colorscale;
         //hdr0   brightness drop 1 -> 3/4
         //result.rgb = (result*result*result + result*result + result) / (result*result*result + result*result + result + 1);
         //hdr1   brightness drop 1 -> 2/3
-        result.rgb = (result*result + result) / (result*result + result + 1);
+        result.rgb = (result*result + result) / (result*result + result + 1.0);
         //hdr2   brightness drop 1 -> 1/2
         //result.rgb = (result) / (result + 1);
 
         o_color = result * 1.000001;
 }
 '''
-
-
-class TerrainShaderTexture:
-
-    def __init__(self, tex):
-
-        self.tex = tex
-        self.regions = []
-
-    def addRegion(self, region):
-
-        self.regions.append(region)
-
-
-class TerrainShaderGenerator:
-
-    def __init__(self, terrain):
-
-        self.terrain = terrain
-        self.textures = []
-
 
     def addTexture(self, texture):
 
@@ -222,7 +255,7 @@ class TerrainShaderGenerator:
 
         self.textures[textureNumber].addRegion(region)
 
-    def getParameters(self):
+    def getfShaderParameters(self):
 
         texNum = 0
         regionNum = 0
@@ -237,7 +270,7 @@ class TerrainShaderGenerator:
                 regionNum += 1
         return string[:-1] #trim last comma
 
-    def getCode(self):
+    def getTextureCode(self):
 
         texNum = 0
         regionNum = 0
@@ -274,15 +307,10 @@ class TerrainShaderGenerator:
                 regionNum += 1
             texNum += 1
 
-    def getConstants(self):
-        string = 'const float slopeScale = '
-        string += str(self.terrain.maxHeight / self.terrain.horizontalScale)
-        string += ';'
-        return string
-
     def createShader(self):
+        self.bulkCode()
         self.feedThePanda()
-        return _header + self.getConstants() + _beginning + self.getParameters() + _middle + self.getCode() + _end
+        return self._header + self._beginning + self.getfShaderParameters() + self._middle + self.getTextureCode() + self._end
 
     def saveShader(self, name='shaders/stephen6.sha'):
         string = self.createShader()

@@ -167,7 +167,6 @@ class ShaderTexturer(TerrainTexturer):
         """texture + detail texture"""
 
         self.loadShader()
-        #self.loadNormalTest()
 
     def loadShader(self):
         """Textures based on altitude and slope. My own version. Normal data appears broken."""
@@ -177,20 +176,22 @@ class ShaderTexturer(TerrainTexturer):
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
 
         ### Load textures
-        self.normalMap = self.loadTexture("Detail_N.png")
-        self.detailTex = self.loadTexture("Detail4.jpg")
+        self.normalMap = self.loadTexture("Detail_NRM.png")
+        #self.normalMap2 = self.loadTexture("Detail_N.png")
+        self.testOn = False
+        self.detailTex = self.loadTexture("Detail_COLOR.png")
         self.tex1 = self.loadTexture("dirt.jpg")
         self.tex2 = self.loadTexture("grass.jpg")
         self.tex3 = self.loadTexture("rock.jpg")
         self.tex4 = self.loadTexture("snow.jpg")
 
         self.normalTS = TextureStage('normalMap')
-        self.detailTS = TextureStage('normalMap')
+        self.normalTS2 = TextureStage('normalMap2')
+        self.detailTS = TextureStage('detailMap')
         self.ts1 = TextureStage('tex1')
         self.ts2 = TextureStage('tex2')
         self.ts3 = TextureStage('tex3')
         self.ts4 = TextureStage('tex4')
-
 
         ### Load the boundries for each texture
         # regionLimits ( min height, max height, min slope, max slope )
@@ -224,32 +225,10 @@ class ShaderTexturer(TerrainTexturer):
         self.terrain.setShaderInput('tscale', self.texScale)
         self.terrain.setShader(self.shader)
 
-    def loadNormalTest(self):
-        ### texture scaling
-        texScale = self.terrain.tileSize / 32 * self.terrain.horizontalScale
-        self.texScale = Vec4(texScale, texScale, texScale, 1.0)
-
-        ### Load textures
-        self.tex1 = self.loadTexture("dirt.jpg")
-        self.tex2 = self.loadTexture("grass.jpg")
-        self.tex3 = self.loadTexture("rock.jpg")
-        self.tex4 = self.loadTexture("snow.jpg")
-
-        self.ts1 = TextureStage('tex1')
-        self.ts2 = TextureStage('tex2')
-        self.ts3 = TextureStage('tex3')
-        self.ts4 = TextureStage('tex4')
-
-        self.shader = Shader.load("shaders/NormalMap", Shader.SLCg)
-        self.terrain.setShaderInput("detailTexture", self.detailTexture)
-        self.terrain.setShaderInput('tscale', self.texScale)
-        #self.terrain.setShaderInput("LightPosition", Vec3(10.0,10.0,10.0))
-        #self.terrain.setShaderInput("LightColor", Vec3(1.0,1.0,1.0))
-
     def texturize(self, input):
         """Apply textures and shaders to the input."""
 
-        return
+        return #abort
         # enable use of the two separate tagged render states for our two cameras
         #input.setTag('Normal', 'True')
         #input.setTag('Clipped', 'True')
@@ -258,5 +237,13 @@ class ShaderTexturer(TerrainTexturer):
         input.setTexture(self.ts3, self.tex3)
         input.setTexture(self.ts4, self.tex4)
 
-        input.setTexture(self.detailTS, self.detailTexture)
+        input.setTexture(self.detailTS, self.detailTex)
         input.setTexScale(self.detailTS, 10, 10)
+
+    def test(self):
+        return #abort
+        self.testOn = not self.testOn
+        if self.testOn:
+            self.terrain.setShaderInput("normalMap", self.normalMap2)
+        else:
+            self.terrain.setShaderInput("normalMap", self.normalMap)
