@@ -211,7 +211,7 @@ class World(DirectObject):
         # load default shaders
         cf = CommonFilters(base.win, base.cam)
         #bloomSize
-        cf.setBloom(size='medium', desat= 0.7, intensity = 2.5, mintrigger = 0.7, maxtrigger = 0.95)
+        cf.setBloom(size='medium', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
