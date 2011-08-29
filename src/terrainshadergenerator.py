@@ -44,14 +44,14 @@ float FogAmount( float maxDistance, float3 PositionVS )
         
     def fogExponential(self):
         # We need to figure out what fog density we want.
-        # Lets find out what density results in 80% fog at max view distance
+        # Lets find out what density results in 75% fog at max view distance
         # the basic fog equation...
         # fog = e^ (-density * z)
         # -density * z = ln(fog) / ln(e)
         # -density * z = ln(fog)
         # density = ln(fog) / -z
-        # density = ln(0.2) / -maxViewRange
-        self.fogDensity = 1.60943791 / (self.terrain.maxViewRange)
+        # density = ln(0.25) / -maxViewRange
+        self.fogDensity = 1.38629436 / (self.terrain.maxViewRange)
         self.fogFunction = '''
 float FogAmount( float density, float3 PositionVS )
 {

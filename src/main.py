@@ -211,7 +211,7 @@ class World(DirectObject):
         # load default shaders
         cf = CommonFilters(base.win, base.cam)
         #bloomSize
-        cf.setBloom(size='medium', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
+        cf.setBloom(size='small', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
@@ -335,7 +335,7 @@ class World(DirectObject):
         self.critter1.update(elapsed)
 
         self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
-        self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor())
+        self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor()*0.9)
         #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \
