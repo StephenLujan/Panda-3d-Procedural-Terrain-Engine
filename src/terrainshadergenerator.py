@@ -26,6 +26,7 @@ class TerrainShaderGenerator:
         self.textures = []
         self.normalMapping = True
         self.glare = False
+        self.avoidConditionals = 0
         self.fogExponential()
         self.terrain.setShaderInput("fogDensity", self.fogDensity)
 
@@ -98,39 +99,34 @@ float FogAmount( float density, float3 PositionVS )
 float3 absoluteValue(float3 input)
 {
     return float3(abs(input.x), abs(input.y), abs(input.z));
-    float3 output = input;
-    if (output.x <= 0)
-        output.x = -output.x;
-    if (output.y <= 0)
-        output.y = -output.y;
-    return output;
-}
+}'''
 
-
-float calculateWeight( float value, float min, float max )
+        if self.avoidConditionals == 0:
+            self._beginning += '''
+float calculateWeight( float value, float minimum, float maximum )
 {
-    if (value > max)
+    if (value > maximum)
         return 0.0;
-    if (value < min)
+    if (value < minimum)
         return 0.0;
 
-    //return 1.0;
+    float weight = min(maximum - value, value - minimum);
 
-    float weight = 0.0;
-
-    weight = value - min < max - value ?
-             value - min : max - value;
-
-    //weight /= max - min;
-    //weight *= weight;
-    //weight = log2( weight );
-    //weight = sqrt( weight );
-
-    weight+= 0.001;
-    //weight = clamp(weight, 0.001, 1.0);
     return weight;
 }
+'''
+        else:
+            self._beginning += '''
+float calculateWeight( float value, float minimum, float maximum )
+{
+    value = clamp(value, minimum, maximum);
+    float weight = min(maximum - value, value - minimum);
 
+    return weight;
+}
+'''
+
+        self._beginning += '''
 float calculateFinalWeight( float height, float slope, float4 limits )
 {
     return calculateWeight(height, limits.x, limits.y)
@@ -374,7 +370,14 @@ void fshader(
                 string += '''
 
     //texture''' + texStr + ', region ' + regionStr + '''
-    textureWeight = calculateFinalWeight(height, slope, region''' + regionStr + '''Limits);
+    textureWeight = calculateFinalWeight(height, slope, region''' + regionStr + '''Limits);'''
+                if self.avoidConditionals > 1:
+                    string += '''
+        textureWeightTotal += textureWeight;
+        terrainColor += textureWeight * tex2D(texUnit''' + texStr + ''', input.l_tex_coord);
+'''
+                else:
+                    string += '''
     if (textureWeight)
     {
         textureWeightTotal += textureWeight;

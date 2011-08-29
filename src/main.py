@@ -8,7 +8,7 @@
 # My aim is to create the best possible 100% procedurally generated terrain
 ###
 
-__author__ = "Stephen"
+__author__ = "Stephen Lujan"
 __date__ = "$Oct 7, 2010 4:10:23 AM$"
 
 if __name__ == "__main__":
