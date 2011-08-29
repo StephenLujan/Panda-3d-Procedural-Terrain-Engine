@@ -26,6 +26,55 @@ class TerrainShaderGenerator:
         self.textures = []
         self.normalMapping = True
         self.glare = False
+        self.fogExponential()
+        self.terrain.setShaderInput("fogDensity", self.fogDensity)
+
+    def fogLinear(self):
+        # We need to figure out what fog density we want.
+        # Lets find out what density results in 80% fog at max view distance
+
+        self.fogDensity = 0.8 * (self.terrain.maxViewRange)
+        self.fogFunction = '''
+float FogAmount( float maxDistance, float3 PositionVS )
+{
+    float z = length( PositionVS ); // viewer position is at origin
+    return saturate( 1-(z / maxDistance));
+}'''
+        
+    def fogExponential(self):
+        # We need to figure out what fog density we want.
+        # Lets find out what density results in 80% fog at max view distance
+        # the basic fog equation...
+        # fog = e^ (-density * z)
+        # -density * z = ln(fog) / ln(e)
+        # -density * z = ln(fog)
+        # density = ln(fog) / -z
+        # density = ln(0.2) / -maxViewRange
+        self.fogDensity = 1.60943791 / (self.terrain.maxViewRange)
+        self.fogFunction = '''
+float FogAmount( float density, float3 PositionVS )
+{
+    float z = length( PositionVS ); // viewer position is at origin
+    return saturate( pow(2.7182818, -(density * z)));
+}'''
+
+    def fogExponential2(self):
+        # We need to figure out what fog density we want.
+        # Lets find out what density results in 80% fog at max view distance
+        # the basic fog equation...
+        # fog = e^ (-density * z)*(-density * z)
+        # -density^2 * z^2 = ln(fog) / ln(e)
+        # -density^2 * z^2 = ln(fog)
+        # density = root(ln(fog) / -z^2)
+        # density = root(ln(0.2) / -maxViewRange * maxViewRange)
+        self.fogDensity = 1.60943791 / (self.terrain.maxViewRange * self.terrain.maxViewRange)
+        self.fogFunction = '''
+float FogAmount( float density, float3 PositionVS )
+{
+    float z = length( PositionVS ); // viewer position is at origin
+    float exp = density * z;
+    return saturate( pow(2.7182818, -(exp * exp)));
+}'''
 
     def bulkCode(self):
 
@@ -38,7 +87,13 @@ class TerrainShaderGenerator:
         self._header += 'const float slopeScale = '
         self._header += str(self.terrain.maxHeight / self.terrain.horizontalScale) + ';'
         self._header += '\nconst float normalStrength = 2.0;'
-        self._beginning = '''
+        self._beginning = ''
+        if self.fogDensity:
+            self._beginning += '''
+//returns [0,1] fog percentage
+'''
+            self._beginning += self.fogFunction
+        self._beginning += '''
 
 float3 absoluteValue(float3 input)
 {
@@ -50,6 +105,7 @@ float3 absoluteValue(float3 input)
         output.y = -output.y;
     return output;
 }
+
 
 float calculateWeight( float value, float min, float max )
 {
@@ -98,8 +154,13 @@ struct vfconn
     float4 l_eye_normal : TEXCOORD4;
     //vshader output should not go to fshader, separated
     //float4 l_position : POSITION;
-};
+'''
+        if self.fogDensity:
+            self._beginning +='''
+    float l_fog : FOG;'''
 
+        self._beginning +='''
+};
 void vshader(
         in float2 vtx_texcoord0 : TEXCOORD0,
         in float4 vtx_position : POSITION,
@@ -108,6 +169,8 @@ void vshader(
         out vfconn output,
         out float4 l_position : POSITION,
 
+        uniform float4 fogDensity: FOGDENSITY,
+        uniform float3 camPos : CAMPOS,
         uniform float4x4 trans_model_to_world,
         uniform float4x4 mat_modelproj,
         uniform float4x4 trans_model_to_view,
@@ -124,16 +187,25 @@ void vshader(
         //for terrain
         output.l_tex_coord = vtx_texcoord0;
         output.l_world_pos = mul(trans_model_to_world, vtx_position);
+'''
+        if self.fogDensity:
+            self._beginning +='''
+        // there has to be a faster way to get the camera's coordinates in a shader
+        float3 cam_to_vertex = output.l_world_pos - camPos;
+        output.l_fog = FogAmount(fogDensity.x, cam_to_vertex);
+
+'''
+
+        self._beginning +='''
         output.l_normal = vtx_normal.xyz;
-        //output.l_normal.z *= zScale;
         output.l_normal.x *= slopeScale;
         output.l_normal.y *= slopeScale;
         output.l_normal = normalize(output.l_normal);
         //vtx_normal.xyz = output.l_normal;
 
-        output.l_eye_position = mul(trans_model_to_view, vtx_position);
-        output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
-        output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
+        //output.l_eye_position = mul(trans_model_to_view, vtx_position);
+        //output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
+        //output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
 }
 
 void fshader(
@@ -147,11 +219,25 @@ void fshader(
 
         //from terrain shader
         in uniform sampler2D normalMap  : NORMALMAP,
-        in uniform sampler2D detailTex  : DETAILTEX,
+        in uniform sampler2D detailTex  : DETAILTEX,'''
+        if self.fogDensity:
+            self._beginning += '''
+        in uniform float4 fogColor : FOGCOLOR,
 '''
 
         self._middle = '''
 ) {
+'''
+#        if self.fogDensity:
+        if False:
+            self._middle += '''
+        if (input.l_fog == 1.0)
+        {
+            o_color = fogColor;
+            return;
+        }
+'''
+        self._middle += '''
         //set up texture calculations
         // Fetch all textures.
         float slope = 1.0 - dot( input.l_normal, vec3(0,0,1));
@@ -229,13 +315,19 @@ void fshader(
         // Debug view DLight only
         // result = tot_diffuse;
 
+        
         //hdr0   brightness drop 1 -> 3/4
         //result.rgb = (result*result*result + result*result + result) / (result*result*result + result*result + result + 1);
         //hdr1   brightness drop 1 -> 2/3
         result.rgb = (result*result + result) / (result*result + result + 1.0);
         //hdr2   brightness drop 1 -> 1/2
         //result.rgb = (result) / (result + 1);
-
+'''
+        if self.fogDensity:
+            self._end += '''
+        result = lerp( fogColor, result, input.l_fog );
+'''
+        self._end += '''
         o_color = result * 1.000001;
 }
 '''

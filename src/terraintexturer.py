@@ -223,6 +223,8 @@ class ShaderTexturer(TerrainTexturer):
         self.terrain.setShaderInput("normalMap", self.normalMap)
         self.terrain.setShaderInput("detailTex", self.detailTex)
         self.terrain.setShaderInput('tscale', self.texScale)
+        self.terrain.setShaderInput("fogColor", Vec4(1.0,1.0,1.0,1.0))
+        self.terrain.setShaderInput("camPos", base.camera.getPos())
         self.terrain.setShader(self.shader)
 
     def texturize(self, input):

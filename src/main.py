@@ -334,13 +334,15 @@ class World(DirectObject):
         self.ralph.update(elapsed)
         self.critter1.update(elapsed)
 
+        self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
+        self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor())
         #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \
                               (self.ralph.getX(), self.ralph.getY(), self.ralph.getZ()))
         # camera heading + pitch output
         self.hpr_text.setText('[HPR]: %03.1f, %03.1f,%03.1f ' % \
-                              (base.camera.getH(), base.camera.getP(), base.camera.getR()))
+                              (self.camera.fulcrum.getH(), self.camera.camNode.getP(), self.camera.camNode.getR()))
 
         self.time_text.setText('[Time]: %02i:%02i' % (self.sky.time / 100, self.sky.time % 100 * 60 / 100))
         #current texture blending mode
