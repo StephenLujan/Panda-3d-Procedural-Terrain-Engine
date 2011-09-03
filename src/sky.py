@@ -50,7 +50,7 @@ class SkyBox(ColoredByTime):
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
         
         self.dayColor = Vec4(.55, .65, .95, 1.0)
-        self.nightColor = Vec4(.1, .1, .3, 1.0)
+        self.nightColor = Vec4(.05, .05, .20, 1.0)
         self.sunsetColor = Vec4(.45, .5, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.skybox.setColor
@@ -109,10 +109,10 @@ class CloudLayer(ColoredByTime):
         self.clouds.setFogOff(1)
         self.clouds.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
 
-        self.speed = 0.05
+        self.speed = 0.003
         self.time = 0
         self.dayColor = Vec4(0.98, 0.98, 0.95, 1.0)
-        self.nightColor = Vec4(-0.5, -0.3, .1, 1.0)
+        self.nightColor = Vec4(-0.5, -0.3, .0, 1.0)
         self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.clouds.setColor
@@ -145,10 +145,12 @@ class CloudLayer(ColoredByTime):
 
 class Sky():
     def __init__(self):
+        
         self.skybox = SkyBox()
         self.sun = Sun()
         self.clouds = CloudLayer()
         #self.fog = DistanceFog()
+        #self.addDirectLight()
         self.dayLength = 120 #in seconds
         self.setTime(800.0)
         self.previousTime = 0

@@ -37,7 +37,7 @@ from pandac.PandaModules import Vec2
 from pstat_debug import pstat
 from terraintexturer import *
 
-""" 
+"""
     Panda3d GeoMipTerrain tips:
 least detail = max detail level = log(block_size) / log(2)
 most detail = min detail level = 0
@@ -72,23 +72,24 @@ class TerrainTile(GeoMipTerrain):
         self.terrain = terrain
         self.xOffset = x
         self.yOffset = y
+        self.detail = 1.0 / 2.0 # higher means greater detail
 
-        name = "ID" + str(terrain.id) + "X" + str(x) + "Y" + str(y)
+        #name = "ID" + str(terrain.id) + "X" + str(x) + "Y" + str(y)
         GeoMipTerrain.__init__(self, name=terrain.name)
 
-        self.mapName = "heightmaps/" + name + ".png"
+        #self.mapName = "heightmaps/" + name + ".png"
         self.image = PNMImage()
 
         self.getRoot().setPos(x, y, 0)
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
         if self.terrain.bruteForce:
             GeoMipTerrain.setBruteforce(self, True)
+            GeoMipTerrain.setBlockSize(self, self.terrain.heightMapSize * self.detail)
         else:
+            GeoMipTerrain.setBlockSize(self, 16)
             self.setBorderStitching(1)
             self.setNear(self.terrain.near)
             self.setFar(self.terrain.far)
-
-        #self.make()
 
     def update(self, dummy):
         """Updates the GeoMip to use the correct LOD on each block."""
@@ -122,25 +123,27 @@ class TerrainTile(GeoMipTerrain):
 
         """
 
-        self.image = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
+        heightMapSize = self.terrain.tileSize * self.detail + 1
+        self.image = PNMImage(heightMapSize, heightMapSize)
         self.image.makeGrayscale()
         # these may be redundant
         #self.image.setNumChannels(1)
         self.image.setMaxval(65535)
 
 
-        ySize = self.image.getYSize()-1
+        ySize = self.image.getYSize() - 1
         getHeight = self.terrain.getHeight
         setGray = self.image.setGray
         xo = self.xOffset
         yo = self.yOffset
+        d = self.detail
 
         for x in range(self.image.getXSize()):
-            for y in range(ySize+1):
-                height = getHeight(x + xo, y + yo)
+            for y in range(ySize + 1):
+                height = getHeight(x / d + xo, y / d + yo)
                 #  feed pixel into image
                 # why is it necessary to invert the y axis I wonder?
-                setGray(x, ySize-y, height)
+                setGray(x, ySize - y, height)
         #self.postProcessImage()
         #self.image.write(Filename(self.mapName))
 
@@ -156,10 +159,13 @@ class TerrainTile(GeoMipTerrain):
     def make(self):
         """Build a finished renderable heightMap."""
 
+        self.getRoot().setSx(1.0 / self.detail)
+        self.getRoot().setSy(1.0 / self.detail)
         self.makeHeightMap()
         self.setHeight()
         #self.getRoot().setSz(self.maxHeight)
         self.generate()
+        
 
 
 ###############################################################################
@@ -387,8 +393,8 @@ class Terrain(NodePath):
         self.texturer = ShaderTexturer(self)
         #self.texturer = DetailTexturer(self)
         #self.texturer.load()
-        self.texturer.texturize(self)
-        self.setShaderInput("zMultiplier", )
+        #self.texturer.texturize(self)
+        #self.setShaderInput("zMultiplier", )
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""
@@ -420,13 +426,6 @@ class Terrain(NodePath):
         taskMgr.setupTaskChain('tileGenerationQueue', numThreads=3, tickClock=0,
                                threadPriority=1, frameBudget=0.2,
                                frameSync=False, timeslicePriority=True)
-
-        #if self.bruteForce:
-        #    taskMgr.setupTaskChain('blockSizeUpdateChain', numThreads=1, tickClock=0,
-        #                           threadPriority=0, frameBudget=0.1,
-        #                           frameSync=False, timeslicePriority=True)
-        #    taskMgr.add(self.blockSizeUpdateTask, "blockSizeUpdate",
-        #                taskChain='blockSizeUpdateChain', sort=1, priority=0)
 
     def lightTask(self, task):
         """This task moves point and directional lights.
@@ -561,7 +560,6 @@ class Terrain(NodePath):
         """Creates a terrain tile at the input coordinates."""
 
         tile = TerrainTile(self, x, y)
-        tile.setBlockSize(self.blockSize)
         tile.make()
         tile.setAutoFlatten(GeoMipTerrain.AFMStrong)
         #np = self.attachNewNode("tileNode")
