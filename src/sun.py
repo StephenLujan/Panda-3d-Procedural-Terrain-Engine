@@ -85,10 +85,10 @@ class Sun:
             self.finalQuad.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd, ColorBlendAttrib.OIncomingColor, ColorBlendAttrib.OFbufferColor))
             self.finalQuad.setShader(Shader.load("shaders/filter-vlight.cg"))
             self.finalQuad.setShaderInput('src', self.vltexture)
-            self.finalQuad.setShaderInput('vlparams', 32, 0.9 / 32.0, 0.97, 0.5) # Note - first 32 is now hardcoded into shader for cards that don't support variable sized loops.
+            self.finalQuad.setShaderInput('vlparams', 32, 0.9 / 32.0, 0.98, 0.5) # Note - first 32 is now hardcoded into shader for cards that don't support variable sized loops.
             self.finalQuad.setShaderInput('casterpos', 0.5, 0.5, 0, 0)
             # Last parameter to vlcolor is the exposure
-            vlcolor = Vec4(1, 0.96, 0.8, 0.025)
+            vlcolor = Vec4(1, 0.99, 0.80, 0.03)
             self.finalQuad.setShaderInput('vlcolor', vlcolor)
 
         self.start()

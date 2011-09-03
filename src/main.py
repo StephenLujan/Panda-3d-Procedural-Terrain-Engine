@@ -8,7 +8,7 @@
 # My aim is to create the best possible 100% procedurally generated terrain
 ###
 
-__author__ = "Stephen"
+__author__ = "Stephen Lujan"
 __date__ = "$Oct 7, 2010 4:10:23 AM$"
 
 if __name__ == "__main__":
@@ -55,6 +55,7 @@ from terrain import *
 from waterNode import *
 from creature import *
 from camera import *
+import splashCard
 
 ###############################################################################
 
@@ -79,6 +80,10 @@ def addText(pos, msg, changeable=False, alignLeft=True, scale=0.05):
 def addTitle(text):
     addText(-0.95, text, False, False, 0.07)
 
+def showFrame():
+    for i in range(4):
+        base.graphicsEngine.renderFrame()
+
 ##############################################################################
 
 
@@ -87,49 +92,50 @@ def addTitle(text):
 class World(DirectObject):
 
     def __init__(self):
-        base.win.setClearColor(Vec4(0, 0, 0, 1))
-        base.win.setClearColorActive(True)
-        taskMgr.doMethodLater(0.1, self.load, "Load Task")
-        self.bug_text = addText(-0.95, "Loading...", True)
+        # set here your favourite background color - this will be used to fade to
+
+        bgcolor=(0, 0, 0, 1)
+        base.setBackgroundColor(*bgcolor)
+        self.splash = splashCard.splashCard('textures/loading.png', bgcolor)
+        taskMgr.doMethodLater(0.01, self.load, "Load Task")
+        self.bug_text = addText(-0.95, "Loading...", True, scale = 0.1)
 
     def load(self, task):
-        yield task.cont
+        #yield task.cont
 
         PStatClient.connect()
 
         self.bug_text.setText("loading Display...")
-        yield task.cont
+        showFrame()
         self._loadDisplay()
 
         self.bug_text.setText("loading sky...")
-        yield task.cont
+        showFrame()
         self._loadSky()
 
         # Definitely need to make sure this loads before terrain
         self.bug_text.setText("loading terrain...")
-        yield task.cont
-        yield task.cont
-        yield task.cont
+        showFrame()
         self._loadTerrain()
 
         self.bug_text.setText("loading fog...")
-        yield task.cont
+        showFrame()
         #self._loadFog()
 
         self.bug_text.setText("loading player...")
-        yield task.cont
+        showFrame()
         self._loadPlayer()
         
         self.bug_text.setText("loading water...")
-        yield task.cont
+        showFrame()
         self._loadWater()
 
         self.bug_text.setText("loading filters")
-        yield task.cont
+        showFrame()
         self._loadFilters()
 
         self.bug_text.setText("loading miscellanious")
-        yield task.cont
+        showFrame()
         
         taskMgr.add(self.move, "moveTask")
 
@@ -139,13 +145,14 @@ class World(DirectObject):
         self.firstmove = 1
 
         # disable std. mouse
+        # disable std. mouse
         base.disableMouse()
         props = WindowProperties()
         props.setCursorHidden(True)
         base.win.requestProperties(props)
 
         self.bug_text.setText("loading gui controls...")
-        yield task.cont
+
         try: self.terrain.texturer.shader
         except: print "Terrain texturer has no shader to control."
         else:
@@ -153,7 +160,9 @@ class World(DirectObject):
             self.shaderControl.hide()
 
         self.bug_text.setText("")
-        yield task.cont
+        showFrame()
+        self.splash.destroy()
+        self.splash = None
 
     def _loadDisplay(self):
         base.setFrameRateMeter(True)
@@ -174,11 +183,12 @@ class World(DirectObject):
         self.inst12 = addText(0.40, "[N]: Toggle Night Skipping")
         self.inst13 = addText(0.35, "[P]: Pause day night cycle")
         self.inst14 = addText(0.3, "[F11]: Screen Shot")
+        #self.inst15 = addText(0.25, "[T]: Special Test")
         
 
-        self.loc_text = addText(0.20, "[LOC]: ", True)
-        self.hpr_text = addText(0.15, "[HPR]: ", True)
-        self.time_text = addText(0.10, "[Time]: ", True)
+        self.loc_text = addText(0.15, "[LOC]: ", True)
+        self.hpr_text = addText(0.10, "[HPR]: ", True)
+        self.time_text = addText(0.05, "[Time]: ", True)
         #self.blend_text = addText(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
@@ -204,7 +214,7 @@ class World(DirectObject):
         # load default shaders
         cf = CommonFilters(base.win, base.cam)
         #bloomSize
-        cf.setBloom(size='medium')
+        cf.setBloom(size='small', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
@@ -252,6 +262,7 @@ class World(DirectObject):
         self.accept("p", self.sky.pause )
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
+        self.accept("t", self.terrain.test)
         #self.accept("f", self.terrain.flatten)
         #self.accept("+", self.setControl, ["option+",1])
         #self.accept("-", self.setControl, ["option-",1])
@@ -326,13 +337,15 @@ class World(DirectObject):
         self.ralph.update(elapsed)
         self.critter1.update(elapsed)
 
+        self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
+        self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor()*0.9)
         #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \
                               (self.ralph.getX(), self.ralph.getY(), self.ralph.getZ()))
         # camera heading + pitch output
         self.hpr_text.setText('[HPR]: %03.1f, %03.1f,%03.1f ' % \
-                              (base.camera.getH(), base.camera.getP(), base.camera.getR()))
+                              (self.camera.fulcrum.getH(), self.camera.camNode.getP(), self.camera.camNode.getR()))
 
         self.time_text.setText('[Time]: %02i:%02i' % (self.sky.time / 100, self.sky.time % 100 * 60 / 100))
         #current texture blending mode
@@ -352,6 +365,7 @@ class World(DirectObject):
         self.mouseLook = not self.mouseLook
         props = WindowProperties()
         props.setCursorHidden(self.mouseLook)
+        self.shaderControl.setHidden(self.mouseLook)
         try: self.shaderControl
         except: print "No shader control found."
         else: self.shaderControl.setHidden(self.mouseLook)

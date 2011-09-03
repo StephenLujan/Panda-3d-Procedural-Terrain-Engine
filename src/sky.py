@@ -1,11 +1,12 @@
 # To change this template, choose Tools | Templates
 # and open the template in the editor.
 
+from panda3d.core import PNMImage
 from pandac.PandaModules import AmbientLight
+from pandac.PandaModules import Fog
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
-from pandac.PandaModules import Fog
 from sun import *
 
 class ColoredByTime():
@@ -49,7 +50,7 @@ class SkyBox(ColoredByTime):
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
         
         self.dayColor = Vec4(.55, .65, .95, 1.0)
-        self.nightColor = Vec4(.05, .05, .25, 1.0)
+        self.nightColor = Vec4(.1, .1, .3, 1.0)
         self.sunsetColor = Vec4(.45, .5, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.skybox.setColor
@@ -64,8 +65,8 @@ class DistanceFog(ColoredByTime):
         #self.fog.setExpDensity(0.025)
         #linear
         self.fog = Fog("A linear-mode Fog node")
-        self.fog.setLinearRange(0,320)
-        self.fog.setLinearFallback(5,20,50)
+        self.fog.setLinearRange(0, 320)
+        self.fog.setLinearFallback(5, 20, 50)
 
         render.attachNewNode(self.fog)
         render.setFog(self.fog)
@@ -81,29 +82,24 @@ class DistanceFog(ColoredByTime):
 
 class CloudLayer(ColoredByTime):
     def __init__(self):
-        #maker = CardMaker('water')
-        #maker.setFrame(-1, 1, -2, 2)
-        #self.clouds = render.attachNewNode(maker.generate())
-        
-        self.clouds = loader.loadModel("models/sphere")
-        tex1 = loader.loadTexture('textures/clouds.png')
+
+        tex1 = loader.loadTexture('textures/clouds.jpg')
         tex1.setMagfilter(Texture.FTLinearMipmapLinear)
         tex1.setMinfilter(Texture.FTLinearMipmapLinear)
         tex1.setAnisotropicDegree(2)
         tex1.setWrapU(Texture.WMRepeat)
         tex1.setWrapV(Texture.WMRepeat)
-        #tex1.setWrapU(Texture.WMClamp)
-        #tex1.setWrapV(Texture.WMClamp)
+        tex1.setFormat(Texture.FAlpha)
         self.ts1 = TextureStage('clouds')
+        #self.ts1.setMode(TextureStage.MBlend)
+        self.ts1.setColor(Vec4(1, 1, 1, 1))
+
+        #self.plane(-2000, -2000, 2000, 2000, 100)
+        self.sphere(10000, -9600)
+
+        self.clouds.setTransparency(TransparencyAttrib.MDual)
         self.clouds.setTexture(self.ts1, tex1)
-        self.clouds.setTransparency(TransparencyAttrib.MAlpha)
-        self.clouds.reparentTo(render)
-        self.clouds.setTexOffset(self.ts1, 0, 0);
-        self.clouds.setTexScale(self.ts1, 10, 3);
-        #self.clouds.setTexRotate(self.ts1, degrees);
-        # make big enough to cover whole terrain, else there'll be problems with the water reflections
-        self.clouds.setScale(5000)
-        #self.clouds.setSz(1000)
+
         self.clouds.setBin('background', 3)
         self.clouds.setDepthWrite(False)
         self.clouds.setDepthTest(False)
@@ -112,34 +108,41 @@ class CloudLayer(ColoredByTime):
         self.clouds.setShaderOff(1)
         self.clouds.setFogOff(1)
         self.clouds.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
-		
-        self.time = 0
-        self.speed = 1.0
-        self.dayColor = Vec4(1.0, 1.0, 1.0, 1.0)
+
+        self.speed = 0.001
+        self.dayColor = Vec4(0.98, 0.98, 0.95, 1.0)
         self.nightColor = Vec4(-0.5, -0.3, .1, 1.0)
         self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.clouds.setColor
 
+    def plane(self, x1, y1, x2, y2, z):
+        self.z = z
+        maker = CardMaker('clouds')
+        maker.setFrame(x1, x2, y1, y2)
+        self.clouds = render.attachNewNode(maker.generate())
+        self.clouds.setHpr(0, 90, 0)
+        self.clouds.setTexOffset(self.ts1, 0, 1)
+        self.clouds.setTexScale(self.ts1, 10, 10)
+
+    def sphere(self, scale, z):
+        self.z = z
+        self.clouds = loader.loadModel("models/sphere")
+        self.clouds.reparentTo(render)
+        self.clouds.setHpr(0, 90, 0)
+        self.clouds.setScale(scale)
+        self.clouds.setTexOffset(self.ts1, 0, 1)
+        self.clouds.setTexScale(self.ts1, 30, 12)
+
     def setTime(self, time):
         self.colorize(time)
-        #self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
-        #self.clouds.setHpr(0,time/45.0 ,90)
-        #self.clouds.setTexOffset(self.ts1, time/600.0, time/600.0);
-        
-    def setPos(self, pos):
-        #pos.normalize()
-
-        self.clouds.setPos(pos)
-        #self.clouds.lookAt(base.cam)
+        self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
         
     def update(self, elapsed):
         self.time += elapsed
         self.clouds.setHpr(0, self.time * self.speed, 90)
-        self.setPos(base.cam.getPos(render) + Vec3(0, 0, -4500))
-        #self.setPos(base.cam.getPos()+Vec3(0,0,0))
+        self.clouds.setPos(base.cam.getPos(render) + Vec3(0, 0, self.z))
 
-        
 class Sky():
     def __init__(self):
         self.skybox = SkyBox()
