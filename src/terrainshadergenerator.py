@@ -26,7 +26,7 @@ class TerrainShaderGenerator:
         self.textures = []
         self.normalMapping = True
         self.glare = False
-        self.avoidConditionals = 0
+        self.avoidConditionals = 1
         self.fogExponential()
         self.terrain.setShaderInput("fogDensity", self.fogDensity)
 
@@ -77,37 +77,41 @@ float FogAmount( float density, float3 PositionVS )
     return saturate( pow(2.7182818, -(exp * exp)));
 }'''
 
-    def bulkCode(self):
+    def getHeader(self):
 
-        self._header = '''
+        header = '''
 //Cg
 // Should use per-pixel lighting, hdr1, and medium bloom
 // input alight0, dlight0
 
 '''
-        self._header += 'const float slopeScale = '
-        self._header += str(self.terrain.maxHeight / self.terrain.horizontalScale) + ';'
-        self._header += '\nconst float normalStrength = 2.0;'
-        self._beginning = ''
+        header += 'const float slopeScale = '
+        header += str(self.terrain.maxHeight / self.terrain.horizontalScale) + ';'
+        header += '\nconst float normalStrength = 2.0;'
+        return header
+    
+    def getFunctions(self):
+        functions = ''
         if self.fogDensity:
-            self._beginning += '''
-//returns [0,1] fog percentage
+            functions += '''
+//returns [0,1] fog factor
 '''
-            self._beginning += self.fogFunction
-        self._beginning += '''
+            functions += self.fogFunction
+        functions += '''
 
 float3 absoluteValue(float3 input)
 {
     return float3(abs(input.x), abs(input.y), abs(input.z));
-}'''
+}
+'''
 
         if self.avoidConditionals == 0:
-            self._beginning += '''
+            functions += '''
 float calculateWeight( float value, float minimum, float maximum )
 {
-    if (value > maximum)
-        return 0.0;
     if (value < minimum)
+        return 0.0;
+    if (value > maximum)
         return 0.0;
 
     float weight = min(maximum - value, value - minimum);
@@ -116,7 +120,7 @@ float calculateWeight( float value, float minimum, float maximum )
 }
 '''
         else:
-            self._beginning += '''
+            functions += '''
 float calculateWeight( float value, float minimum, float maximum )
 {
     value = clamp(value, minimum, maximum);
@@ -126,7 +130,7 @@ float calculateWeight( float value, float minimum, float maximum )
 }
 '''
 
-        self._beginning += '''
+        functions += '''
 float calculateFinalWeight( float height, float slope, float4 limits )
 {
     return calculateWeight(height, limits.x, limits.y)
@@ -137,7 +141,12 @@ float3 reflectVector( float3 input, float3 normal)
 {
     return ( -2 * dot(input,normal) * normal + input );
 }
-
+'''
+        return functions
+    
+    
+    def getVertexFragmentConnector(self):
+        vfconn ='''
 struct vfconn
 {
     //from terrain shader
@@ -152,11 +161,16 @@ struct vfconn
     //float4 l_position : POSITION;
 '''
         if self.fogDensity:
-            self._beginning +='''
+            vfconn +='''
     float l_fog : FOG;'''
 
-        self._beginning +='''
+        vfconn +='''
 };
+'''
+        return vfconn
+    
+    def getVertexShader(self):
+        vShader ='''
 void vshader(
         in float2 vtx_texcoord0 : TEXCOORD0,
         in float4 vtx_position : POSITION,
@@ -185,14 +199,14 @@ void vshader(
         output.l_world_pos = mul(trans_model_to_world, vtx_position);
 '''
         if self.fogDensity:
-            self._beginning +='''
+            vShader +='''
         // there has to be a faster way to get the camera's coordinates in a shader
         float3 cam_to_vertex = output.l_world_pos - camPos;
         output.l_fog = FogAmount(fogDensity.x, cam_to_vertex);
 
 '''
 
-        self._beginning +='''
+        vShader +='''
         output.l_normal = vtx_normal.xyz;
         output.l_normal.x *= slopeScale;
         output.l_normal.y *= slopeScale;
@@ -203,7 +217,11 @@ void vshader(
         //output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
         //output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
 }
-
+'''
+        return vShader
+    
+    def getFragmentShaderTop(self):
+        fshader ='''
 void fshader(
         in vfconn input,
         uniform float4 alight_alight0,
@@ -217,23 +235,25 @@ void fshader(
         in uniform sampler2D normalMap  : NORMALMAP,
         in uniform sampler2D detailTex  : DETAILTEX,'''
         if self.fogDensity:
-            self._beginning += '''
+            fshader += '''
         in uniform float4 fogColor : FOGCOLOR,
 '''
+        return fshader
 
-        self._middle = '''
+    def getTerrainPrepCode(self):
+        fshader = '''
 ) {
 '''
 #        if self.fogDensity:
         if False:
-            self._middle += '''
+            fshader += '''
         if (input.l_fog == 1.0)
         {
             o_color = fogColor;
             return;
         }
 '''
-        self._middle += '''
+        fshader += '''
         //set up texture calculations
         // Fetch all textures.
         float slope = 1.0 - dot( input.l_normal, vec3(0,0,1));
@@ -243,9 +263,11 @@ void fshader(
         vec4 terrainColor = float4(0.0, 0.0, 0.0, 1.0);
 
 '''
+        return fshader
+    
+    def getFragmentShaderEnd(self):
 
-
-        self._end = '''
+        fshader = '''
         // normalize color
         terrainColor /= textureWeightTotal;
         attr_color = terrainColor;
@@ -258,7 +280,7 @@ void fshader(
         attr_color *= 1.5 * (tex2D(detailTex, detailCoordSmall) * tex2D(detailTex, detailCoordBig) * tex2D(detailTex, detailCoordHuge));
 '''
         if self.normalMapping:
-            self._end += '''
+            fshader += '''
         // normal mapping
         float3 normalModifier = (tex2D(normalMap, detailCoordSmall) * 4.0 + tex2D(normalMap, detailCoordBig) * 4.0 + tex2D(normalMap, detailCoordHuge) * 4.0) - 6.0;
         input.l_normal *= normalModifier.z/normalStrength;
@@ -267,7 +289,7 @@ void fshader(
         input.l_normal = normalize(input.l_normal);
 '''
 
-        self._end += '''
+        fshader += '''
         // Begin view-space light calculations
         float ldist,lattenv,langle;
         float4 lcolor,lspec,lvec,lpoint,latten,ldir,leye,lhalf;
@@ -285,11 +307,11 @@ void fshader(
         dlight_angle *= sqrt(dlight_angle);
 '''
         if self.glare:
-            self._end += '''
+            fshader += '''
         //glare direct sun... should glare on reflection over normal instead.
         dlight_angle -= 0.002 * dlight_angle / (dlight_angle-1.005);
 '''
-        self._end += '''
+        fshader += '''
         lcolor *= dlight_angle;
 
         tot_diffuse += lcolor;
@@ -320,13 +342,14 @@ void fshader(
         //result.rgb = (result) / (result + 1);
 '''
         if self.fogDensity:
-            self._end += '''
+            fshader += '''
         result = lerp( fogColor, result, input.l_fog );
 '''
-        self._end += '''
+        fshader += '''
         o_color = result * 1.000001;
 }
 '''
+        return fshader
 
     def addTexture(self, texture):
 
@@ -343,7 +366,7 @@ void fshader(
 
         self.textures[textureNumber].addRegion(region)
 
-    def getfShaderParameters(self):
+    def getFShaderTerrainParameters(self):
 
         texNum = 0
         regionNum = 0
@@ -358,7 +381,7 @@ void fshader(
                 regionNum += 1
         return string[:-1] #trim last comma
 
-    def getTextureCode(self):
+    def getTerrainTextureCode(self):
 
         texNum = 0
         regionNum = 0
@@ -403,9 +426,18 @@ void fshader(
             texNum += 1
 
     def createShader(self):
-        self.bulkCode()
         self.feedThePanda()
-        return self._header + self._beginning + self.getfShaderParameters() + self._middle + self.getTextureCode() + self._end
+        
+        shader = self.getHeader()
+        shader += self.getFunctions()
+        shader += self.getVertexFragmentConnector()
+        shader += self.getVertexShader()
+        shader += self.getFragmentShaderTop()
+        shader += self.getFShaderTerrainParameters()
+        shader += self.getTerrainPrepCode()
+        shader += self.getTerrainTextureCode()
+        shader += self.getFragmentShaderEnd()
+        return shader
 
     def saveShader(self, name='shaders/stephen6.sha'):
         string = self.createShader()

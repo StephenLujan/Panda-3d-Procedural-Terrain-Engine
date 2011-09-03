@@ -109,7 +109,8 @@ class CloudLayer(ColoredByTime):
         self.clouds.setFogOff(1)
         self.clouds.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
 
-        self.speed = 0.001
+        self.speed = 0.05
+        self.time = 0
         self.dayColor = Vec4(0.98, 0.98, 0.95, 1.0)
         self.nightColor = Vec4(-0.5, -0.3, .1, 1.0)
         self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
@@ -136,11 +137,10 @@ class CloudLayer(ColoredByTime):
 
     def setTime(self, time):
         self.colorize(time)
-        self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
+        self.clouds.setTexOffset(self.ts1, self.time * self.speed, self.time * self.speed);
         
     def update(self, elapsed):
         self.time += elapsed
-        self.clouds.setHpr(0, self.time * self.speed, 90)
         self.clouds.setPos(base.cam.getPos(render) + Vec3(0, 0, self.z))
 
 class Sky():
