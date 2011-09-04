@@ -33,7 +33,7 @@ from pandac.PandaModules import GeoMipTerrain
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import PandaNode
 from pandac.PandaModules import Point3
-from pandac.PandaModules import Vec2
+#from pandac.PandaModules import Vec2
 from pstat_debug import pstat
 from terraintexturer import *
 
@@ -501,7 +501,7 @@ class Terrain(NodePath):
 
         for x in range (xstart - radius, xstart + radius, self.tileSize):
             for y in range (ystart - radius, ystart + radius, self.tileSize):
-                if not Vec2(x, y) in self.tiles:
+                if not (x, y) in self.tiles:
                     deltaX = xpos - (x + halfTile)
                     deltaY = ypos - (y + halfTile)
                     distanceSquared = deltaX * deltaX + deltaY * deltaY
@@ -517,6 +517,7 @@ class Terrain(NodePath):
         ystart = (int(y) / self.tileSize) * self.tileSize
         radius = (self.minTileDistance / self.tileSize + 1) * self.tileSize
         halfTile = self.tileSize * 0.49
+        tiles = self.tiles
 
         #print xstart, ystart, radius
         vec = 0
@@ -525,25 +526,25 @@ class Terrain(NodePath):
 
         for checkX in range (xstart - radius, xstart + radius, self.tileSize):
             for checkY in range (ystart - radius, ystart + radius, self.tileSize):
-                if not Vec2(checkX, checkY) in self.tiles:
+                if not (checkX, checkY) in tiles:
                     deltaX = x - (checkX + halfTile)
                     deltaY = y - (checkY + halfTile)
                     distanceSq = deltaX * deltaX + deltaY * deltaY
 
                     if distanceSq < minDistanceSq and distanceSq < minFoundDistance:
                         minFoundDistance = distanceSq
-                        vec = Vec2(checkX, checkY)
+                        vec = (checkX, checkY)
         if not vec == 0:
             #print distance," < ",self.minTileDistance," and ",distance," < ",minDistance
             #self.generateTile(vec.getX(), vec.getY())
-            self.dispatchNewTileAt(vec.getX(), vec.getY())
+            self.dispatchNewTileAt(*vec)
 
     def dispatchNewTileAt(self, x, y):
         """Dispatch a task to create a tile at the input coordinates."""
 
         self.newTile.xOffset = x
         self.newTile.yOffset = y
-        self.tiles[Vec2(x, y)] = self.newTile
+        self.tiles[(x, y)] = self.newTile
         #generateTile(x,y)
         taskMgr.add(self._generateTileTask, name="_generateTile",
                     extraArgs=[x, y], appendTask=True,
@@ -567,7 +568,7 @@ class Terrain(NodePath):
         #tile.getRoot().reparentTo(np)
         #self.tiles.append(np)
         tile.getRoot().reparentTo(self)
-        self.tiles[Vec2(x, y)] = tile
+        self.tiles[(x, y)] = tile
 
         #texturize tile
         #self.texturer.texturize(tile)
@@ -580,11 +581,12 @@ class Terrain(NodePath):
         """Remove distant tiles to free system resources."""
 
         center = self.tileSize * 0.5
+        maxDistanceSquared = self.maxTileDistance * self.maxTileDistance
         for pos, tile in self.tiles.items():
             deltaX = x - (tile.xOffset + center)
             deltaY = y - (tile.yOffset + center)
             distance = deltaX * deltaX + deltaY * deltaY
-            if distance > self.maxTileDistance * self.maxTileDistance:
+            if distance > maxDistanceSquared:
                 #print distance, " > ", self.maxTileDistance * self.maxTileDistance
                 self.removeTile(pos)
 
