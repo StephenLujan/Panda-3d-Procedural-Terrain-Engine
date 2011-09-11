@@ -33,7 +33,6 @@ loadPrcFile("config/config.prc")
 
 import direct.directbase.DirectStart
 from direct.filter.CommonFilters import CommonFilters
-from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.DirectObject import DirectObject
 from direct.task.Task import Task
 from gui import *
@@ -45,50 +44,20 @@ from pandac.PandaModules import PStatClient
 from pandac.PandaModules import PandaNode
 from pandac.PandaModules import PointLight
 from pandac.PandaModules import RenderState
-from pandac.PandaModules import TexGenAttrib
-from pandac.PandaModules import TextNode
+
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
-from pandac.PandaModules import WindowProperties
+
 from sky import *
 from terrain import *
 from waterNode import *
 from creature import *
 from camera import *
+from basicfunctions import *
 import splashCard
 
 ###############################################################################
 
-# Function returns the width / height ratio of the window or screen
-def getScreenRatio():
-    props = WindowProperties(base.win.getProperties())
-    return float(props.getXSize()) / float(props.getYSize())
-
-# Function to add instructions and other information along either side
-def addText(pos, msg, changeable=False, alignLeft=True, scale=0.05):
-    x = -getScreenRatio() + 0.03
-    if alignLeft:
-        align = TextNode.ALeft
-    else:
-        align = TextNode.ARight
-        x *= -1.0
-    return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
-                        pos=(x, pos), align=align, scale=scale,
-                        mayChange=changeable)
-
-# Function to put title on the screen.
-def addTitle(text):
-    addText(-0.95, text, False, False, 0.07)
-
-def showFrame():
-    for i in range(4):
-        base.graphicsEngine.renderFrame()
-
-##############################################################################
-
-
-
-###############################################################################
 class World(DirectObject):
 
     def __init__(self):
@@ -145,7 +114,6 @@ class World(DirectObject):
         self.firstmove = 1
 
         # disable std. mouse
-        # disable std. mouse
         base.disableMouse()
         props = WindowProperties()
         props.setCursorHidden(True)
@@ -153,8 +121,10 @@ class World(DirectObject):
 
         self.bug_text.setText("loading gui controls...")
 
-        try: self.terrain.texturer.shader
-        except: print "Terrain texturer has no shader to control."
+        try: 
+            self.terrain.texturer.shader
+        except: 
+            print "Terrain texturer has no shader to control."
         else:
             self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
             self.shaderControl.hide()
@@ -178,7 +148,7 @@ class World(DirectObject):
         self.inst7 = addText(0.65, "[D]: Run Ralph Right")
         self.inst8 = addText(0.60, "[shift]: Turbo Mode")
         self.inst9 = addText(0.55, "[R]: Regenerate Terrain")
-        self.inst10 = addText(0.50, "[right-mouse]: Open Shader Controls")
+        self.inst10 = addText(0.50, "[tab]: Open Shader Controls")
         self.inst11 = addText(0.45, "[1-8]: Set time to # * 3")
         self.inst12 = addText(0.40, "[N]: Toggle Night Skipping")
         self.inst13 = addText(0.35, "[P]: Pause day night cycle")
@@ -189,26 +159,18 @@ class World(DirectObject):
         self.loc_text = addText(0.15, "[LOC]: ", True)
         self.hpr_text = addText(0.10, "[HPR]: ", True)
         self.time_text = addText(0.05, "[Time]: ", True)
-        #self.blend_text = addText(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
-        maxRange=ConfigVariableInt("max-view-range").getValue()
-        if maxRange:
-            self.terrain = Terrain('Terrain', base.camera, maxRange=ConfigVariableInt("max-view-range").getValue())
-        else:
-            self.terrain = Terrain('Terrain', base.camera)
+        maxRange = ConfigVariableInt("max-view-range", 400).getValue()
+        self.terrain = Terrain('Terrain', base.camera, maxRange)
         self.terrain.reparentTo(render)
-        self.environ = self.terrain	# make available for original Ralph code below
 
     def _loadWater(self):
-        self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
-                                 * self.terrain.waterHeight, 1.0)
+        self._water_level = self.terrain.maxHeight * self.terrain.waterHeight
         size = self.terrain.maxViewRange * 1.5
-        self.water = WaterNode(self, -size, -size, size, size, self._water_level.z)
+        self.water = WaterNode(self, -size, -size, size, size, self._water_level)
 
     def _loadFilters(self):
-        wl = self._water_level
-        wl.z = wl.z-0.05	# add some leeway (gets rid of some mirroring artifacts)
         self.terrain.setShaderInput('waterlevel', self._water_level)
 
         # load default shaders
@@ -227,7 +189,6 @@ class World(DirectObject):
 
     def _loadPlayer(self):
         # Create the main character, Ralph
-        # ralphStartPos = self.environ.find("**/start_point").getPos()
         ralphStartPosX = 50
         ralphStartPosY = 90
         ralphStartPosZ = self.terrain.getElevation(ralphStartPosX, ralphStartPosY)
@@ -249,7 +210,7 @@ class World(DirectObject):
         self.accept("d", self.setControl, ["right", 1])
         self.accept("y", self.setControl, ["invert-y", 1])
         self.accept("shift", self.setControl, ["turbo", 1])
-        self.accept("f11", self.screenShot)
+        self.accept("f11", screenShot)
         self.accept("1", self.sky.setTime, [300.0])
         self.accept("2", self.sky.setTime, [600.0])
         self.accept("3", self.sky.setTime, [900.0])
@@ -280,7 +241,7 @@ class World(DirectObject):
         self.accept("wheel_down", self.camera.zoom, [0])
 
         # mouse controls
-        self.accept("mouse3", self.toggleMouseLook)
+        self.accept("tab", self.toggleMenu)
         self.mouseLook = True
 #        self.accept("mouse1", self.setControl, [0, 1])
 #        self.accept("mouse1-up", self.setControl, [0, 0])
@@ -312,10 +273,16 @@ class World(DirectObject):
         sphere = loader.loadModel("models/sphere")
         sphere.reparentTo(plnp)
         render.setShaderInput("plight0", plnp)
+    
+    def toggleMenu(self):
+        ml = toggleMouseLook()
+        try: self.shaderControl
+        except: print "No shader control found."
+        else: self.shaderControl.setHidden(ml)
         
     def move(self, task):
         #self.lightpivot.setPos(self.focus.getPos() + Vec3(0, 0, 4))
-        if not self.mouseLook:
+        if not getMouseLook():
             return Task.cont
 
         elapsed = task.time - self.prevtime
@@ -361,26 +328,6 @@ class World(DirectObject):
         self.controlMap[control] = value
 
 
-    def toggleMouseLook(self):
-        self.mouseLook = not self.mouseLook
-        props = WindowProperties()
-        props.setCursorHidden(self.mouseLook)
-        self.shaderControl.setHidden(self.mouseLook)
-        try: self.shaderControl
-        except: print "No shader control found."
-        else: self.shaderControl.setHidden(self.mouseLook)
-        base.win.requestProperties(props)
-        print "toggleMouseLook"
-
-    def screenShot(self):
-        base.screenshot()
-        print 'screenshot taken.'
-
-def setResolution():
-    wp = WindowProperties()
-    wp.setSize(1920, 1080)
-    wp.setFullscreen(True)
-    base.win.requestProperties(wp)
 
 #setResolution()
 
