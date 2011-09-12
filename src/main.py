@@ -14,40 +14,17 @@ __date__ = "$Oct 7, 2010 4:10:23 AM$"
 if __name__ == "__main__":
     print "Hello World"
 
-import math
 import sys
-
 import os
-from panda3d.core import ConfigVariableInt
-from panda3d.core import loadPrcFile
-from pandac.PandaModules import Filename
-
-# Figure out what directory this program is in.
-MYDIR = os.path.abspath(sys.path[0])
-MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
-print('running from:' + MYDIR)
-
-loadPrcFile("config/config.prc")
-
-###############################################################################
 
 import direct.directbase.DirectStart
 from direct.filter.CommonFilters import CommonFilters
 from direct.showbase.DirectObject import DirectObject
 from direct.task.Task import Task
-from gui import *
-from pandac.PandaModules import AmbientLight
-from pandac.PandaModules import DirectionalLight
 from pandac.PandaModules import LightRampAttrib
-from pandac.PandaModules import NodePath
 from pandac.PandaModules import PStatClient
-from pandac.PandaModules import PandaNode
-from pandac.PandaModules import PointLight
-from pandac.PandaModules import RenderState
 
-from pandac.PandaModules import Vec3
-from pandac.PandaModules import Vec4
-
+from gui import *
 from sky import *
 from terrain import *
 from waterNode import *
@@ -55,6 +32,18 @@ from creature import *
 from camera import *
 from basicfunctions import *
 import splashCard
+
+from panda3d.core import ConfigVariableInt
+from panda3d.core import loadPrcFile
+from pandac.PandaModules import Filename
+
+###############################################################################
+# Figure out what directory this program is in.
+MYDIR = os.path.abspath(sys.path[0])
+MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
+print('running from:' + MYDIR)
+
+loadPrcFile("config/config.prc")
 
 ###############################################################################
 
@@ -102,6 +91,10 @@ class World(DirectObject):
         self.bug_text.setText("loading filters")
         showFrame()
         self._loadFilters()
+        
+        self.bug_text.setText("loading gui controls...")
+        showFrame()
+        self._loadGui()
 
         self.bug_text.setText("loading miscellanious")
         showFrame()
@@ -113,26 +106,21 @@ class World(DirectObject):
         self.isMoving = False
         self.firstmove = 1
 
-        # disable std. mouse
-        base.disableMouse()
-        props = WindowProperties()
-        props.setCursorHidden(True)
-        base.win.requestProperties(props)
+        disableMouse()
 
-        self.bug_text.setText("loading gui controls...")
-
+        self.bug_text.setText("")
+        showFrame()
+        self.splash.destroy()
+        self.splash = None
+        
+    def _loadGui(self):
         try: 
             self.terrain.texturer.shader
         except: 
             print "Terrain texturer has no shader to control."
         else:
             self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
-            self.shaderControl.hide()
-
-        self.bug_text.setText("")
-        showFrame()
-        self.splash.destroy()
-        self.splash = None
+            self.shaderControl.hide()     
 
     def _loadDisplay(self):
         base.setFrameRateMeter(True)
@@ -156,7 +144,7 @@ class World(DirectObject):
         #self.inst15 = addText(0.25, "[T]: Special Test")
         
 
-        self.loc_text = addText(0.15, "[LOC]: ", True)
+        self.loc_text = addText(0.15, "[POS]: ", True)
         self.hpr_text = addText(0.10, "[HPR]: ", True)
         self.time_text = addText(0.05, "[Time]: ", True)
 
@@ -199,17 +187,14 @@ class World(DirectObject):
         self.terrain.focus = self.focus
         # Accept the control keys for movement
                 
-        self.controlMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "turbo":0, "option+":0, "option-":0, "zoom in":0, "zoom out": 0}
-        self.ralph.controls = self.controlMap
-        self.camera = FollowCamera(self.ralph, self.controlMap, self.terrain)
+        self.camera = FollowCamera(self.ralph, self.terrain)
         self.mouseInvertY = False
         self.accept("escape", sys.exit)
-        self.accept("w", self.setControl, ["forward", 1])
-        self.accept("a", self.setControl, ["left", 1])
-        self.accept("s", self.setControl, ["back", 1])
-        self.accept("d", self.setControl, ["right", 1])
-        self.accept("y", self.setControl, ["invert-y", 1])
-        self.accept("shift", self.setControl, ["turbo", 1])
+        self.accept("w", self.ralph.setControl, ["forward", 1])
+        self.accept("a", self.ralph.setControl, ["left", 1])
+        self.accept("s", self.ralph.setControl, ["back", 1])
+        self.accept("d", self.ralph.setControl, ["right", 1])
+        self.accept("shift", self.ralph.setControl, ["turbo", 1])
         self.accept("f11", screenShot)
         self.accept("1", self.sky.setTime, [300.0])
         self.accept("2", self.sky.setTime, [600.0])
@@ -219,39 +204,22 @@ class World(DirectObject):
         self.accept("6", self.sky.setTime, [1800.0])
         self.accept("7", self.sky.setTime, [2100.0])
         self.accept("8", self.sky.setTime, [0.0])
-        self.accept("n", self.sky.toggleNightSkip )
-        self.accept("p", self.sky.pause )
+        self.accept("n", self.sky.toggleNightSkip)
+        self.accept("p", self.sky.pause)
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
         self.accept("t", self.terrain.test)
-        #self.accept("f", self.terrain.flatten)
-        #self.accept("+", self.setControl, ["option+",1])
-        #self.accept("-", self.setControl, ["option-",1])
-        #self.accept("+", self.terrain.incrementDetailBlendMode )
-        #self.accept("-", self.terrain.decrementDetailBlendMode )
-        self.accept("w-up", self.setControl, ["forward", 0])
-        self.accept("a-up", self.setControl, ["left", 0])
-        self.accept("s-up", self.setControl, ["back", 0])
-        self.accept("d-up", self.setControl, ["right", 0])
-        self.accept("y-up", self.setControl, ["invert-y", 0])
-        self.accept("shift-up", self.setControl, ["turbo", 0])
-        #self.accept("+-up", self.setControl, ["option+",0])
-        #self.accept("--up", self.setControl, ["option-",0])
+        self.accept("w-up", self.ralph.setControl, ["forward", 0])
+        self.accept("a-up", self.ralph.setControl, ["left", 0])
+        self.accept("s-up", self.ralph.setControl, ["back", 0])
+        self.accept("d-up", self.ralph.setControl, ["right", 0])
+        self.accept("shift-up", self.ralph.setControl, ["turbo", 0])
         self.accept("wheel_up", self.camera.zoom, [1])
         self.accept("wheel_down", self.camera.zoom, [0])
 
         # mouse controls
         self.accept("tab", self.toggleMenu)
         self.mouseLook = True
-#        self.accept("mouse1", self.setControl, [0, 1])
-#        self.accept("mouse1-up", self.setControl, [0, 0])
-#        self.accept("mouse2", self.setControl, [1, 1])
-#        self.accept("mouse2-up", self.setControl, [1, 0])
-#        self.accept("mouse3", self.setControl, [2, 1])
-#        self.accept("mouse3-up", self.setControl, [2, 0])
-#        self.accept("wheel_up", self.setControl, [3, 1])
-#        self.accept("wheel_down", self.setControl, [3, -1])
-
         x = 0
         y = 0
         z = self.terrain.getElevation(x, y)
@@ -297,10 +265,6 @@ class World(DirectObject):
         if base.win.movePointer(0, 200, 200):
             self.camera.update(deltaX,deltaY)
             
-        # toggle mouse Y-axis invert
-        if self.controlMap["invert-y"] != 0:
-            self.mouseInvertY = not self.mouseInvertY
-            
         self.ralph.update(elapsed)
         self.critter1.update(elapsed)
 
@@ -315,21 +279,10 @@ class World(DirectObject):
                               (self.camera.fulcrum.getH(), self.camera.camNode.getP(), self.camera.camNode.getR()))
 
         self.time_text.setText('[Time]: %02i:%02i' % (self.sky.time / 100, self.sky.time % 100 * 60 / 100))
-        #current texture blending mode
-        #self.blend_text.setText('[blend mode]: %i ' % \
-        #                      ( self.terrain.textureBlendMode ) )
 
         # Store the task time and continue.
         self.prevtime = task.time
         return Task.cont
-
-# records the state of the keyboard
-    def setControl(self, control, value):
-        self.controlMap[control] = value
-
-
-
-#setResolution()
 
 print('instancing world...')
 w = World()

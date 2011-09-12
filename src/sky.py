@@ -12,7 +12,7 @@ from sun import *
 class ColoredByTime():
     def __init__(self):
         self.schedule = ((400, self.nightColor), (600, self.sunsetColor),
-                         (800, self.dayColor), (1600, self.dayColor),
+                         (900, self.dayColor), (1500, self.dayColor),
                          (1800, self.sunsetColor), (2000, self.nightColor))
 
     def interpolateColor (self, start, end, time, startColor, endColor):
@@ -154,7 +154,7 @@ class Sky():
         self.dayLength = 120 #in seconds
         self.setTime(800.0)
         self.previousTime = 0
-        self.nightSkip = False
+        self.nightSkip = True
         self.paused = False
         
         ambient = Vec4(0.55, 0.65, 1.0, 1) #bright for hdr
@@ -199,8 +199,8 @@ class Sky():
         if self.paused:
             return task.cont
         if self.nightSkip:
-            if self.time > 2000.0:
-                self.time = 400.0
+            if self.time > 1950.0:
+                self.time = 450.0
         else:
             if self.time > 2400.0:
                 self.time -= 2400.0

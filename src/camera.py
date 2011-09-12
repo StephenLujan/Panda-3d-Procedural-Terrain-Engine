@@ -30,11 +30,10 @@ class TerrainCamera(Camera):
 
 class FollowCamera(TerrainCamera):
     
-    def __init__(self, fulcrum, controlMap, terrain):
+    def __init__(self, fulcrum, terrain):
         TerrainCamera.__init__(self)
 
         self.terrain = terrain
-        self.controlMap = controlMap
         self.fulcrum = fulcrum
         # in behind Ralph regardless of ralph's movement.
         self.camNode.reparentTo(fulcrum)

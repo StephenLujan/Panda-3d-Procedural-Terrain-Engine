@@ -99,7 +99,7 @@ class Creature(NodePath):
 class Player(Creature):
     def __init__(self, heightFunction,  startPosition = Vec3(0,0,0)):
         Creature.__init__(self,  heightFunction, startPosition)
-        #self.desiredHeading = 0.0
+        self.controls = {"left":0, "right":0, "forward":0, "back":0, "turbo":0}
         
     def update(self, elapsed):
         heading = -self.getH()
@@ -134,6 +134,11 @@ class Player(Creature):
         if self.controls["forward"] == 1:
             desiredVelocity *= -1
         self.move(desiredVelocity,direction,elapsed)
+        
+    # records the state of the keyboard
+    def setControl(self, control, value):
+        self.controls[control] = value
+
         
 class Ai(Creature):
     def __init__(self, heightFunction, startPosition = Vec3(0,0,0)):
