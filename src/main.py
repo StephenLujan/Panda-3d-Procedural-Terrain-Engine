@@ -177,12 +177,8 @@ class World(DirectObject):
 
     def _loadPlayer(self):
         # Create the main character, Ralph
-        ralphStartPosX = 50
-        ralphStartPosY = 90
-        ralphStartPosZ = self.terrain.getElevation(ralphStartPosX, ralphStartPosY)
-        ralphStartPos = Vec3(ralphStartPosX,ralphStartPosY,ralphStartPosZ)
         
-        self.ralph = Player(self.terrain.getElevation, ralphStartPos)
+        self.ralph = Player(self.terrain.getElevation, 50, 90)
         self.focus = self.ralph
         self.terrain.focus = self.focus
         # Accept the control keys for movement
@@ -220,11 +216,13 @@ class World(DirectObject):
         # mouse controls
         self.accept("tab", self.toggleMenu)
         self.mouseLook = True
-        x = 0
-        y = 0
-        z = self.terrain.getElevation(x, y)
-        self.critter1 = Ai(self.terrain.getElevation, Vec3(x,y,z))
-        self.critter1.seekTarget = self.ralph
+        
+        self.critter1 = Ai(self.terrain.getElevation, 2, 2)
+        self.critter1.setSeek(self.ralph)
+        
+        self.critter2 = Ai(self.terrain.getElevation, 0, 0)
+        self.critter2.maxSpeed = 5.0
+        self.critter2.setWander(60)
 
 
     def _loadPointLight():
@@ -267,6 +265,7 @@ class World(DirectObject):
             
         self.ralph.update(elapsed)
         self.critter1.update(elapsed)
+        self.critter2.update(elapsed)
 
         self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
         self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor()*0.9)
