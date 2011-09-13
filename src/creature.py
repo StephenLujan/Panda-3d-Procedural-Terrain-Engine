@@ -23,6 +23,7 @@ class Creature(NodePath):
         self.speed = 0
         self.maxAngularVelocity = 360
         self.turbo = 1
+        self.maxStoppingDistance = self.maxSpeed / self.acceleration * 0.5
         
         self.body = Actor("models/ralph",
                    {"run":"models/ralph-run",
@@ -95,6 +96,11 @@ class Creature(NodePath):
         self.setPos(startpos + self.velocity * elapsed * self.turbo)
         self.animate()
         self.setZ(self.heightFunction(self.getX(),self.getY()))
+        
+    def getMaxArrivalSpeed(self, distance):
+        # speed / acc * 0.5 = stopping distance
+        # speed = 2 * acc * distance
+        return 2 * self.acceleration * distance
                 
 class Player(Creature):
     def __init__(self, heightFunction,  startPosition = Vec3(0,0,0)):
@@ -153,15 +159,20 @@ class Ai(Creature):
     def seekVec(self, target, elapsed):
         desiredVelocity = target - self.getPos()
         desiredVelocity.z = 0
-        distance = desiredVelocity.length()
         
-        if distance > self.maxSpeed:
+        desiredHeading = math.degrees( math.atan2(desiredVelocity.y, desiredVelocity.x) ) + 90;
+        
+        speed = desiredVelocity.length()
+        if speed < self.maxStoppingDistance:
+            desiredVelocity.normalize()
+            speed = self.getMaxArrivalSpeed(speed)
+            desiredVelocity *= speed
+            
+        if speed > self.maxSpeed:
             desiredVelocity.normalize()
             desiredVelocity *= self.maxSpeed
             
-        desiredHeading = math.degrees( math.atan2(desiredVelocity.y, desiredVelocity.x) ) + 90; 
-        
-        if distance < 1:
+        if speed < 1:
             desiredVelocity = Vec3(0,0,0)
         
         self.move(desiredVelocity, desiredHeading, elapsed)

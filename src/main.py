@@ -53,7 +53,7 @@ class World(DirectObject):
         # set here your favourite background color - this will be used to fade to
 
         bgcolor=(0, 0, 0, 1)
-        base.setBackgroundColor(*bgcolor)
+#        base.setBackgroundColor(*bgcolor)
         self.splash = splashCard.splashCard('textures/loading.png', bgcolor)
         taskMgr.doMethodLater(0.01, self.load, "Load Task")
         self.bug_text = addText(-0.95, "Loading...", True, scale = 0.1)
