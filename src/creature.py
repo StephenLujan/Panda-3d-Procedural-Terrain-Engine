@@ -1,21 +1,23 @@
 
-from pandac.PandaModules import Vec3
+from pandac.PandaModules import Vec3, Vec2
 from direct.actor.Actor import Actor
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import PandaNode
 from direct.showbase.DirectObject import DirectObject
 import math
+import random
 
 origin = Vec3(0,0,0)
 
-class Creature(NodePath):
+class Walker(NodePath):
     
-    def __init__(self, heightFunction, startPosition = Vec3(0,0,0)):
+    def __init__(self, heightFunction, x = 0, y = 0):
         
         NodePath.__init__(self, "Creature")
         self.reparentTo(render)
-        self.startPosition = startPosition
-        self.setPos(startPosition)
+        self.startPosition = Vec2(x, y)
+        z = heightFunction(x, y)
+        self.setPos(x, y, z)
         #  movement
         self.acceleration = 25
         self.velocity = Vec3(0,0,0)
@@ -23,6 +25,7 @@ class Creature(NodePath):
         self.speed = 0
         self.maxAngularVelocity = 360
         self.turbo = 1
+        self.maxStoppingDistance = self.maxSpeed / self.acceleration * 0.5
         
         self.body = Actor("models/ralph",
                    {"run":"models/ralph-run",
@@ -95,11 +98,16 @@ class Creature(NodePath):
         self.setPos(startpos + self.velocity * elapsed * self.turbo)
         self.animate()
         self.setZ(self.heightFunction(self.getX(),self.getY()))
+        
+    def getMaxArrivalSpeed(self, distance):
+        # speed / acc * 0.5 = stopping distance
+        # speed = 2 * acc * distance
+        return 2 * self.acceleration * distance
                 
-class Player(Creature):
-    def __init__(self, heightFunction,  startPosition = Vec3(0,0,0)):
-        Creature.__init__(self,  heightFunction, startPosition)
-        #self.desiredHeading = 0.0
+class Player(Walker):
+    def __init__(self, heightFunction,  x = 0, y = 0):
+        Walker.__init__(self,  heightFunction, x, y)
+        self.controls = {"left":0, "right":0, "forward":0, "back":0, "turbo":0}
         
     def update(self, elapsed):
         heading = -self.getH()
@@ -122,7 +130,7 @@ class Player(Creature):
             elif self.controls["left"] != 0:
                 direction = 90.0
             elif self.controls["back"] == 0:
-                Creature.move(self, Vec3(0,0,0), 0, elapsed)
+                Walker.move(self, Vec3(0,0,0), 0, elapsed)
                 return
         
         # the body is parented to the Player
@@ -135,31 +143,72 @@ class Player(Creature):
             desiredVelocity *= -1
         self.move(desiredVelocity,direction,elapsed)
         
-class Ai(Creature):
-    def __init__(self, heightFunction, startPosition = Vec3(0,0,0)):
-        Creature.__init__(self, heightFunction, startPosition)
+    # records the state of the keyboard
+    def setControl(self, control, value):
+        self.controls[control] = value
+
+        
+class Ai(Walker):
+    def __init__(self, heightFunction,  x = 0, y = 0):
+        Walker.__init__(self,  heightFunction, x, y)
         self.seekTarget = None
+        self.wanderVelocity = None
         self.arrivalRadius = 1
         
     def update(self, elapsed):
         if self.seekTarget:
             self.seekNP(self.seekTarget, elapsed)
+        elif self.wanderVelocity:
+            self.wander(elapsed)
             
     def seekVec(self, target, elapsed):
         desiredVelocity = target - self.getPos()
         desiredVelocity.z = 0
-        distance = desiredVelocity.length()
         
-        if distance > self.maxSpeed:
+        desiredHeading = math.degrees( math.atan2(desiredVelocity.y, desiredVelocity.x) ) + 90
+        
+        speed = desiredVelocity.length()
+        if speed < self.maxStoppingDistance:
+            desiredVelocity.normalize()
+            speed = self.getMaxArrivalSpeed(speed)
+            desiredVelocity *= speed
+            
+        if speed > self.maxSpeed:
             desiredVelocity.normalize()
             desiredVelocity *= self.maxSpeed
             
-        desiredHeading = math.degrees( math.atan2(desiredVelocity.y, desiredVelocity.x) ) + 90; 
-        
-        if distance < 1:
+        if speed < 1:
             desiredVelocity = Vec3(0,0,0)
         
         self.move(desiredVelocity, desiredHeading, elapsed)
         
     def seekNP(self, target, elapsed):
         self.seekVec(target.getPos(),elapsed)
+        
+    def setSeek(self, target):
+        self.seekTarget = target
+        
+    def setWander(self, radius = 50):
+        self.wanderVelocity = Vec2(0,0)
+        self.wanderRadius = radius
+        
+    def wander(self, elapsed):
+        pos = Vec2(self.getPos().xy) 
+        r = elapsed * self.maxSpeed * 3
+        if (pos - self.startPosition).length() > self.wanderRadius:
+            change = self.startPosition - pos
+            change.normalize()
+            change *= r
+        else:
+            change = Vec2(random.uniform(-r, r), random.uniform(-r, r))
+            
+        desiredVelocity = self.wanderVelocity + change
+
+        desiredVelocity.normalize()
+        desiredVelocity *= self.maxSpeed
+        self.wanderVelocity = desiredVelocity
+            
+        desiredHeading = math.degrees( math.atan2(desiredVelocity.y, desiredVelocity.x) ) + 90
+        desiredVelocity = Vec3(desiredVelocity.x, desiredVelocity.y, 0)
+        print desiredVelocity
+        self.move(desiredVelocity, desiredHeading, elapsed)

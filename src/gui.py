@@ -94,7 +94,7 @@ class ShaderRegionControl():
         self.terrain.setShaderInput(key, value)
         #print 'setShaderInput' + str(value)
         self.terrain.setShader(self.terrain.texturer.shader)
-
+ 
     def resize(self, size):
         self.size = size
         vertical = size[1]- size[0]
@@ -108,7 +108,7 @@ class ShaderRegionControl():
 class TerrainShaderControl():
     def __init__(self, x, y, terrain, parent = aspect2d):
         self.terrain = terrain
-
+        
         size = 1.0
         self.size = (-size,size,-size,size)
         self.frame = DirectFrame(frameColor=(0, 0, 0, 0),

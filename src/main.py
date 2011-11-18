@@ -14,14 +14,30 @@ __date__ = "$Oct 7, 2010 4:10:23 AM$"
 if __name__ == "__main__":
     print "Hello World"
 
-import math
 import sys
-
 import os
+
+import direct.directbase.DirectStart
+from direct.filter.CommonFilters import CommonFilters
+from direct.showbase.DirectObject import DirectObject
+from direct.task.Task import Task
+from pandac.PandaModules import LightRampAttrib
+from pandac.PandaModules import PStatClient
+
+from gui import *
+from sky import *
+from terrain import *
+from waterNode import *
+from creature import *
+from camera import *
+from basicfunctions import *
+import splashCard
+
 from panda3d.core import ConfigVariableInt
 from panda3d.core import loadPrcFile
 from pandac.PandaModules import Filename
 
+###############################################################################
 # Figure out what directory this program is in.
 MYDIR = os.path.abspath(sys.path[0])
 MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
@@ -31,71 +47,13 @@ loadPrcFile("config/config.prc")
 
 ###############################################################################
 
-import direct.directbase.DirectStart
-from direct.filter.CommonFilters import CommonFilters
-from direct.gui.OnscreenText import OnscreenText
-from direct.showbase.DirectObject import DirectObject
-from direct.task.Task import Task
-from gui import *
-from pandac.PandaModules import AmbientLight
-from pandac.PandaModules import DirectionalLight
-from pandac.PandaModules import LightRampAttrib
-from pandac.PandaModules import NodePath
-from pandac.PandaModules import PStatClient
-from pandac.PandaModules import PandaNode
-from pandac.PandaModules import PointLight
-from pandac.PandaModules import RenderState
-from pandac.PandaModules import TexGenAttrib
-from pandac.PandaModules import TextNode
-from pandac.PandaModules import Vec3
-from pandac.PandaModules import Vec4
-from pandac.PandaModules import WindowProperties
-from sky import *
-from terrain import *
-from waterNode import *
-from creature import *
-from camera import *
-import splashCard
-
-###############################################################################
-
-# Function returns the width / height ratio of the window or screen
-def getScreenRatio():
-    props = WindowProperties(base.win.getProperties())
-    return float(props.getXSize()) / float(props.getYSize())
-
-# Function to add instructions and other information along either side
-def addText(pos, msg, changeable=False, alignLeft=True, scale=0.05):
-    x = -getScreenRatio() + 0.03
-    if alignLeft:
-        align = TextNode.ALeft
-    else:
-        align = TextNode.ARight
-        x *= -1.0
-    return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1),
-                        pos=(x, pos), align=align, scale=scale,
-                        mayChange=changeable)
-
-# Function to put title on the screen.
-def addTitle(text):
-    addText(-0.95, text, False, False, 0.07)
-
-def showFrame():
-    for i in range(4):
-        base.graphicsEngine.renderFrame()
-
-##############################################################################
-
-
-
-###############################################################################
 class World(DirectObject):
 
     def __init__(self):
         # set here your favourite background color - this will be used to fade to
 
         bgcolor=(0, 0, 0, 1)
-        base.setBackgroundColor(*bgcolor)
+#        base.setBackgroundColor(*bgcolor)
         self.splash = splashCard.splashCard('textures/loading.png', bgcolor)
         taskMgr.doMethodLater(0.01, self.load, "Load Task")
         self.bug_text = addText(-0.95, "Loading...", True, scale = 0.1)
@@ -109,10 +67,6 @@ class World(DirectObject):
         showFrame()
         self._loadDisplay()
 
-        self.bug_text.setText("loading filters")
-        showFrame()
-        self._loadFilters()
-
         self.bug_text.setText("loading sky...")
         showFrame()
         self._loadSky()
@@ -122,6 +76,10 @@ class World(DirectObject):
         showFrame()
         self._loadTerrain()
 
+        self.bug_text.setText("loading fog...")
+        showFrame()
+        #self._loadFog()
+
         self.bug_text.setText("loading player...")
         showFrame()
         self._loadPlayer()
@@ -129,6 +87,14 @@ class World(DirectObject):
         self.bug_text.setText("loading water...")
         showFrame()
         self._loadWater()
+
+        self.bug_text.setText("loading filters")
+        showFrame()
+        self._loadFilters()
+        
+        self.bug_text.setText("loading gui controls...")
+        showFrame()
+        self._loadGui()
 
         self.bug_text.setText("loading miscellanious")
         showFrame()
@@ -140,24 +106,24 @@ class World(DirectObject):
         self.isMoving = False
         self.firstmove = 1
 
-        # disable std. mouse
-        base.disableMouse()
-        props = WindowProperties()
-        props.setCursorHidden(True)
-        base.win.requestProperties(props)
-
-        self.bug_text.setText("loading gui controls...")
-        showFrame()
-
-        self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
-        self.shaderControl.hide()
+        disableMouse()
 
         self.bug_text.setText("")
         showFrame()
         self.splash.destroy()
         self.splash = None
+        
+    def _loadGui(self):
+        try: 
+            self.terrain.texturer.shader
+        except: 
+            print "Terrain texturer has no shader to control."
+        else:
+            self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
+            self.shaderControl.hide()     
 
     def _loadDisplay(self):
+        base.setFrameRateMeter(True)
         #base.win.setClearColor(Vec4(0, 0, 0, 1))
         # Post the instructions
         self.title = addTitle("Animate Dream Terrain Engine")
@@ -170,7 +136,7 @@ class World(DirectObject):
         self.inst7 = addText(0.65, "[D]: Run Ralph Right")
         self.inst8 = addText(0.60, "[shift]: Turbo Mode")
         self.inst9 = addText(0.55, "[R]: Regenerate Terrain")
-        self.inst10 = addText(0.50, "[right-mouse]: Open Shader Controls")
+        self.inst10 = addText(0.50, "[tab]: Open Shader Controls")
         self.inst11 = addText(0.45, "[1-8]: Set time to # * 3")
         self.inst12 = addText(0.40, "[N]: Toggle Night Skipping")
         self.inst13 = addText(0.35, "[P]: Pause day night cycle")
@@ -178,30 +144,27 @@ class World(DirectObject):
         #self.inst15 = addText(0.25, "[T]: Special Test")
         
 
-        self.loc_text = addText(0.15, "[LOC]: ", True)
+        self.loc_text = addText(0.15, "[POS]: ", True)
         self.hpr_text = addText(0.10, "[HPR]: ", True)
         self.time_text = addText(0.05, "[Time]: ", True)
 
     def _loadTerrain(self):
-        maxRange=ConfigVariableInt("max-view-range", 400).getValue()
+        maxRange = ConfigVariableInt("max-view-range", 400).getValue()
         self.terrain = Terrain('Terrain', base.camera, maxRange)
         self.terrain.reparentTo(render)
 
     def _loadWater(self):
-        self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
-                                 * self.terrain.waterHeight, 1.0)
+        self._water_level = self.terrain.maxHeight * self.terrain.waterHeight
         size = self.terrain.maxViewRange * 1.5
-        self.water = WaterNode(self, -size, -size, size, size, self._water_level.z)
+        self.water = WaterNode(self, -size, -size, size, size, self._water_level)
 
     def _loadFilters(self):
-#        wl = self._water_level
-#        wl.z = wl.z-0.05	# add some leeway (gets rid of some mirroring artifacts)
-#        self.terrain.setShaderInput('waterlevel', self._water_level)
+        self.terrain.setShaderInput('waterlevel', self._water_level)
 
         # load default shaders
-        self.filters = CommonFilters(base.win, base.cam)
+        cf = CommonFilters(base.win, base.cam)
         #bloomSize
-        self.filters.setBloom(size='small', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
+        cf.setBloom(size='small', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
@@ -209,33 +172,26 @@ class World(DirectObject):
         #base.bufferViewer.toggleEnable()
 
     def _loadSky(self):
-        self.sky = Sky(self.filters)
+        self.sky = Sky(None)
         self.sky.start()
 
     def _loadPlayer(self):
         # Create the main character, Ralph
-        ralphStartPosX = 50
-        ralphStartPosY = 90
-        ralphStartPosZ = self.terrain.getElevation(ralphStartPosX, ralphStartPosY)
-        ralphStartPos = Vec3(ralphStartPosX,ralphStartPosY,ralphStartPosZ)
         
-        self.ralph = Player(self.terrain.getElevation, ralphStartPos)
+        self.ralph = Player(self.terrain.getElevation, 50, 90)
         self.focus = self.ralph
         self.terrain.focus = self.focus
         # Accept the control keys for movement
                 
-        self.controlMap = {"left":0, "right":0, "forward":0, "back":0, "invert-y":0, "turbo":0, "option+":0, "option-":0, "zoom in":0, "zoom out": 0}
-        self.ralph.controls = self.controlMap
-        self.camera = FollowCamera(self.ralph, self.controlMap, self.terrain)
+        self.camera = FollowCamera(self.ralph, self.terrain)
         self.mouseInvertY = False
         self.accept("escape", sys.exit)
-        self.accept("w", self.setControl, ["forward", 1])
-        self.accept("a", self.setControl, ["left", 1])
-        self.accept("s", self.setControl, ["back", 1])
-        self.accept("d", self.setControl, ["right", 1])
-        self.accept("y", self.setControl, ["invert-y", 1])
-        self.accept("shift", self.setControl, ["turbo", 1])
-        self.accept("f11", self.screenShot)
+        self.accept("w", self.ralph.setControl, ["forward", 1])
+        self.accept("a", self.ralph.setControl, ["left", 1])
+        self.accept("s", self.ralph.setControl, ["back", 1])
+        self.accept("d", self.ralph.setControl, ["right", 1])
+        self.accept("shift", self.ralph.setControl, ["turbo", 1])
+        self.accept("f11", screenShot)
         self.accept("1", self.sky.setTime, [300.0])
         self.accept("2", self.sky.setTime, [600.0])
         self.accept("3", self.sky.setTime, [900.0])
@@ -244,29 +200,29 @@ class World(DirectObject):
         self.accept("6", self.sky.setTime, [1800.0])
         self.accept("7", self.sky.setTime, [2100.0])
         self.accept("8", self.sky.setTime, [0.0])
-        self.accept("n", self.sky.toggleNightSkip )
-        self.accept("p", self.sky.pause )
+        self.accept("n", self.sky.toggleNightSkip)
+        self.accept("p", self.sky.pause)
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
         self.accept("t", self.terrain.test)
-        #self.accept("f", self.terrain.flatten)
-        self.accept("w-up", self.setControl, ["forward", 0])
-        self.accept("a-up", self.setControl, ["left", 0])
-        self.accept("s-up", self.setControl, ["back", 0])
-        self.accept("d-up", self.setControl, ["right", 0])
-        self.accept("y-up", self.setControl, ["invert-y", 0])
-
+        self.accept("w-up", self.ralph.setControl, ["forward", 0])
+        self.accept("a-up", self.ralph.setControl, ["left", 0])
+        self.accept("s-up", self.ralph.setControl, ["back", 0])
+        self.accept("d-up", self.ralph.setControl, ["right", 0])
+        self.accept("shift-up", self.ralph.setControl, ["turbo", 0])
         self.accept("wheel_up", self.camera.zoom, [1])
         self.accept("wheel_down", self.camera.zoom, [0])
 
         # mouse controls
-        self.accept("mouse3", self.toggleMouseLook)
+        self.accept("tab", self.toggleMenu)
         self.mouseLook = True
-        x = 0
-        y = 0
-        z = self.terrain.getElevation(x, y)
-        self.critter1 = Ai(self.terrain.getElevation, Vec3(x,y,z))
-        self.critter1.seekTarget = self.ralph
+        
+        self.critter1 = Ai(self.terrain.getElevation, 2, 2)
+        self.critter1.setSeek(self.ralph)
+        
+        self.critter2 = Ai(self.terrain.getElevation, 0, 0)
+        self.critter2.maxSpeed = 5.0
+        self.critter2.setWander(60)
 
 
     def _loadPointLight():
@@ -283,10 +239,16 @@ class World(DirectObject):
         sphere = loader.loadModel("models/sphere")
         sphere.reparentTo(plnp)
         render.setShaderInput("plight0", plnp)
+    
+    def toggleMenu(self):
+        ml = toggleMouseLook()
+        try: self.shaderControl
+        except: print "No shader control found."
+        else: self.shaderControl.setHidden(ml)
         
     def move(self, task):
         #self.lightpivot.setPos(self.focus.getPos() + Vec3(0, 0, 4))
-        if not self.mouseLook:
+        if not getMouseLook():
             return Task.cont
 
         elapsed = task.time - self.prevtime
@@ -301,12 +263,9 @@ class World(DirectObject):
         if base.win.movePointer(0, 200, 200):
             self.camera.update(deltaX,deltaY)
             
-        # toggle mouse Y-axis invert
-        if self.controlMap["invert-y"] != 0:
-            self.mouseInvertY = not self.mouseInvertY
-            
         self.ralph.update(elapsed)
         self.critter1.update(elapsed)
+        self.critter2.update(elapsed)
 
         self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
         self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor()*0.9)
@@ -323,31 +282,6 @@ class World(DirectObject):
         # Store the task time and continue.
         self.prevtime = task.time
         return Task.cont
-
-# records the state of the keyboard
-    def setControl(self, control, value):
-        self.controlMap[control] = value
-
-
-    def toggleMouseLook(self):
-        self.mouseLook = not self.mouseLook
-        props = WindowProperties()
-        props.setCursorHidden(self.mouseLook)
-        self.shaderControl.setHidden(self.mouseLook)
-        base.win.requestProperties(props)
-        print "toggleMouseLook"
-
-    def screenShot(self):
-        base.screenshot()
-        print 'screenshot taken.'
-
-def setResolution():
-    wp = WindowProperties()
-    wp.setSize(1920, 1080)
-    wp.setFullscreen(True)
-    base.win.requestProperties(wp)
-
-#setResolution()
 
 print('instancing world...')
 w = World()

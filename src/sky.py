@@ -12,7 +12,7 @@ from sun import *
 class ColoredByTime():
     def __init__(self):
         self.schedule = ((400, self.nightColor), (600, self.sunsetColor),
-                         (800, self.dayColor), (1600, self.dayColor),
+                         (900, self.dayColor), (1500, self.dayColor),
                          (1800, self.sunsetColor), (2000, self.nightColor))
 
     def interpolateColor (self, start, end, time, startColor, endColor):
@@ -50,7 +50,7 @@ class SkyBox(ColoredByTime):
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
         
         self.dayColor = Vec4(.55, .65, .95, 1.0)
-        self.nightColor = Vec4(.1, .1, .3, 1.0)
+        self.nightColor = Vec4(.05, .05, .20, 1.0)
         self.sunsetColor = Vec4(.45, .5, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.skybox.setColor
@@ -84,15 +84,15 @@ class CloudLayer(ColoredByTime):
     def __init__(self):
 
         tex1 = loader.loadTexture('textures/clouds.jpg')
-
-        tex1.setMagfilter(Texture.FTLinear)
-        tex1.setMagfilter(Texture.FTLinear)
+        tex1.setMagfilter(Texture.FTLinearMipmapLinear)
+        tex1.setMinfilter(Texture.FTLinearMipmapLinear)
+        tex1.setAnisotropicDegree(2)
         tex1.setWrapU(Texture.WMRepeat)
         tex1.setWrapV(Texture.WMRepeat)
         tex1.setFormat(Texture.FAlpha)
         self.ts1 = TextureStage('clouds')
         #self.ts1.setMode(TextureStage.MBlend)
-        self.ts1.setColor(Vec4(1, 1, 1,1))
+        self.ts1.setColor(Vec4(1, 1, 1, 1))
 
         #self.plane(-2000, -2000, 2000, 2000, 100)
         self.sphere(10000, -9600)
@@ -109,9 +109,10 @@ class CloudLayer(ColoredByTime):
         self.clouds.setFogOff(1)
         self.clouds.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
 
-        self.speed = 0.001
+        self.speed = 0.003
+        self.time = 0
         self.dayColor = Vec4(0.98, 0.98, 0.95, 1.0)
-        self.nightColor = Vec4(-0.5, -0.3, .1, 1.0)
+        self.nightColor = Vec4(-0.5, -0.3, .0, 1.0)
         self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.clouds.setColor
@@ -136,22 +137,24 @@ class CloudLayer(ColoredByTime):
 
     def setTime(self, time):
         self.colorize(time)
-        self.clouds.setTexOffset(self.ts1, time * self.speed, time * self.speed);
+        self.clouds.setTexOffset(self.ts1, self.time * self.speed, self.time * self.speed);
         
-    def update(self):
+    def update(self, elapsed):
+        self.time += elapsed
         self.clouds.setPos(base.cam.getPos(render) + Vec3(0, 0, self.z))
 
 class Sky():
     def __init__(self, filters):
-        self.filters = filters
+        
         self.skybox = SkyBox()
-        self.sun = Sun(self.filters)
+        self.sun = Sun(filters)
         self.clouds = CloudLayer()
         #self.fog = DistanceFog()
+        #self.addDirectLight()
         self.dayLength = 120 #in seconds
         self.setTime(800.0)
         self.previousTime = 0
-        self.nightSkip = False
+        self.nightSkip = True
         self.paused = False
         
         ambient = Vec4(0.55, 0.65, 1.0, 1) #bright for hdr
@@ -160,6 +163,18 @@ class Sky():
         alnp = render.attachNewNode(alight)
         render.setLight(alnp)
         render.setShaderInput('alight0', alnp)
+        
+    def addDirectLight(self):
+        """Adds just a direct light as an alternative to adding a Sun."""
+        
+        direct = Vec4(2.0, 1.9, 1.8, 1) #bright for hdr
+        #direct = Vec4(0.7, 0.65, 0.6, 1)
+        self.dlight = DirectionalLight('dlight')
+        self.dlight.setColor(direct)
+        dlnp = render.attachNewNode(self.dlight)
+        render.setLight(dlnp)
+        render.setShaderInput('dlight0', dlnp)
+        return dlnp
         
     def setTime(self, time):
         self.time = time
@@ -179,13 +194,13 @@ class Sky():
         elapsed = task.time - self.previousTime
         self.previousTime = task.time
 
-        self.clouds.update()
+        self.clouds.update(elapsed)
 
         if self.paused:
             return task.cont
         if self.nightSkip:
-            if self.time > 2000.0:
-                self.time = 400.0
+            if self.time > 1950.0:
+                self.time = 450.0
         else:
             if self.time > 2400.0:
                 self.time -= 2400.0
