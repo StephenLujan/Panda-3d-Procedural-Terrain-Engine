@@ -31,13 +31,14 @@ from pandac.PandaModules import Vec4
 
 class Sun:
     """Represents the sun, handles godrays, etc."""
-    def __init__(self):
+    def __init__(self, filters):
+        self.filters = filters
         self.updateTask = None
         self.finalQuad = None
 
         self.sun = base.cam.attachNewNode('sun')
         loader.loadModel("models/sphere").reparentTo(self.sun)
-        self.sun.setScale(0.07)
+        self.sun.setScale(0.08)
         self.sun.setTwoSided(True)
         self.sun.setColorScale(1.0, 1.0, 1.0, 1.0, 10001)
         self.sun.setLightOff(1)
@@ -60,9 +61,12 @@ class Sun:
 
         self.setTime(700.0)
 
-        godrays = True
+        pandaVolumetricLighting = False
 
-        if godrays:
+
+        if pandaVolumetricLighting:
+            self.filters.setVolumetricLighting( dlnp )
+        else:
             self.vlbuffer = base.win.makeTextureBuffer('volumetric-lighting', base.win.getXSize() / 2, base.win.getYSize() / 2)
             self.vlbuffer.setClearColor(Vec4(0, 0, 0, 1))
             cam = base.makeCamera(self.vlbuffer)
@@ -85,7 +89,7 @@ class Sun:
             self.finalQuad.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd, ColorBlendAttrib.OIncomingColor, ColorBlendAttrib.OFbufferColor))
             self.finalQuad.setShader(Shader.load("shaders/filter-vlight.cg"))
             self.finalQuad.setShaderInput('src', self.vltexture)
-            self.finalQuad.setShaderInput('vlparams', 32, 0.9 / 32.0, 0.98, 0.5) # Note - first 32 is now hardcoded into shader for cards that don't support variable sized loops.
+            self.finalQuad.setShaderInput('vlparams', 32, 0.95 / 32.0, 0.985, 0.5) # Note - first 32 is now hardcoded into shader for cards that don't support variable sized loops.
             self.finalQuad.setShaderInput('casterpos', 0.5, 0.5, 0, 0)
             # Last parameter to vlcolor is the exposure
             vlcolor = Vec4(1, 0.99, 0.80, 0.03)
@@ -119,7 +123,7 @@ class Sun:
             lightColor = directColor + sunsetColor
 
         else:
-            maxSunsetStrength = (1.0 + 1.0/6.0) * (1.0 + 1.0/6.0)
+            maxSunsetStrength = (1.0 + 1.0 / 6.0) * (1.0 + 1.0 / 6.0)
             duskTime = maxSunsetStrength - 1.0
             duskMultiplier = ((1.0 + duskTime) - sunsetStrength) / duskTime
             #print duskMultiplier

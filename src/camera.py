@@ -23,9 +23,6 @@ class TerrainCamera(Camera):
     def __init__(self):
         self.camNode = base.cam
         self.cam = self.camNode.node()
-        self.cam.getLens().setNear(.1)
-        self.cam.getLens().setFar(10000)
-        self.cam.getLens().setFov(100)
         self.cam.setTagStateKey('Normal')
 
 class FollowCamera(TerrainCamera):

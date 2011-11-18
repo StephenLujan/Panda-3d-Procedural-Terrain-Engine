@@ -33,6 +33,7 @@ from pandac.PandaModules import GeoMipTerrain
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import PandaNode
 from pandac.PandaModules import Point3
+from pandac.PandaModules import Texture
 from pandac.PandaModules import Vec2
 from pstat_debug import pstat
 from terraintexturer import *
@@ -124,8 +125,6 @@ class TerrainTile(GeoMipTerrain):
 
         self.image = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
         self.image.makeGrayscale()
-        # these may be redundant
-        #self.image.setNumChannels(1)
         self.image.setMaxval(65535)
 
 
@@ -136,7 +135,7 @@ class TerrainTile(GeoMipTerrain):
         yo = self.yOffset
 
         for x in range(self.image.getXSize()):
-            for y in range(ySize+1):
+            for y in range(ySize + 1):
                 height = getHeight(x + xo, y + yo)
                 #  feed pixel into image
                 # why is it necessary to invert the y axis I wonder?
@@ -152,6 +151,24 @@ class TerrainTile(GeoMipTerrain):
     def wireframe(self):
         self.getRoot().setRenderModeWireframe()
 
+    def makeSlopeMap(self):
+        print "makeSlopeMap"
+        self.slopeMap = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
+        self.slopeMap.makeGrayscale()
+        self.slopeMap.setMaxval(65535)
+
+        size = self.slopeMap.getYSize()
+        getNormal = self.getNormal
+        setGray = self.slopeMap.setGray
+
+        for x in range(size):
+            for y in range(size):
+                slope = getNormal(x, y).z
+                #  feed pixel into image
+                # why is it necessary to invert the y axis I wonder?
+                setGray(x, y, normal)
+        #self.getNormal (int x, int y)
+ 	#Fetches the terrain normal at (x, y), where the input coordinate is specified in pixels.
     @pstat
     def make(self):
         """Build a finished renderable heightMap."""
@@ -304,7 +321,7 @@ class HeightMap():
 class Terrain(NodePath):
     """A terrain contains a set of geomipmaps, and maintains their common properties."""
 
-    def __init__(self, name, focus, id=0, maxRange = _MAXRANGE):
+    def __init__(self, name, focus, id=0, maxRange=_MAXRANGE):
         """Create a new terrain centered on the focus.
 
         The focus is the NodePath where the LOD is the greatest.
@@ -384,11 +401,11 @@ class Terrain(NodePath):
             self.far = 100
         self.wireFrame = 0
         #self.texturer = MonoTexturer(self)
-        self.texturer = ShaderTexturer(self)
+        self.texturer = ShaderTexturer2(self)
         #self.texturer = DetailTexturer(self)
         #self.texturer.load()
         self.texturer.texturize(self)
-        self.setShaderInput("zMultiplier", )
+        self.setShaderInput("zMultiplier",)
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""

@@ -4,26 +4,14 @@
 # This file contains a shader generator specific to the terrain
 ###
 
-
-class TerrainShaderTexture:
-
-    def __init__(self, tex):
-
-        self.tex = tex
-        self.regions = []
-
-    def addRegion(self, region):
-
-        self.regions.append(region)
-
-
+from terraintexturemap import *
 
 class TerrainShaderGenerator:
 
     def __init__(self, terrain):
 
         self.terrain = terrain
-        self.textures = []
+        self.textureMapper = TextureMapper()
         self.normalMapping = True
         self.glare = False
         self.avoidConditionals = 0
@@ -63,11 +51,13 @@ float FogAmount( float density, float3 PositionVS )
         # We need to figure out what fog density we want.
         # Lets find out what density results in 80% fog at max view distance
         # the basic fog equation...
+        #
         # fog = e^ (-density * z)*(-density * z)
         # -density^2 * z^2 = ln(fog) / ln(e)
         # -density^2 * z^2 = ln(fog)
         # density = root(ln(fog) / -z^2)
         # density = root(ln(0.2) / -maxViewRange * maxViewRange)
+
         self.fogDensity = 1.60943791 / (self.terrain.maxViewRange * self.terrain.maxViewRange)
         self.fogFunction = '''
 float FogAmount( float density, float3 PositionVS )
@@ -330,25 +320,18 @@ void fshader(
 
     def addTexture(self, texture):
 
-        self.textures.append(TerrainShaderTexture(texture))
+        self.textureMapper.addTexture(texture)
 
     def addRegionToTex(self, region, textureNumber=-1):
 
-        #bail out if there are no textures to avoid crash
-        if len(self.textures) < 1:
-            return
-        #default to the last texture
-        if textureNumber == -1:
-            textureNumber = len(self.textures) - 1
-
-        self.textures[textureNumber].addRegion(region)
+        self.textureMapper.addRegionToTex(region, textureNumber)
 
     def getfShaderParameters(self):
 
         texNum = 0
         regionNum = 0
         string = ''
-        for tex in self.textures:
+        for tex in self.textureMapper.textures:
             string += '''
             in uniform sampler2D texUnit''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
             texNum += 1
@@ -363,7 +346,7 @@ void fshader(
         texNum = 0
         regionNum = 0
         string = ''
-        for tex in self.textures:
+        for tex in self.textureMapper.textures:
             for region in tex.regions:
                 texStr = str(texNum)
                 regionStr = str(regionNum)
@@ -392,7 +375,7 @@ void fshader(
 
         texNum = 0
         regionNum = 0
-        for tex in self.textures:
+        for tex in self.textureMapper.textures:
             self.terrain.setShaderInput('texUnit' + str(texNum), tex.tex)
             for region in tex.regions:
                 key = 'region' + str(regionNum) + 'Limits'

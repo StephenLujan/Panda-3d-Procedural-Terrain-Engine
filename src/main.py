@@ -109,6 +109,10 @@ class World(DirectObject):
         showFrame()
         self._loadDisplay()
 
+        self.bug_text.setText("loading filters")
+        showFrame()
+        self._loadFilters()
+
         self.bug_text.setText("loading sky...")
         showFrame()
         self._loadSky()
@@ -118,10 +122,6 @@ class World(DirectObject):
         showFrame()
         self._loadTerrain()
 
-        self.bug_text.setText("loading fog...")
-        showFrame()
-        #self._loadFog()
-
         self.bug_text.setText("loading player...")
         showFrame()
         self._loadPlayer()
@@ -129,10 +129,6 @@ class World(DirectObject):
         self.bug_text.setText("loading water...")
         showFrame()
         self._loadWater()
-
-        self.bug_text.setText("loading filters")
-        showFrame()
-        self._loadFilters()
 
         self.bug_text.setText("loading miscellanious")
         showFrame()
@@ -162,7 +158,6 @@ class World(DirectObject):
         self.splash = None
 
     def _loadDisplay(self):
-        base.setFrameRateMeter(True)
         #base.win.setClearColor(Vec4(0, 0, 0, 1))
         # Post the instructions
         self.title = addTitle("Animate Dream Terrain Engine")
@@ -186,16 +181,11 @@ class World(DirectObject):
         self.loc_text = addText(0.15, "[LOC]: ", True)
         self.hpr_text = addText(0.10, "[HPR]: ", True)
         self.time_text = addText(0.05, "[Time]: ", True)
-        #self.blend_text = addText(0.25, "Detail Texture Blend Mode: ")
 
     def _loadTerrain(self):
-        maxRange=ConfigVariableInt("max-view-range").getValue()
-        if maxRange:
-            self.terrain = Terrain('Terrain', base.camera, maxRange=ConfigVariableInt("max-view-range").getValue())
-        else:
-            self.terrain = Terrain('Terrain', base.camera)
+        maxRange=ConfigVariableInt("max-view-range", 400).getValue()
+        self.terrain = Terrain('Terrain', base.camera, maxRange)
         self.terrain.reparentTo(render)
-        self.environ = self.terrain	# make available for original Ralph code below
 
     def _loadWater(self):
         self._water_level = Vec4(0.0, 0.0, self.terrain.maxHeight
@@ -204,14 +194,14 @@ class World(DirectObject):
         self.water = WaterNode(self, -size, -size, size, size, self._water_level.z)
 
     def _loadFilters(self):
-        wl = self._water_level
-        wl.z = wl.z-0.05	# add some leeway (gets rid of some mirroring artifacts)
-        self.terrain.setShaderInput('waterlevel', self._water_level)
+#        wl = self._water_level
+#        wl.z = wl.z-0.05	# add some leeway (gets rid of some mirroring artifacts)
+#        self.terrain.setShaderInput('waterlevel', self._water_level)
 
         # load default shaders
-        cf = CommonFilters(base.win, base.cam)
+        self.filters = CommonFilters(base.win, base.cam)
         #bloomSize
-        cf.setBloom(size='small', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
+        self.filters.setBloom(size='small', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
@@ -219,12 +209,11 @@ class World(DirectObject):
         #base.bufferViewer.toggleEnable()
 
     def _loadSky(self):
-        self.sky = Sky()
+        self.sky = Sky(self.filters)
         self.sky.start()
 
     def _loadPlayer(self):
         # Create the main character, Ralph
-        # ralphStartPos = self.environ.find("**/start_point").getPos()
         ralphStartPosX = 50
         ralphStartPosY = 90
         ralphStartPosZ = self.terrain.getElevation(ralphStartPosX, ralphStartPosY)
@@ -261,33 +250,18 @@ class World(DirectObject):
         self.accept("l", self.terrain.toggleWireFrame)
         self.accept("t", self.terrain.test)
         #self.accept("f", self.terrain.flatten)
-        #self.accept("+", self.setControl, ["option+",1])
-        #self.accept("-", self.setControl, ["option-",1])
-        #self.accept("+", self.terrain.incrementDetailBlendMode )
-        #self.accept("-", self.terrain.decrementDetailBlendMode )
         self.accept("w-up", self.setControl, ["forward", 0])
         self.accept("a-up", self.setControl, ["left", 0])
         self.accept("s-up", self.setControl, ["back", 0])
         self.accept("d-up", self.setControl, ["right", 0])
         self.accept("y-up", self.setControl, ["invert-y", 0])
-        self.accept("shift-up", self.setControl, ["turbo", 0])
-        #self.accept("+-up", self.setControl, ["option+",0])
-        #self.accept("--up", self.setControl, ["option-",0])
+
         self.accept("wheel_up", self.camera.zoom, [1])
         self.accept("wheel_down", self.camera.zoom, [0])
 
         # mouse controls
         self.accept("mouse3", self.toggleMouseLook)
         self.mouseLook = True
-#        self.accept("mouse1", self.setControl, [0, 1])
-#        self.accept("mouse1-up", self.setControl, [0, 0])
-#        self.accept("mouse2", self.setControl, [1, 1])
-#        self.accept("mouse2-up", self.setControl, [1, 0])
-#        self.accept("mouse3", self.setControl, [2, 1])
-#        self.accept("mouse3-up", self.setControl, [2, 0])
-#        self.accept("wheel_up", self.setControl, [3, 1])
-#        self.accept("wheel_down", self.setControl, [3, -1])
-
         x = 0
         y = 0
         z = self.terrain.getElevation(x, y)
@@ -345,9 +319,6 @@ class World(DirectObject):
                               (self.camera.fulcrum.getH(), self.camera.camNode.getP(), self.camera.camNode.getR()))
 
         self.time_text.setText('[Time]: %02i:%02i' % (self.sky.time / 100, self.sky.time % 100 * 60 / 100))
-        #current texture blending mode
-        #self.blend_text.setText('[blend mode]: %i ' % \
-        #                      ( self.terrain.textureBlendMode ) )
 
         # Store the task time and continue.
         self.prevtime = task.time

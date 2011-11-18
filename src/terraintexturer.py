@@ -106,12 +106,10 @@ class DetailTexturer(TerrainTexturer):
 
     def loadDetail(self):
         self.detailTS = TextureStage('ts')
-        tex = self.loadTexture("Detail4.jpg")
-        #tex = self.loadTexture("normal.jpg")
+        tex = self.loadTexture("Detail_COLOR.jpg")
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.detailTexture = tex
-        #self.textureBlendMode = 7
         self.textureBlendMode = self.detailTS.MHeight
         self.detailTS.setMode(self.textureBlendMode)
 
@@ -177,7 +175,6 @@ class ShaderTexturer(TerrainTexturer):
 
         ### Load textures
         self.normalMap = self.loadTexture("Detail_NRM.png")
-        #self.normalMap2 = self.loadTexture("Detail_N.png")
         self.testOn = False
         self.detailTex = self.loadTexture("Detail_COLOR.png")
         self.tex1 = self.loadTexture("dirt.jpg")
@@ -202,7 +199,7 @@ class ShaderTexturer(TerrainTexturer):
         sg.addRegionToTex(Vec4(-9999.0, self.indexToHeight(0.1), 0.0, 1.0))
 
         sg.addTexture(self.tex2)
-        sg.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), 0.0, 0.35))
+        sg.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), 0.0, 0.30))
 
         sg.addTexture(self.tex3)
         sg.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.10, 1.0))
@@ -219,12 +216,13 @@ class ShaderTexturer(TerrainTexturer):
         else:
             self.shader = Shader.make(sg.createShader(), Shader.SLCg);
 
-
+        ### Shader input
         self.terrain.setShaderInput("normalMap", self.normalMap)
         self.terrain.setShaderInput("detailTex", self.detailTex)
         self.terrain.setShaderInput('tscale', self.texScale)
         self.terrain.setShaderInput("fogColor", Vec4(1.0,1.0,1.0,1.0))
         self.terrain.setShaderInput("camPos", base.camera.getPos())
+
         self.terrain.setShader(self.shader)
 
     def texturize(self, input):

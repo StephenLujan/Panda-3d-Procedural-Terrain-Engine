@@ -84,15 +84,15 @@ class CloudLayer(ColoredByTime):
     def __init__(self):
 
         tex1 = loader.loadTexture('textures/clouds.jpg')
-        tex1.setMagfilter(Texture.FTLinearMipmapLinear)
-        tex1.setMinfilter(Texture.FTLinearMipmapLinear)
-        tex1.setAnisotropicDegree(2)
+
+        tex1.setMagfilter(Texture.FTLinear)
+        tex1.setMagfilter(Texture.FTLinear)
         tex1.setWrapU(Texture.WMRepeat)
         tex1.setWrapV(Texture.WMRepeat)
         tex1.setFormat(Texture.FAlpha)
         self.ts1 = TextureStage('clouds')
         #self.ts1.setMode(TextureStage.MBlend)
-        self.ts1.setColor(Vec4(1, 1, 1, 1))
+        self.ts1.setColor(Vec4(1, 1, 1,1))
 
         #self.plane(-2000, -2000, 2000, 2000, 100)
         self.sphere(10000, -9600)
@@ -142,9 +142,10 @@ class CloudLayer(ColoredByTime):
         self.clouds.setPos(base.cam.getPos(render) + Vec3(0, 0, self.z))
 
 class Sky():
-    def __init__(self):
+    def __init__(self, filters):
+        self.filters = filters
         self.skybox = SkyBox()
-        self.sun = Sun()
+        self.sun = Sun(self.filters)
         self.clouds = CloudLayer()
         #self.fog = DistanceFog()
         self.dayLength = 120 #in seconds
