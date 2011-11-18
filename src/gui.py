@@ -93,8 +93,60 @@ class ShaderRegionControl():
         value = self.regionBounds()
         self.terrain.setShaderInput(key, value)
         #print 'setShaderInput' + str(value)
-        self.terrain.setShader(self.terrain.texturer.shader)
+        #self.terrain.setShader(self.terrain.texturer.shader)
  
+    def resize(self, size):
+        self.size = size
+        vertical = size[1]- size[0]
+        horizontal = size[3]- size[2]
+        self.frame.setScale(horizontal/2, 1, vertical/2)
+
+    def destroy(self):
+        self.frame.destroy()
+
+class ShaderMiscellaniousControl():
+    def __init__(self, x, y, terrain, parent = aspect2d):
+
+        size = 0.5
+        self.size = (-size,size,-size,size)
+        self.frame = DirectFrame(frameColor=(0, 0, 0, 0),
+                      frameSize= self.size,
+                      pos=(x, 0, y),
+                      parent = parent
+                      )
+
+        self.terrain = terrain
+        #self.normalStregth = terrain.getShaderInput('normalMapStrength').getVector().x
+        self.normalStregth = 2.5
+        self.normalStregthSlide = SlideControl(0, 0.6, parent = self.frame, range = (0,10), value = self.normalStregth, name = "Normal Strength", function = self.setNormalStrength, ysize = 1.5, xsize = 1.5)
+
+        self.detailSmallScale = 23.0
+        self.detailHugeSlide = SlideControl(0, 0.2, parent = self.frame, range = (0,100), value = self.detailSmallScale, name = "Small Detail", function = self.setSmallDetail, ysize = 1.5, xsize = 1.5)
+
+        self.detailBigScale = 7.0
+        self.detailBigeSlide = SlideControl(0, -0.2, parent = self.frame, range = (0,20), value = self.detailBigScale, name = "BigDetail", function = self.setBigDetail, ysize = 1.5, xsize = 1.5)
+
+        self.detailHugeScale = 1.6
+        self.detailHugeSlide = SlideControl(0, -0.6, parent = self.frame, range = (0,4), value = self.detailHugeScale, name = "Huge Detail", function = self.setHugeDetail, ysize = 1.5, xsize = 1.5)
+
+        self.resize(self.size)
+
+    def setNormalStrength(self, input):
+        self.normalStregth = input
+        self.terrain.setShaderInput("normalMapStrength", [self.normalStregth])
+
+    def setSmallDetail(self, input):
+        self.detailSmallScale = input
+        self.terrain.setShaderInput("detailSmallScale", [self.detailSmallScale])
+
+    def setBigDetail(self, input):
+        self.detailBigScale = input
+        self.terrain.setShaderInput("detailBigScale", [self.detailBigScale])
+
+    def setHugeDetail(self, input):
+        self.detailHugeScale = input
+        self.terrain.setShaderInput("detailHugeScale", [self.detailHugeScale])
+
     def resize(self, size):
         self.size = size
         vertical = size[1]- size[0]
@@ -119,7 +171,7 @@ class TerrainShaderControl():
         self.buttons = []
         self.v = [0]
         iter = 0
-        self.shaderControl = ShaderRegionControl(0, -0.35, 0, self.terrain, parent = self.frame)
+        self.shaderControl = ShaderMiscellaniousControl(0, -0.35, self.terrain, parent = self.frame)
 
         while (self.terrain.getShaderInput('region' + str(iter) + 'Limits').getValueType()):
             iter += 1
@@ -127,9 +179,16 @@ class TerrainShaderControl():
         total = iter
         iter = 0
 
-        while (self.terrain.getShaderInput('region' + str(iter) + 'Limits').getValueType()):
-            button = DirectRadioButton(text='Region ' + str(iter), variable=self.v,
-                                       value=[iter], scale=0.05, pos=((iter - total/2) * 0.3, 0, 0.04),
+        button = DirectRadioButton(text='Shader', variable=self.v,
+                                       value=[iter-1], scale=0.05, pos=((iter - total/2) * 0.3, 0, 0.04),
+                                       command=self.switchShaderControl,
+                                       parent = self.frame)
+        self.buttons.append(button)
+        iter += 1
+
+        while (self.terrain.getShaderInput('region' + str(iter-1) + 'Limits').getValueType()):
+            button = DirectRadioButton(text='Region ' + str(iter-1), variable=self.v,
+                                       value=[iter-1], scale=0.05, pos=((iter - total/2) * 0.3, 0, 0.04),
                                        command=self.switchShaderControl,
                                        parent = self.frame)
             self.buttons.append(button)
@@ -141,7 +200,10 @@ class TerrainShaderControl():
     # Callback function for radio buttons
     def switchShaderControl(self, status=None):
         self.shaderControl.destroy()
-        self.shaderControl = ShaderRegionControl(0, -0.35, self.v[0], self.terrain, parent = self.frame)
+        if self.v[0]> -1:
+            self.shaderControl = ShaderRegionControl(0, -0.35, self.v[0], self.terrain, parent = self.frame)
+        else:
+            self.shaderControl = ShaderMiscellaniousControl(0, -0.35, self.terrain, parent = self.frame)
 
     def show(self):
         self.frame.show()

@@ -16,7 +16,11 @@ class TerrainShaderGenerator:
         self.glare = False
         self.avoidConditionals = 1
         self.fogExponential()
-        self.terrain.setShaderInput("fogDensity", self.fogDensity)
+        self.terrain.setShaderInput("fogDensity", [self.fogDensity])
+        self.terrain.setShaderInput("normalMapStrength", [2.5])
+        self.terrain.setShaderInput("detailSmallScale", [1.6])
+        self.terrain.setShaderInput("detailBigScale", [7.0])
+        self.terrain.setShaderInput("detailHugeScale", [23.0])
 
     def fogLinear(self):
         # We need to figure out what fog density we want.
@@ -77,7 +81,6 @@ float FogAmount( float density, float3 PositionVS )
 '''
         header += 'const float slopeScale = '
         header += str(self.terrain.maxHeight / self.terrain.horizontalScale) + ';'
-        header += '\nconst float normalStrength = 2.0;'
         return header
     
     def getFunctions(self):
@@ -169,7 +172,7 @@ void vshader(
         out vfconn output,
         out float4 l_position : POSITION,
 
-        uniform float4 fogDensity: FOGDENSITY,
+        uniform float2 fogDensity: FOGDENSITY,
         uniform float3 camPos : CAMPOS,
         uniform float4x4 trans_model_to_world,
         uniform float4x4 mat_modelproj,
@@ -223,7 +226,12 @@ void fshader(
 
         //from terrain shader
         in uniform sampler2D normalMap  : NORMALMAP,
-        in uniform sampler2D detailTex  : DETAILTEX,'''
+        in uniform sampler2D detailTex  : DETAILTEX,
+        in uniform float2 normalMapStrength : NORMALMAPSTRENGTH,
+        in uniform float2 detailSmallScale,
+        in uniform float2 detailBigScale,
+        in uniform float2 detailHugeScale,
+        '''
         if self.fogDensity:
             fshader += '''
         in uniform float4 fogColor : FOGCOLOR,
@@ -264,16 +272,16 @@ void fshader(
         //attr_color =  float4(1.0,1.0,1.0,1.0); //lighting test
 
         // detail texture
-        float2 detailCoordSmall = input.l_tex_coord * 17.0;
-        float2 detailCoordBig = input.l_tex_coord * 5.0;
-        float2 detailCoordHuge = input.l_tex_coord * 1.6;
+        float2 detailCoordSmall = input.l_tex_coord * detailSmallScale;
+        float2 detailCoordBig = input.l_tex_coord * detailBigScale;
+        float2 detailCoordHuge = input.l_tex_coord * detailHugeScale;
         attr_color *= 1.5 * (tex2D(detailTex, detailCoordSmall) * tex2D(detailTex, detailCoordBig) * tex2D(detailTex, detailCoordHuge));
 '''
         if self.normalMapping:
             fshader += '''
         // normal mapping
-        float3 normalModifier = (tex2D(normalMap, detailCoordSmall) * 4.0 + tex2D(normalMap, detailCoordBig) * 4.0 + tex2D(normalMap, detailCoordHuge) * 4.0) - 6.0;
-        input.l_normal *= normalModifier.z/normalStrength;
+        float3 normalModifier = tex2D(normalMap, detailCoordSmall) + tex2D(normalMap, detailCoordBig) + tex2D(normalMap, detailCoordHuge) - 1.5;
+        input.l_normal *= normalModifier.z/normalMapStrength.x;
         input.l_normal.x += normalModifier.x;
         input.l_normal.y += normalModifier.y;
         input.l_normal = normalize(input.l_normal);
