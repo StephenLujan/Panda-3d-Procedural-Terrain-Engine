@@ -17,6 +17,20 @@ if __name__ == "__main__":
 import sys
 import os
 
+from panda3d.core import ConfigVariableInt
+from panda3d.core import loadPrcFile
+from pandac.PandaModules import Filename
+
+###############################################################################
+# Figure out what directory this program is in.
+MYDIR = os.path.abspath(sys.path[0])
+MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
+print('running from:' + MYDIR)
+
+loadPrcFile("config/config.prc")
+
+###############################################################################
+
 import direct.directbase.DirectStart
 from direct.filter.CommonFilters import CommonFilters
 from direct.showbase.DirectObject import DirectObject
@@ -33,19 +47,6 @@ from camera import *
 from basicfunctions import *
 import splashCard
 
-from panda3d.core import ConfigVariableInt
-from panda3d.core import loadPrcFile
-from pandac.PandaModules import Filename
-
-###############################################################################
-# Figure out what directory this program is in.
-MYDIR = os.path.abspath(sys.path[0])
-MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
-print('running from:' + MYDIR)
-
-loadPrcFile("config/config.prc")
-
-###############################################################################
 
 class World(DirectObject):
 
@@ -150,7 +151,7 @@ class World(DirectObject):
 
     def _loadTerrain(self):
         maxRange = ConfigVariableInt("max-view-range", 400).getValue()
-        self.terrain = Terrain('Terrain', base.camera, maxRange)
+        self.terrain = Terrain('Terrain', base.camera, maxRange, self.bug_text)
         self.terrain.reparentTo(render)
 
     def _loadWater(self):

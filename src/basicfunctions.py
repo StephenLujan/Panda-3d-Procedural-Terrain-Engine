@@ -52,7 +52,7 @@ def screenShot():
         base.screenshot()
         print 'screenshot taken.'
 
-def setResolution(x = 800, y = 600, fullScreen = True):
+def setResolution(x = 800, y = 600, fullScreen = False):
     wp = WindowProperties()
     wp.setSize(x, y)
     wp.setFullscreen(fullScreen)

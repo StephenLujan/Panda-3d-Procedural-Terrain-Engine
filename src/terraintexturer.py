@@ -54,7 +54,7 @@ class TerrainTexturer():
     def load(self):
         """Load textures and shaders."""
 
-    def texturize(self, input):
+    def apply(self, input):
         """Apply textures and shaders to the input."""
 
     def indexToHeight(self, input):
@@ -82,7 +82,7 @@ class MonoTexturer(TerrainTexturer):
         tex.setWrapU(Texture.WMMirror)
         tex.setWrapV(Texture.WMMirror)
         self.monoTexture = tex
-    def texturize(self, input):
+    def apply(self, input):
         """Apply textures and shaders to the input."""
 
         input.setTexture(self.ts, self.monoTexture)
@@ -113,7 +113,7 @@ class DetailTexturer(TerrainTexturer):
         self.textureBlendMode = self.detailTS.MHeight
         self.detailTS.setMode(self.textureBlendMode)
 
-    def texturize(self, input):
+    def apply(self, input):
         """Apply textures and shaders to the input."""
 
         input.setTexture(self.ts1, self.monoTexture)
@@ -216,34 +216,34 @@ class ShaderTexturer(TerrainTexturer):
         else:
             self.shader = Shader.make(sg.createShader(), Shader.SLCg);
 
-        ### Shader input
         self.terrain.setShaderInput("normalMap", self.normalMap)
         self.terrain.setShaderInput("detailTex", self.detailTex)
         self.terrain.setShaderInput('tscale', self.texScale)
         self.terrain.setShaderInput("fogColor", Vec4(1.0,1.0,1.0,1.0))
         self.terrain.setShaderInput("camPos", base.camera.getPos())
 
-        self.terrain.setShader(self.shader)
-
-    def texturize(self, input):
+    def apply(self, input):
         """Apply textures and shaders to the input."""
 
-        return #abort
-        # enable use of the two separate tagged render states for our two cameras
-        #input.setTag('Normal', 'True')
-        #input.setTag('Clipped', 'True')
-        input.setTexture(self.ts1, self.tex1)
-        input.setTexture(self.ts2, self.tex2)
-        input.setTexture(self.ts3, self.tex3)
-        input.setTexture(self.ts4, self.tex4)
+        # we can just leave most shader inputs on top of terrain
 
-        input.setTexture(self.detailTS, self.detailTex)
-        input.setTexScale(self.detailTS, 10, 10)
+        ### apply textures
+        #input.setTexture(self.ts1, self.tex1)
+        #input.setTexture(self.ts2, self.tex2)
+        #input.setTexture(self.ts3, self.tex3)
+        #input.setTexture(self.ts4, self.tex4)
+        #input.setTexture(self.detailTS, self.detailTex)
+        #input.setTexScale(self.detailTS, 10, 10)
+
+        ### apply shader
+        #input.setShaderInput("normalMap", self.normalMap)
+        #input.setShaderInput("detailTex", self.detailTex)
+        #input.setShaderInput('tscale', self.texScale)
+        #input.setShaderInput("fogColor", Vec4(1.0,1.0,1.0,1.0))
+        #input.setShaderInput("camPos", base.camera.getPos())
+        
+        input.setShader(self.shader)
 
     def test(self):
-        return #abort
-        self.testOn = not self.testOn
-        if self.testOn:
-            self.terrain.setShaderInput("normalMap", self.normalMap2)
-        else:
-            self.terrain.setShaderInput("normalMap", self.normalMap)
+        # nothing I want to test here right now
+        return

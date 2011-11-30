@@ -19,11 +19,11 @@ sync-video 0
 # windowed
 #win-size 800 600
 # HD
-win-size 1280 720
+#win-size 1280 720
 
 # fullscreen
-#win-size 1920 1080
-#fullscreen #t
+win-size 1920 1080
+fullscreen #t
 
 # field of view of screen Y in degrees (panda default is 30)
 # A larger fov brings more local detail in the picture and makes the limit of

@@ -18,7 +18,7 @@ class TerrainShaderGenerator:
         self.fogExponential()
         self.terrain.setShaderInput("fogDensity", [self.fogDensity])
         self.terrain.setShaderInput("normalMapStrength", [2.5])
-        self.terrain.setShaderInput("detailSmallScale", [1.6])
+        self.terrain.setShaderInput("detailSmallScale", [1.3])
         self.terrain.setShaderInput("detailBigScale", [7.0])
         self.terrain.setShaderInput("detailHugeScale", [23.0])
 

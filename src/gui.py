@@ -126,7 +126,7 @@ class ShaderMiscellaniousControl():
         self.detailBigScale = 7.0
         self.detailBigeSlide = SlideControl(0, -0.2, parent = self.frame, range = (0,20), value = self.detailBigScale, name = "BigDetail", function = self.setBigDetail, ysize = 1.5, xsize = 1.5)
 
-        self.detailHugeScale = 1.6
+        self.detailHugeScale = 1.3
         self.detailHugeSlide = SlideControl(0, -0.6, parent = self.frame, range = (0,4), value = self.detailHugeScale, name = "Huge Detail", function = self.setHugeDetail, ysize = 1.5, xsize = 1.5)
 
         self.resize(self.size)
