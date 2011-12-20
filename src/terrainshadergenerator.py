@@ -8,10 +8,12 @@ from terraintexturemap import *
 
 class TerrainShaderGenerator:
 
-    def __init__(self, terrain):
+    def __init__(self, terrain, textureMapper = None):
 
         self.terrain = terrain
-        self.textureMapper = TextureMapper()
+        if not textureMapper:
+            textureMapper = TextureMapper(terrain)
+        self.textureMapper = textureMapper
         self.normalMapping = True
         self.glare = False
         self.avoidConditionals = 1
@@ -70,6 +72,10 @@ float FogAmount( float density, float3 PositionVS )
     float exp = density * z;
     return saturate( pow(2.7182818, -(exp * exp)));
 }'''
+
+
+
+class FullTerrainShaderGenerator(TerrainShaderGenerator):
 
     def getHeader(self):
 

@@ -156,7 +156,7 @@ class Sky():
         self.previousTime = 0
         self.nightSkip = True
         self.paused = False
-        
+
         ambient = Vec4(0.55, 0.65, 1.0, 1) #bright for hdr
         alight = AmbientLight('alight')
         alight.setColor(ambient)

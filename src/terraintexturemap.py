@@ -4,12 +4,19 @@
 # This file contains the TextureMapper class and its constituents
 ###
 
+from pandac.PandaModules import PNMImage
+from pandac.PandaModules import Vec4
+
 class TerrainShaderTexture:
 
-    def __init__(self, tex):
+    def __init__(self, tex, terrain):
 
         self.tex = tex
         self.regions = []
+        self.terrain = terrain
+        size = self.terrain.tileSize + 1
+        self.image = PNMImage(size, size, 1, 65535)
+        self.weight = 0.0
 
     def addRegion(self, region):
 
@@ -19,12 +26,13 @@ class TerrainShaderTexture:
 class TextureMapper:
     """Collects all textures used by the terrain and stores regional boundries for each."""
 
-    def __init__(self):
+    def __init__(self, terrain):
         self.textures = []
+        self.terrain = terrain
 
     def addTexture(self, texture):
 
-        self.textures.append(TerrainShaderTexture(texture))
+        self.textures.append(TerrainShaderTexture(texture, self.terrain))
 
     def addRegionToTex(self, region, textureNumber=-1):
 
@@ -36,3 +44,40 @@ class TextureMapper:
             textureNumber = len(self.textures) - 1
 
         self.textures[textureNumber].addRegion(region)
+
+    def calculateWeight(self, value, minimum, maximum ):
+
+        value = clamp(value, minimum, maximum)
+        weight = min(maximum - value, value - minimum)
+
+        return weight
+
+
+    def calculateFinalWeight(self, height, slope, limits ):
+
+        return calculateWeight(height, limits.x, limits.y) \
+               * calculateWeight(slope, limits.z, limits.a)
+
+
+    def calculateTextures(self, terrainTile):
+
+        size = terrainTile.slopeMap.getYSize()
+        #getNormal = self.getNormal
+        getSlope = terrainTile.slopeMap.getGray
+        getHeight = terrainTile.image.getGray
+
+
+        for x in range(size):
+            for y in range(size):
+                slope = getSlope(x,y)
+                height = getHeight(x,y)
+                textureWeightTotal = 0.000001;
+
+                texNum = 0
+                regionNum = 0
+
+                for tex in self.textureMapper.textures:
+                    textureWeight = 0.0;
+                    for region in tex.regions:
+
+                        textureWeight += calculateFinalWeight(height, slope, region)

@@ -2,6 +2,8 @@ from pandac.PandaModules import WindowProperties
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextNode
 from direct.gui.OnscreenText import OnscreenText
+import time
+from direct.stdpy import thread
 
 # Function returns the width / height ratio of the window or screen
 def getScreenRatio():
@@ -28,6 +30,11 @@ def showFrame():
     for i in range(4):
         base.graphicsEngine.renderFrame()
 
+
+def threadContinue(sleeptime, lock):
+    lock.release()
+    time.sleep(sleeptime)
+    lock.acquire()
 
 def disableMouse():
     base.disableMouse()

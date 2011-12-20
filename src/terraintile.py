@@ -13,8 +13,10 @@ from pandac.PandaModules import Filename
 from pandac.PandaModules import GeoMipTerrain
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import PNMImage
-#from pandac.PandaModules import Vec2
+from pandac.PandaModules import Vec3
 from pstat_debug import pstat
+
+from collections import deque
 
 ###############################################################################
 #   TerrainTile
@@ -37,10 +39,9 @@ class TerrainTile(GeoMipTerrain):
         self.yOffset = y
         self.detail = 1 # higher means greater detail
 
-        #name = "ID" + str(terrain.id) + "X" + str(x) + "Y" + str(y)
+        self.name = "ID" + str(terrain.id) + "_X" + str(x) + "_Y" + str(y)
         GeoMipTerrain.__init__(self, name=terrain.name)
 
-        #self.mapName = "heightmaps/" + name + ".png"
         self.image = PNMImage()
 
         self.getRoot().setPos(x, y, 0)
@@ -88,11 +89,8 @@ class TerrainTile(GeoMipTerrain):
         """
 
         heightMapSize = self.terrain.tileSize * self.detail + 1
-        self.image = PNMImage(heightMapSize, heightMapSize)
-        self.image.makeGrayscale()
-        self.image.setMaxval(65535)
-
-
+        self.image = PNMImage(heightMapSize, heightMapSize, 1, 65535)
+        
         ySize = self.image.getYSize() - 1
         getHeight = self.terrain.getHeight
         setGray = self.image.setGray
@@ -107,7 +105,8 @@ class TerrainTile(GeoMipTerrain):
                 # why is it necessary to invert the y axis I wonder?
                 setGray(x, ySize - y, height)
         #self.postProcessImage()
-        #self.image.write(Filename(self.mapName))
+        #print "saving to "+self.fileName
+        #self.image.write(Filename("heightmaps/" + self.name + ".png"))
 
     def postProcessImage(self):
         """Perform filters and manipulations on the heightmap image."""
@@ -118,7 +117,7 @@ class TerrainTile(GeoMipTerrain):
         self.getRoot().setRenderModeWireframe()
 
     def makeSlopeMap(self):
-        print "makeSlopeMap"
+        
         self.slopeMap = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
         self.slopeMap.makeGrayscale()
         self.slopeMap.setMaxval(65535)
@@ -129,12 +128,20 @@ class TerrainTile(GeoMipTerrain):
 
         for x in range(size):
             for y in range(size):
-                slope = getNormal(x, y).z
+                #note getNormal works at the same resolution as the heightmap
+                normal = getNormal(x, y)
                 #  feed pixel into image
                 # why is it necessary to invert the y axis I wonder?
-                setGray(x, y, normal)
+                #print normal
+                normal.z /= self.terrain.getSz()
+                normal.normalize()
+                slope = 1.0 - normal.dot( Vec3(0,0,1))
+                setGray(x, y, slope)
         #self.getNormal (int x, int y)
  	#Fetches the terrain normal at (x, y), where the input coordinate is specified in pixels.
+        #self.slopeMap.write(Filename("slopemaps/" + self.name + ".png"))
+        #print "makeSlopeMap", self.terrain.heightMapSize
+
     @pstat
     def make(self):
         """Build a finished renderable heightMap."""
@@ -145,8 +152,34 @@ class TerrainTile(GeoMipTerrain):
         self.setHeight()
         #self.getRoot().setSz(self.maxHeight)
         self.generate()
-        self.terrain.texturer.apply(self.getRoot())
+        #self.terrain.texturer.apply(self.getRoot())
+        #self.makeSlopeMap()
 
+
+###############################################################################
+#   TextureMappedTerrainTile
+###############################################################################
+
+class TextureMappedTerrainTile(TerrainTile):
+    """This terrain tile stores a pnm image map of textures to use."""
+
+    def __init__(self, terrain, x, y):
+
+        TerrainTile.__init__(self, terrain, x, y)
+
+        # this sort of thing should really be done in c++
+        self.maps = deque()
+        for tex in self.terrain.terrainTexturer.textureMapper.textures:
+            self.maps.append(Texture())
+
+    def make(self):
+        self.terrain.textureMapper.calculateTextures(self)
+        num = 0
+        for tex in self.terrain.textureMapper.textures:
+            num+= 1
+            texture = Texture()
+            ts = TextureStage('alpha'+str(num))
+            self.getRoot().setTexture(ts, texture)
 
 
 ###############################################################################

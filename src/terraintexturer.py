@@ -16,6 +16,7 @@ from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
 from direct.showbase import AppRunnerGlobal
 from terrainshadergenerator import *
+from terraintexturemap import *
 
 #http://www.panda3d.org/forums/viewtopic.php?t=10222
 if AppRunnerGlobal.appRunner is None:
@@ -193,21 +194,23 @@ class ShaderTexturer(TerrainTexturer):
         ### Load the boundries for each texture
         # regionLimits ( min height, max height, min slope, max slope )
 
-        sg = TerrainShaderGenerator(self.terrain)
+        self.textureMapper = TextureMapper(self.terrain)
 
-        sg.addTexture(self.tex1)
-        sg.addRegionToTex(Vec4(-9999.0, self.indexToHeight(0.1), 0.0, 1.0))
+        self.textureMapper.addTexture(self.tex1)
+        self.textureMapper.addRegionToTex(Vec4(-9999.0, self.indexToHeight(0.1), -0.001, 1.0))
 
-        sg.addTexture(self.tex2)
-        sg.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), 0.0, 0.30))
+        self.textureMapper.addTexture(self.tex2)
+        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), -0.001, 0.30))
 
-        sg.addTexture(self.tex3)
-        sg.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.10, 1.0))
+        self.textureMapper.addTexture(self.tex3)
+        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.10, 1.0))
         #second region forces tex 2 and 4 to blend a bit at their boundries regardless of slope
-        sg.addRegionToTex(Vec4(self.indexToHeight(0.4), self.indexToHeight(0.9), 0.0, 1.0))
+        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.4), self.indexToHeight(0.9), -0.001, 1.0))
 
-        sg.addTexture(self.tex4)
-        sg.addRegionToTex(Vec4(self.indexToHeight(0.72), 9999.0, 0.0, 1.0))
+        self.textureMapper.addTexture(self.tex4)
+        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.72), 9999.0, 0.0, 1.0))
+
+        sg = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
 
         if RUNTYPE == 'python':
             file = 'shaders/stephen6.sha'

@@ -30,6 +30,7 @@ from pandac.PandaModules import NodePath
 from pstat_debug import pstat
 from terraintile import *
 from terraintexturer import *
+from populator import *
 
 """
     Panda3d GeoMipTerrain tips:
@@ -54,13 +55,9 @@ in adding and removing tiles is trivial in practice.
 class HeightMap():
     """HeightMap functionally maps any x and y to the appropriate height for realistic terrain."""
 
-    def __init__(self, id=0, flatHeight=0.3):
+    def __init__(self, id, flatHeight=0.3):
 
-        self.dice = RandomNumGen(TimeVal().getUsec())
-        if id == 0:
-            id = self.dice.randint(2, 1000000)
         self.id = id
-
         # the overall smoothness/roughness of the terrain
         self.smoothness = 150
         # how quickly altitude and roughness shift
@@ -206,6 +203,9 @@ class Terrain(NodePath):
         ##### rendering properties
         self.initializeRenderingProperties()
 
+        ##### Other
+        self.populator = TerrainPopulator(self)
+
         ##### task handling
         self._setupSimpleTasks()
         #self._setupThreadedTasks()
@@ -218,6 +218,11 @@ class Terrain(NodePath):
 
     def initializeHeightMap(self, id=0):
         """ """
+
+        if id == 0:
+            self.dice = RandomNumGen(TimeVal().getUsec())
+            id = self.dice.randint(2, 1000000)
+        self.id = id
 
         #Remove old tiles that will not conform to a new heightmap
         for pos, tile in self.tiles.items():
@@ -239,8 +244,8 @@ class Terrain(NodePath):
         #self.texturer = MonoTexturer(self)
         self.texturer = ShaderTexturer(self)
         #self.texturer = DetailTexturer(self)
-        #self.texturer.load()
-        #self.texturer.texturize(self)
+        self.texturer.load()
+        self.texturer.apply(self)
         #self.setShaderInput("zMultiplier", )
 
     def _setupSimpleTasks(self):
