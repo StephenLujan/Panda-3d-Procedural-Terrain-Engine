@@ -212,7 +212,7 @@ class Terrain(NodePath):
 
         # newTile is a placeholder for a tile currently under construction
         # this has to be initialized last because it requires values from self
-        self.newTile = TerrainTile(self, 0, 0)
+        #self.newTile = TerrainTile(self, 0, 0)
         # loads all terrain tiles in range immediately
         self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
@@ -232,6 +232,7 @@ class Terrain(NodePath):
         self.getHeight = self.heightMap.getHeight
 
     def initializeRenderingProperties(self):
+        self.bakedTextures = False
         self.bruteForce = True
         #self.bruteForce = False
         if self.bruteForce:
@@ -283,7 +284,9 @@ class Terrain(NodePath):
             tile.update(task)
     
     def tileLodUpdate(self):
-        """Updates tiles to LOD appropriate for their distance
+        """Unused! LOD causes exposed terrain seams.
+        
+        Updates tiles to LOD appropriate for their distance
         
         setMinDetailLevel() doesn't flag a geomipterrain as dirty, so update
         will not alter detail level. It would have to be regenerated.
@@ -400,9 +403,9 @@ class Terrain(NodePath):
     def dispatchNewTileAt(self, x, y):
         """Dispatch a task to create a tile at the input coordinates."""
 
-        self.newTile.xOffset = x
-        self.newTile.yOffset = y
-        self.tiles[(x, y)] = self.newTile
+        #self.newTile.xOffset = x
+        #self.newTile.yOffset = y
+        #self.tiles[(x, y)] = self.newTile
         #_generateTile(x,y)
         taskMgr.add(self._generateTileTask, name="_generateTile",
                     extraArgs=[x, y], appendTask=True,
@@ -412,7 +415,7 @@ class Terrain(NodePath):
     def _generateTile(self, x, y):
         """Creates a terrain tile at the input coordinates."""
 
-        tile = TerrainTile(self, x, y)
+        tile = TextureMappedTerrainTile(self, x, y)
         tile.make()
         tile.getRoot().reparentTo(self)
         self.tiles[(x, y)] = tile

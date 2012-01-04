@@ -13,6 +13,8 @@ from pandac.PandaModules import Filename
 from pandac.PandaModules import GeoMipTerrain
 from pandac.PandaModules import NodePath
 from pandac.PandaModules import PNMImage
+from pandac.PandaModules import Texture
+from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pstat_debug import pstat
 
@@ -169,17 +171,19 @@ class TextureMappedTerrainTile(TerrainTile):
 
         # this sort of thing should really be done in c++
         self.maps = deque()
-        for tex in self.terrain.terrainTexturer.textureMapper.textures:
-            self.maps.append(Texture())
 
     def make(self):
-        self.terrain.textureMapper.calculateTextures(self)
+        TerrainTile.make(self)
+        self.terrain.texturer.apply(self.getRoot())
+        self.makeSlopeMap()
+        self.terrain.texturer.textureMapper.calculateTextures(self)
         num = 0
-        for tex in self.terrain.textureMapper.textures:
+        for tex in self.terrain.texturer.textureMapper.textures:
             num+= 1
-            texture = Texture()
+            newTexture = Texture()
+            newTexture.load(tex.image)
             ts = TextureStage('alpha'+str(num))
-            self.getRoot().setTexture(ts, texture)
+            self.getRoot().setTexture(ts, newTexture)
 
 
 ###############################################################################
