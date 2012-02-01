@@ -37,6 +37,8 @@ class TerrainTexturer():
 
     def __init__(self, terrain):
         """initialize"""
+
+        print "initializing terrain texturer..."
         self.terrain = terrain
         self.load()
 
@@ -168,8 +170,9 @@ class ShaderTexturer(TerrainTexturer):
         self.loadShader()
 
     def loadShader(self):
-        """Textures based on altitude and slope. My own version. Normal data appears broken."""
-    
+        """Textures based on altitude and slope."""
+
+        print "loading texures..."
         ### texture scaling
         texScale = self.terrain.tileSize / 32 * self.terrain.horizontalScale
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)
@@ -210,7 +213,9 @@ class ShaderTexturer(TerrainTexturer):
         self.textureMapper.addTexture(self.tex4)
         self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.72), 9999.0, 0.0, 1.0))
 
+        print "intializing terrain shader generator..."
         sg = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
+        print "terrain shader generator initialized..."
 
         if RUNTYPE == 'python':
             file = 'shaders/stephen6.sha'
