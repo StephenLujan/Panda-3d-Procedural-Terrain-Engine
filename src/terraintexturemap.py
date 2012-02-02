@@ -55,8 +55,8 @@ class TextureMapper:
 
     def calculateFinalWeight(self, height, slope, limits ):
 
-        return calculateWeight(height, limits.x, limits.y) \
-               * calculateWeight(slope, limits.z, limits.a)
+        return self.calculateWeight(height, limits.w, limits.x) \
+               * self.calculateWeight(slope, limits.y, limits.z)
 
 
     def calculateTextures(self, terrainTile):
@@ -65,7 +65,8 @@ class TextureMapper:
         #getNormal = self.getNormal
         getSlope = terrainTile.slopeMap.getGray
         getHeight = terrainTile.image.getGray
-
+        calculateFinalWeight = self.calculateFinalWeight
+        textures = self.textures
 
         for x in range(size):
             for y in range(size):
@@ -76,7 +77,7 @@ class TextureMapper:
                 texNum = 0
                 regionNum = 0
 
-                for tex in self.textureMapper.textures:
+                for tex in textures:
                     textureWeight = 0.0;
                     for region in tex.regions:
 

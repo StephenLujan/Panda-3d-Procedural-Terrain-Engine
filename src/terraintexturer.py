@@ -214,7 +214,10 @@ class ShaderTexturer(TerrainTexturer):
         self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.72), 9999.0, 0.0, 1.0))
 
         print "intializing terrain shader generator..."
-        sg = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
+        if self.terrain.bakedTextures:
+            sg = BakedTerrainShaderGenerator(self.terrain, self.textureMapper)
+        else:
+            sg = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
         print "terrain shader generator initialized..."
 
         if RUNTYPE == 'python':
