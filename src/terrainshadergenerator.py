@@ -106,7 +106,7 @@ float FogAmount( float density, float3 PositionVS )
         shader += self.getFragmentShaderEnd()
         return shader
 
-    def saveShader(self, name='shaders/stephen6.sha'):
+    def saveShader(self, name='shaders/fullTerrain.sha'):
         string = self.createShader()
         f = open(name, 'w')
         f.write(string)
@@ -157,9 +157,10 @@ struct vfconn
 {
     //from terrain shader
     float2 l_tex_coord : TEXCOORD0;
+    float2 l_tex_coord3 : TEXCOORD3;
     float3 l_normal : TEXCOORD1;
     float3 l_world_pos : TEXCOORD2;
-
+    
     //from auto shader
     float4 l_eye_position : TEXCOORD4;
     float4 l_eye_normal : TEXCOORD5;
@@ -177,6 +178,7 @@ struct vfconn
         vShader ='''
 void vshader(
         in float2 vtx_texcoord0 : TEXCOORD0,
+        in float2 vtx_texcoord3 : TEXCOORD3,
         in float4 vtx_position : POSITION,
         in float4 vtx_normal : NORMAL,
 
@@ -200,6 +202,7 @@ void vshader(
 
         //for terrain
         output.l_tex_coord = vtx_texcoord0;
+        output.l_tex_coord3 = vtx_texcoord3;
         output.l_world_pos = mul(trans_model_to_world, vtx_position);
 '''
         if self.fogDensity:
@@ -258,10 +261,11 @@ void fshader(
             string += '''
             in uniform sampler2D tex_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
             texNum += 1
+        texNum = 0
         #alpha maps
         for tex in self.textureMapper.textures:
             string += '''
-            in uniform sampler2D tex_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
+            in uniform sampler2D map_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
             texNum += 1
         return string[:-1] #trim last comma
 
@@ -294,20 +298,19 @@ void fshader(
         string = ''
         for tex in self.textureMapper.textures:
             string += '''
-              float4 tex'''+ str(texNum) +' = tex2D(tex_'+ str(texNum) +', input.l_tex_coord);'
+            float4 tex'''+ str(texNum) +' = tex2D(tex_'+ str(texNum) +', input.l_tex_coord);'
             texNum += 1
             
-        totalBaseTextures = texNum
         texNum = 0
         for tex in self.textureMapper.textures:
             string += '''
-              float alpha'''+ str(texNum) +' = tex2D(tex_'+ str(texNum + totalBaseTextures) +', input.l_tex_coord).a;'
+            float alpha'''+ str(texNum) +' = tex2D(map_'+ str(texNum) +', input.l_tex_coord3).a;'
             texNum += 1
           
         texNum = 0
         for tex in self.textureMapper.textures:
             string += '''
-            terrainColor += tex'''+ str(texNum) +'*alpha'+ str(texNum) +' * 1.0;'
+            terrainColor += tex'''+ str(texNum) +' * alpha'+ str(texNum) +' * 1.0;'
             #terrainColor = tex2D(tex_2, input.l_tex_coord) * tex2D(tex_4, input.l_tex_coord).a* 5.5;'''
             #terrainColor += tex'''+ str(texNum) +'*1.5;'''
             
@@ -763,7 +766,7 @@ void fshader(
         shader += self.getFragmentShaderEnd()
         return shader
 
-    def saveShader(self, name='shaders/stephen6.sha'):
+    def saveShader(self, name='shaders/FullTerrain.sha'):
         string = self.createShader()
         f = open(name, 'w')
         f.write(string)

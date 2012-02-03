@@ -15,7 +15,7 @@ class TerrainShaderTexture:
         self.regions = []
         self.terrain = terrain
         size = self.terrain.tileSize + 1
-        self.image = PNMImage(size, size, 4)
+        self.image = PNMImage(size, size, 3)
         self.weight = 0.0
 
     def addRegion(self, region):
@@ -47,17 +47,26 @@ class TextureMapper:
 
     def calculateWeight(self, value, minimum, maximum ):
 
-        value = clamp(value, minimum, maximum)
+        if value > maximum:
+            #print "value > maximum"
+            return 0
+        if value < minimum:
+            #print "value < minimum"
+            return 0
+
         weight = min(maximum - value, value - minimum)
-        weight = max(weight, 0)
+        #print "min(",maximum," - ", value," , ", value ," - ",minimum,") =",weight
+
         return weight
 
 
     def calculateFinalWeight(self, height, slope, limits ):
-        print height, slope, limits
+        #print "calculateFinalWeight(",height, slope, limits,")"
 
-        return self.calculateWeight(height, limits.w, limits.x) \
-               * self.calculateWeight(slope, limits.y, limits.z)
+        height = self.calculateWeight(height, limits.x, limits.y)
+        slope = self.calculateWeight(slope, limits.z, limits.w)
+        #print "height * slope =", height * slope
+        return height * slope
 
 
     def calculateTextures(self, terrainTile):
@@ -65,7 +74,7 @@ class TextureMapper:
         size = terrainTile.slopeMap.getYSize()
         #getNormal = self.getNormal
         getSlope = terrainTile.slopeMap.getGray
-        slopeMult = self.terrain.maxHeight / self.terrain.horizontalScale
+        #slopeMult = self.terrain.maxHeight / self.terrain.horizontalScale
         getHeight = terrainTile.image.getGray
         maxHeight = self.terrain.maxHeight
         calculateFinalWeight = self.calculateFinalWeight
@@ -77,16 +86,16 @@ class TextureMapper:
                 height = getHeight(x,y) * maxHeight
                 textureWeightTotal = 0.000001;
 
-                texNum = 0
-                regionNum = 0
-
                 for tex in textures:
                     tex.weight = 0.0;
                     for region in tex.regions:
-                        tex.weight += calculateFinalWeight(height, slope, region)
-                        print tex.weight
+                        weight = calculateFinalWeight(height, slope, region)
+                        tex.weight += weight
+                        textureWeightTotal += weight
+                        #print tex.weight
                 for tex in textures:
-                    tex.image.setAlpha(x, y, tex.weight / textureWeightTotal)
+                    #print "setGray(", x, y, "  tex.weight / textureWeightTotal =",tex.weight / textureWeightTotal
+                    tex.image.setGray(x, y, tex.weight / textureWeightTotal)
+                    #print tex.image.getGray(x,y)
                     #tex.image.setAlpha(x, y, 0.3)
                     #tex.image.setAlpha(5, 5, 0.25)
-                        

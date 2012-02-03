@@ -189,8 +189,12 @@ class TextureMappedTerrainTile(TerrainTile):
         self.makeSlopeMap()
         self.terrain.texturer.textureMapper.calculateTextures(self)
 
+        texNum = 0
         for tex in self.terrain.texturer.textureMapper.textures:
+            texNum += 1
             self.maps.append(tex.image)
+            tex.image.write(Filename("texture maps/" + self.name +"+_texture" + str(texNum) + ".png"))
+            
 
         num = 0
         for tex in self.maps:

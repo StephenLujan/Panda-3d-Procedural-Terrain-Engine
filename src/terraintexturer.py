@@ -200,28 +200,30 @@ class ShaderTexturer(TerrainTexturer):
         self.textureMapper = TextureMapper(self.terrain)
 
         self.textureMapper.addTexture(self.tex1)
-        self.textureMapper.addRegionToTex(Vec4(-9999.0, self.indexToHeight(0.1), -0.001, 1.0))
+        self.textureMapper.addRegionToTex(Vec4(-9999.0, self.indexToHeight(0.1), -0.001, 1.001))
 
         self.textureMapper.addTexture(self.tex2)
         self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(-0.15), self.indexToHeight(0.75), -0.001, 0.30))
 
         self.textureMapper.addTexture(self.tex3)
-        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.10, 1.0))
+        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.1), self.indexToHeight(0.95), 0.10, 1.001))
         #second region forces tex 2 and 4 to blend a bit at their boundries regardless of slope
-        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.4), self.indexToHeight(0.9), -0.001, 1.0))
+        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.4), self.indexToHeight(0.9), -0.001, 1.001))
 
         self.textureMapper.addTexture(self.tex4)
-        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.72), 9999.0, 0.0, 1.0))
+        self.textureMapper.addRegionToTex(Vec4(self.indexToHeight(0.72), 9999.0, -0.001, 1.001))
 
         print "intializing terrain shader generator..."
+        file = 'shaders/terrain.sha'
         if self.terrain.bakedTextures:
             sg = BakedTerrainShaderGenerator(self.terrain, self.textureMapper)
+            file = 'shaders/bakedTerrain.sha'
         else:
             sg = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
+            file = 'shaders/fullTerrain.sha'
         print "terrain shader generator initialized..."
 
         if RUNTYPE == 'python':
-            file = 'shaders/stephen6.sha'
             sg.saveShader(file)
             self.shader = Shader.load(file, Shader.SLCg)
         else:
