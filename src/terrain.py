@@ -12,8 +12,8 @@ __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
 
 import math
-from collections import deque
 
+from collections import deque
 from direct.showbase.RandomNumGen import *
 from direct.task.Task import Task
 from panda3d.core import BitMask32
@@ -26,11 +26,10 @@ from panda3d.core import PerlinNoise2
 from panda3d.core import StackedPerlinNoise2
 from panda3d.core import TimeVal
 from pandac.PandaModules import NodePath
-#from pandac.PandaModules import Vec2
-from pstat_debug import pstat
-from terraintile import *
-from terraintexturer import *
 from populator import *
+from pstat_debug import pstat
+from terraintexturer import *
+from terraintile import *
 
 """
     Panda3d GeoMipTerrain tips:
@@ -153,7 +152,7 @@ class HeightMap():
 class Terrain(NodePath):
     """A terrain contains a set of geomipmaps, and maintains their common properties."""
 
-    def __init__(self, name, focus, maxRange, feedBackString=None,  id=0 ):
+    def __init__(self, name, focus, maxRange, populator=None, feedBackString=None, id=0):
         """Create a new terrain centered on the focus.
 
         The focus is the NodePath where the LOD is the greatest.
@@ -170,6 +169,9 @@ class Terrain(NodePath):
         # stores all terrain tiles that make up the terrain
         self.tiles = {}
         self.feedBackString = feedBackString
+        if populator == None:
+            populator = TerrainPopulator()
+        self.populator = populator
 
         ##### Terrain Tile physical properties
         self.maxHeight = 300.0
@@ -203,9 +205,6 @@ class Terrain(NodePath):
         ##### rendering properties
         self.initializeRenderingProperties()
 
-        ##### Other
-        self.populator = TerrainPopulator(self)
-
         ##### task handling
         self._setupSimpleTasks()
         #self._setupThreadedTasks()
@@ -218,6 +217,8 @@ class Terrain(NodePath):
 
     def initializeHeightMap(self, id=0):
         """ """
+
+        print "initializing heightmap..."
 
         if id == 0:
             self.dice = RandomNumGen(TimeVal().getUsec())
@@ -232,7 +233,8 @@ class Terrain(NodePath):
         self.getHeight = self.heightMap.getHeight
 
     def initializeRenderingProperties(self):
-        self.bakedTextures = True
+        print "initializing terrain rendering properties..."
+        self.bakedTextures = False
         self.bruteForce = True
         #self.bruteForce = False
         if self.bruteForce:
@@ -245,12 +247,14 @@ class Terrain(NodePath):
         #self.texturer = MonoTexturer(self)
         self.texturer = ShaderTexturer(self)
         #self.texturer = DetailTexturer(self)
-        self.texturer.load()
         #self.texturer.apply(self)
         #self.setShaderInput("zMultiplier", )
+        print "rendering properties initialized..."
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""
+
+        print "initializing terrain update task..."
 
         ##Add tasks to keep updating the terrain
         #taskMgr.add(self.updateTilesTask, "updateTiles", sort=9, priority=0)
@@ -343,6 +347,8 @@ class Terrain(NodePath):
 
         """
 
+        print "preloading terrain tiles..."
+
         xstart = (int(xpos) / self.tileSize) * self.tileSize
         ystart = (int(ypos) / self.tileSize) * self.tileSize
         radius = (int(self.maxTileDistance) / self.tileSize + 1) * self.tileSize
@@ -363,7 +369,7 @@ class Terrain(NodePath):
         total = len(self.buildQueue)
         while len(self.buildQueue):
             if self.feedBackString:
-                self.feedBackString = "Loading Terrain "+ str(total-len(self.buildQueue))+"/"+str(total)
+                self.feedBackString = "Loading Terrain " + str(total-len(self.buildQueue)) + "/" + str(total)
                 #showFrame()
             tile = self.buildQueue.popleft()
             self._generateTile(*tile)
@@ -422,6 +428,8 @@ class Terrain(NodePath):
 
         #texturize tile
         #self.texturer.texturize(tile)
+
+        self.populator.populate(tile)
 
         print "tile generated at", x, y
         return tile

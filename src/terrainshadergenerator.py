@@ -5,6 +5,8 @@
 ###
 
 from terraintexturemap import *
+from pandac.PandaModules import PTAFloat
+from panda3d.core import Shader
 
 ###############################################################################
 #   TerrainShaderGenerator
@@ -22,14 +24,19 @@ class TerrainShaderGenerator:
         self.glare = False
         self.avoidConditionals = 1
         self.fogExponential()
-        self.terrain.setShaderInput("fogDensity", [self.fogDensity])
-        self.terrain.setShaderInput("normalMapStrength", [2.5])
-        self.terrain.setShaderInput("detailSmallScale", [1.3])
-        self.terrain.setShaderInput("detailBigScale", [7.0])
-        self.terrain.setShaderInput("detailHugeScale", [23.0])
-        
-    def addTexture(self, texture):
+        print "setting basic terrain shader input..."
 
+        self.setShaderFloatInput("fogDensity", self.fogDensity)
+        self.setShaderFloatInput("normalMapStrength", 2.5)
+        self.setShaderFloatInput("detailSmallScale", 1.3)
+        self.setShaderFloatInput("detailBigScale", 7.0)
+        self.setShaderFloatInput("detailHugeScale", 23.0)
+        print "done"
+
+    def setShaderFloatInput(self, name, input):
+        self.terrain.setShaderInput(name, PTAFloat([input]))
+
+    def addTexture(self, texture):
         self.textureMapper.addTexture(texture)
 
     def addRegionToTex(self, region, textureNumber=-1):
@@ -176,7 +183,7 @@ void vshader(
         out vfconn output,
         out float4 l_position : POSITION,
 
-        uniform float2 fogDensity: FOGDENSITY,
+        uniform float fogDensity: FOGDENSITY,
         uniform float3 camPos : CAMPOS,
         uniform float4x4 trans_model_to_world,
         uniform float4x4 mat_modelproj,
@@ -199,7 +206,7 @@ void vshader(
             vShader +='''
         // there has to be a faster way to get the camera's coordinates in a shader
         float3 cam_to_vertex = output.l_world_pos - camPos;
-        output.l_fog = FogAmount(fogDensity.x, cam_to_vertex);
+        output.l_fog = FogAmount(fogDensity, cam_to_vertex);
 
 '''
 
@@ -231,10 +238,10 @@ void fshader(
         //from terrain shader
         in uniform sampler2D normalMap  : NORMALMAP,
         in uniform sampler2D detailTex  : DETAILTEX,
-        in uniform float2 normalMapStrength : NORMALMAPSTRENGTH,
-        in uniform float2 detailSmallScale,
-        in uniform float2 detailBigScale,
-        in uniform float2 detailHugeScale,
+        in uniform float normalMapStrength : NORMALMAPSTRENGTH,
+        in uniform float detailSmallScale,
+        in uniform float detailBigScale,
+        in uniform float detailHugeScale,
         '''
         if self.fogDensity:
             fshader += '''
@@ -323,7 +330,7 @@ void fshader(
             fshader += '''
         // normal mapping
         float3 normalModifier = tex2D(normalMap, detailCoordSmall) + tex2D(normalMap, detailCoordBig) + tex2D(normalMap, detailCoordHuge) - 1.5;
-        input.l_normal *= normalModifier.z/normalMapStrength.x;
+        input.l_normal *= normalModifier.z/normalMapStrength;
         input.l_normal.x += normalModifier.x;
         input.l_normal.y += normalModifier.y;
         input.l_normal = normalize(input.l_normal);
@@ -502,7 +509,7 @@ void vshader(
         out vfconn output,
         out float4 l_position : POSITION,
 
-        uniform float2 fogDensity: FOGDENSITY,
+        uniform float fogDensity: FOGDENSITY,
         uniform float3 camPos : CAMPOS,
         uniform float4x4 trans_model_to_world,
         uniform float4x4 mat_modelproj,
@@ -557,10 +564,10 @@ void fshader(
         //from terrain shader
         in uniform sampler2D normalMap  : NORMALMAP,
         in uniform sampler2D detailTex  : DETAILTEX,
-        in uniform float2 normalMapStrength : NORMALMAPSTRENGTH,
-        in uniform float2 detailSmallScale,
-        in uniform float2 detailBigScale,
-        in uniform float2 detailHugeScale,
+        in uniform float normalMapStrength : NORMALMAPSTRENGTH,
+        in uniform float detailSmallScale,
+        in uniform float detailBigScale,
+        in uniform float detailHugeScale,
         '''
         if self.fogDensity:
             fshader += '''
@@ -739,3 +746,24 @@ void fshader(
                 self.terrain.setShaderInput(key, value)
                 regionNum += 1
             texNum += 1
+
+    def createShader(self):
+        print "loading terrain settings into shader input..."
+        self.feedThePanda()
+
+        print "assembling shader cg code"
+        shader = self.getHeader()
+        shader += self.getFunctions()
+        shader += self.getVertexFragmentConnector()
+        shader += self.getVertexShader()
+        shader += self.getFragmentShaderTop()
+        shader += self.getFShaderTerrainParameters()
+        shader += self.getTerrainPrepCode()
+        shader += self.getTerrainTextureCode()
+        shader += self.getFragmentShaderEnd()
+        return shader
+
+    def saveShader(self, name='shaders/stephen6.sha'):
+        string = self.createShader()
+        f = open(name, 'w')
+        f.write(string)

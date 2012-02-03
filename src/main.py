@@ -150,8 +150,11 @@ class World(DirectObject):
         self.time_text = addText(0.05, "[Time]: ", True)
 
     def _loadTerrain(self):
+        populator = TerrainPopulator()
+        populator.addObject(makeTree, {}, 5)
+
         maxRange = ConfigVariableInt("max-view-range", 400).getValue()
-        self.terrain = Terrain('Terrain', base.camera, maxRange, self.bug_text)
+        self.terrain = Terrain('Terrain', base.camera, maxRange, populator, self.bug_text)
         self.terrain.reparentTo(render)
 
     def _loadWater(self):

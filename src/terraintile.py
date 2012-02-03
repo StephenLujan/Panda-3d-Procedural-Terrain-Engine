@@ -42,10 +42,12 @@ class TerrainTile(GeoMipTerrain):
         self.detail = 1 # higher means greater detail
 
         self.name = "ID" + str(terrain.id) + "_X" + str(x) + "_Y" + str(y)
-        GeoMipTerrain.__init__(self, name=terrain.name)
+        GeoMipTerrain.__init__(self, name=self.name)
 
         self.image = PNMImage()
+ 
 
+        self.setAutoFlatten(GeoMipTerrain.AFMOff)
         self.getRoot().setPos(x, y, 0)
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
         if self.terrain.bruteForce:
@@ -56,7 +58,7 @@ class TerrainTile(GeoMipTerrain):
             self.setBorderStitching(1)
             self.setNear(self.terrain.near)
             self.setFar(self.terrain.far)
-        self.setAutoFlatten(GeoMipTerrain.AFMStrong)
+        
 
     def update(self, dummy):
         """Updates the GeoMip to use the correct LOD on each block."""
@@ -156,6 +158,15 @@ class TerrainTile(GeoMipTerrain):
         self.generate()
         #self.terrain.texturer.apply(self.getRoot())
         #self.makeSlopeMap()
+
+        self.statics = self.getRoot().attachNewNode(self.name+"_statics")
+        #self.statics.reparentTo(self.getRoot())
+        #print self.statics
+        #print self.statics.getParent()
+        #self.statics.reparentTo(self.getRoot())
+        self.statics.setSz(1.0/self.terrain.getSz())
+        self.statics.setShaderAuto()
+
 
 
 ###############################################################################

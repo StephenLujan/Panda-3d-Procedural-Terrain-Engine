@@ -84,7 +84,7 @@ class Walker(NodePath):
         else:
             if self.isMoving:
                 self.body.stop()
-                self.body.pose("walk",9)
+                self.body.pose("walk",5)
                 self.isMoving = False 
             
     def move(self, desiredVelocity, desiredHeading, elapsed):
