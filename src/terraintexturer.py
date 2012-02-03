@@ -234,10 +234,10 @@ class ShaderTexturer(TerrainTexturer):
         # we can just leave most shader inputs on top of terrain
 
         ### apply textures
-        #input.setTexture(self.ts1, self.tex1)
-        #input.setTexture(self.ts2, self.tex2)
-        #input.setTexture(self.ts3, self.tex3)
-        #input.setTexture(self.ts4, self.tex4)
+        input.setTexture(self.ts1, self.tex1)
+        input.setTexture(self.ts2, self.tex2)
+        input.setTexture(self.ts3, self.tex3)
+        input.setTexture(self.ts4, self.tex4)
         #input.setTexture(self.detailTS, self.detailTex)
         #input.setTexScale(self.detailTS, 10, 10)
 

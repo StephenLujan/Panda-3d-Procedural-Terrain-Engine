@@ -57,7 +57,7 @@ float FogAmount( float maxDistance, float3 PositionVS )
         # -density * z = ln(fog)
         # density = ln(fog) / -z
         # density = ln(0.25) / -maxViewRange
-        self.fogDensity = 1.38629436 / (self.terrain.maxViewRange)
+        self.fogDensity = 1.38629436 / (self.terrain.maxViewRange + 30)
         self.fogFunction = '''
 float FogAmount( float density, float3 PositionVS )
 {
@@ -249,12 +249,12 @@ void fshader(
         #base textures
         for tex in self.textureMapper.textures:
             string += '''
-            in uniform sampler2D texUnit''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
+            in uniform sampler2D tex_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
             texNum += 1
         #alpha maps
         for tex in self.textureMapper.textures:
             string += '''
-            in uniform sampler2D texUnit''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
+            in uniform sampler2D tex_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
             texNum += 1
         return string[:-1] #trim last comma
 
@@ -287,20 +287,23 @@ void fshader(
         string = ''
         for tex in self.textureMapper.textures:
             string += '''
-              float4 tex'''+ str(texNum) +' = tex2D(texUnit'+ str(texNum) +', input.l_tex_coord);'
+              float4 tex'''+ str(texNum) +' = tex2D(tex_'+ str(texNum) +', input.l_tex_coord);'
             texNum += 1
             
         totalBaseTextures = texNum
         texNum = 0
         for tex in self.textureMapper.textures:
             string += '''
-              float alpha'''+ str(texNum) +' = tex2D(texUnit'+ str(texNum + totalBaseTextures) +', input.l_tex_coord).z;'
+              float alpha'''+ str(texNum) +' = tex2D(tex_'+ str(texNum + totalBaseTextures) +', input.l_tex_coord).a;'
             texNum += 1
           
         texNum = 0
         for tex in self.textureMapper.textures:
             string += '''
-               terrainColor += tex'''+ str(texNum) +'*alpha'+ str(texNum) +';'
+            terrainColor += tex'''+ str(texNum) +'*alpha'+ str(texNum) +' * 1.0;'
+            #terrainColor = tex2D(tex_2, input.l_tex_coord) * tex2D(tex_4, input.l_tex_coord).a* 5.5;'''
+            #terrainColor += tex'''+ str(texNum) +'*1.5;'''
+            
             texNum += 1
         return string
     

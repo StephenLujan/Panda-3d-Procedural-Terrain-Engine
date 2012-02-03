@@ -232,7 +232,7 @@ class Terrain(NodePath):
         self.getHeight = self.heightMap.getHeight
 
     def initializeRenderingProperties(self):
-        self.bakedTextures = False
+        self.bakedTextures = True
         self.bruteForce = True
         #self.bruteForce = False
         if self.bruteForce:
@@ -246,7 +246,7 @@ class Terrain(NodePath):
         self.texturer = ShaderTexturer(self)
         #self.texturer = DetailTexturer(self)
         self.texturer.load()
-        self.texturer.apply(self)
+        #self.texturer.apply(self)
         #self.setShaderInput("zMultiplier", )
 
     def _setupSimpleTasks(self):

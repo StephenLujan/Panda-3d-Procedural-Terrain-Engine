@@ -18,9 +18,9 @@ sync-video 0
 
 # windowed
 # 4:3
-#win-size 800 600
+win-size 800 600
 # HD
-win-size 1280 720
+#win-size 1280 720
 
 # fullscreen
 #win-size 1920 1080

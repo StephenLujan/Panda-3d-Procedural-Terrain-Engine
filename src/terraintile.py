@@ -92,7 +92,7 @@ class TerrainTile(GeoMipTerrain):
 
         heightMapSize = self.terrain.tileSize * self.detail + 1
         self.image = PNMImage(heightMapSize, heightMapSize, 1, 65535)
-        
+
         ySize = self.image.getYSize() - 1
         getHeight = self.terrain.getHeight
         setGray = self.image.setGray
@@ -119,7 +119,7 @@ class TerrainTile(GeoMipTerrain):
         self.getRoot().setRenderModeWireframe()
 
     def makeSlopeMap(self):
-        
+
         self.slopeMap = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
         self.slopeMap.makeGrayscale()
         self.slopeMap.setMaxval(65535)
@@ -177,13 +177,20 @@ class TextureMappedTerrainTile(TerrainTile):
         self.terrain.texturer.apply(self.getRoot())
         self.makeSlopeMap()
         self.terrain.texturer.textureMapper.calculateTextures(self)
-        num = 0
+
         for tex in self.terrain.texturer.textureMapper.textures:
+            self.maps.append(tex.image)
+
+        num = 0
+        for tex in self.maps:
+            #tex.write(Filename("texture maps/" + self.name + 'tex' + str(num) + ".png"))
             num+= 1
             newTexture = Texture()
-            newTexture.load(tex.image)
-            ts = TextureStage('alpha'+str(num))
+            newTexture.load(tex)
+            ts = TextureStage('alp'+str(num))
             self.getRoot().setTexture(ts, newTexture)
+        #print self.getRoot().findAllTextureStages()
+
 
 
 ###############################################################################
