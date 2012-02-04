@@ -36,7 +36,7 @@ default-far 10000
 default-near 0.01
 
 # The distance below which terrain is guaranteed to be loaded and rendered
-max-view-range 10
+max-view-range 250
 
 # Portal support so we can clip large chunks of geometry...
 allow-portal-cull 1

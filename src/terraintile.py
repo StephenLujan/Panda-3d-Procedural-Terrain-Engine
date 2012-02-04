@@ -146,26 +146,30 @@ class TerrainTile(GeoMipTerrain):
         #self.slopeMap.write(Filename("slopemaps/" + self.name + ".png"))
         #print "makeSlopeMap", self.terrain.heightMapSize
 
+    def createGroups(self):
+        self.statics = self.getRoot().attachNewNode(self.name+"_statics")
+        self.statics.setSz(1.0/self.terrain.getSz())
+        self.statics.setShaderAuto()
+
     @pstat
     def make(self):
         """Build a finished renderable heightMap."""
-
-        self.getRoot().setSx(1.0 / self.detail)
-        self.getRoot().setSy(1.0 / self.detail)
+        
+        # apply shader
+        self.terrain.texturer.apply(self.getRoot())
+        
+        # detail settings
+        #self.getRoot().setSx(1.0 / self.detail)
+        #self.getRoot().setSy(1.0 / self.detail)
+        
         self.makeHeightMap()
         self.setHeight()
         #self.getRoot().setSz(self.maxHeight)
         self.generate()
         #self.terrain.texturer.apply(self.getRoot())
         #self.makeSlopeMap()
+        self.createGroups()
 
-        self.statics = self.getRoot().attachNewNode(self.name+"_statics")
-        #self.statics.reparentTo(self.getRoot())
-        #print self.statics
-        #print self.statics.getParent()
-        #self.statics.reparentTo(self.getRoot())
-        self.statics.setSz(1.0/self.terrain.getSz())
-        self.statics.setShaderAuto()
 
 
 
@@ -185,7 +189,7 @@ class TextureMappedTerrainTile(TerrainTile):
 
     def make(self):
         TerrainTile.make(self)
-        self.terrain.texturer.apply(self.getRoot())
+        #self.terrain.texturer.apply(self.getRoot())
         self.makeSlopeMap()
         self.terrain.texturer.textureMapper.calculateTextures(self)
 
@@ -205,6 +209,7 @@ class TextureMappedTerrainTile(TerrainTile):
             ts = TextureStage('alp'+str(num))
             self.getRoot().setTexture(ts, newTexture)
         #print self.getRoot().findAllTextureStages()
+        self.createGroups()
 
 
 

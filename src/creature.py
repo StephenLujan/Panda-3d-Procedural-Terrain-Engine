@@ -122,7 +122,7 @@ class Player(Walker):
                 #direction = 45.0
                 direction = 0.0
             elif self.controls["back"] != 0:
-                Creature.move(self, Vec3(0,0,0), 0, elapsed)
+                Walker.move(self, Vec3(0,0,0), 0, elapsed)
                 return
         else:
             if self.controls["right"] != 0:

@@ -30,6 +30,7 @@ from populator import *
 from pstat_debug import pstat
 from terraintexturer import *
 from terraintile import *
+from pandac.PandaModules import PTAFloat
 
 """
     Panda3d GeoMipTerrain tips:
@@ -420,8 +421,11 @@ class Terrain(NodePath):
     #@pstat
     def _generateTile(self, x, y):
         """Creates a terrain tile at the input coordinates."""
-
-        tile = TextureMappedTerrainTile(self, x, y)
+        
+        if self.bakedTextures:
+            tile = TextureMappedTerrainTile(self, x, y)
+        else:
+            tile = TerrainTile(self, x, y)
         tile.make()
         tile.getRoot().reparentTo(self)
         self.tiles[(x, y)] = tile
@@ -514,3 +518,7 @@ class Terrain(NodePath):
 
     def test(self):
         self.texturer.test()
+        
+    def setShaderFloatInput(self, name, input):
+        print "set shader input ",name," to ",input
+        self.setShaderInput(name, PTAFloat([input]))

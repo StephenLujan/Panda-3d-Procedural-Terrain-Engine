@@ -26,15 +26,12 @@ class TerrainShaderGenerator:
         self.fogExponential()
         print "setting basic terrain shader input..."
 
-        self.setShaderFloatInput("fogDensity", self.fogDensity)
-        self.setShaderFloatInput("normalMapStrength", 2.5)
-        self.setShaderFloatInput("detailSmallScale", 1.3)
-        self.setShaderFloatInput("detailBigScale", 7.0)
-        self.setShaderFloatInput("detailHugeScale", 23.0)
+        self.terrain.setShaderFloatInput("fogDensity", self.fogDensity)
+        self.terrain.setShaderFloatInput("normalMapStrength", 2.5)
+        self.terrain.setShaderFloatInput("detailSmallScale", 1.3)
+        self.terrain.setShaderFloatInput("detailBigScale", 7.0)
+        self.terrain.setShaderFloatInput("detailHugeScale", 23.0)
         print "done"
-
-    def setShaderFloatInput(self, name, input):
-        self.terrain.setShaderInput(name, PTAFloat([input]))
 
     def addTexture(self, texture):
         self.textureMapper.addTexture(texture)
@@ -106,7 +103,7 @@ float FogAmount( float density, float3 PositionVS )
         shader += self.getFragmentShaderEnd()
         return shader
 
-    def saveShader(self, name='shaders/fullTerrain.sha'):
+    def saveShader(self, name='shaders/terrain.sha'):
         string = self.createShader()
         f = open(name, 'w')
         f.write(string)
@@ -668,7 +665,7 @@ void fshader(
             fshader += '''
         // normal mapping
         float3 normalModifier = tex2D(normalMap, detailCoordSmall) + tex2D(normalMap, detailCoordBig) + tex2D(normalMap, detailCoordHuge) - 1.5;
-        input.l_normal *= normalModifier.z/normalMapStrength.x;
+        input.l_normal *= normalModifier.z/normalMapStrength;
         input.l_normal.x += normalModifier.x;
         input.l_normal.y += normalModifier.y;
         input.l_normal = normalize(input.l_normal);
@@ -717,6 +714,8 @@ void fshader(
         //result = tot_diffuse + tot_ambient;
         // Debug view DLight only
         // result = tot_diffuse;
+        //result = float4(1.0,0,0,0.5);
+        
 
         
         //hdr0   brightness drop 1 -> 3/4

@@ -187,12 +187,12 @@ class ShaderTexturer(TerrainTexturer):
         self.tex4 = self.loadTexture("snow.jpg")
 
         self.normalTS = TextureStage('normalMap')
-        self.normalTS2 = TextureStage('normalMap2')
+        #self.normalTS2 = TextureStage('normalMap2')
         self.detailTS = TextureStage('detailMap')
-        self.ts1 = TextureStage('tex1')
-        self.ts2 = TextureStage('tex2')
-        self.ts3 = TextureStage('tex3')
-        self.ts4 = TextureStage('tex4')
+        self.ts1 = TextureStage('textures')
+        #self.ts2 = TextureStage('tex2')
+        #self.ts3 = TextureStage('tex3')
+        #self.ts4 = TextureStage('tex4')
 
         ### Load the boundries for each texture
         # regionLimits ( min height, max height, min slope, max slope )
@@ -242,9 +242,9 @@ class ShaderTexturer(TerrainTexturer):
 
         ### apply textures
         input.setTexture(self.ts1, self.tex1)
-        input.setTexture(self.ts2, self.tex2)
-        input.setTexture(self.ts3, self.tex3)
-        input.setTexture(self.ts4, self.tex4)
+        input.setTexture(self.ts1, self.tex2)
+        input.setTexture(self.ts1, self.tex3)
+        input.setTexture(self.ts1, self.tex4)
         #input.setTexture(self.detailTS, self.detailTex)
         #input.setTexScale(self.detailTS, 10, 10)
 

@@ -133,19 +133,19 @@ class ShaderMiscellaniousControl():
 
     def setNormalStrength(self, input):
         self.normalStregth = input
-        self.terrain.setShaderInput("normalMapStrength", [self.normalStregth])
+        self.terrain.setShaderFloatInput("normalMapStrength", self.normalStregth)
 
     def setSmallDetail(self, input):
         self.detailSmallScale = input
-        self.terrain.setShaderInput("detailSmallScale", [self.detailSmallScale])
+        self.terrain.setShaderFloatInput("detailSmallScale", self.detailSmallScale)
 
     def setBigDetail(self, input):
         self.detailBigScale = input
-        self.terrain.setShaderInput("detailBigScale", [self.detailBigScale])
+        self.terrain.setShaderFloatInput("detailBigScale", self.detailBigScale)
 
     def setHugeDetail(self, input):
         self.detailHugeScale = input
-        self.terrain.setShaderInput("detailHugeScale", [self.detailHugeScale])
+        self.terrain.setShaderFloatInput("detailHugeScale", self.detailHugeScale)
 
     def resize(self, size):
         self.size = size
