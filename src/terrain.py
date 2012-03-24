@@ -89,7 +89,7 @@ class HeightMap():
     def generateStackedPerlin(self, perlin, frequency, layers, frequencySpread, amplitudeSpread, id):
 
         for x in range(layers):
-            layer = PerlinNoise2(0, 0, 256, seed=id * x + x)
+            layer = PerlinNoise2(0, 0, 256, seed=id + x)
             layer.setScale(frequency / (math.pow(frequencySpread, x)))
             perlin.addLevel(layer, 1 / (math.pow(amplitudeSpread, x)))
 
@@ -97,7 +97,6 @@ class HeightMap():
         """Create perlin noise."""
 
         # See getHeight() for more details....
-
         # where perlin 1 is low terrain will be mostly low and flat
         # where it is high terrain will be higher and slopes will be exagerrated
         # increase perlin1 to create larger areas of geographic consistency
@@ -108,7 +107,7 @@ class HeightMap():
         # without perlin2 everything would look unnaturally smooth and regular
         # increase perlin2 to make the terrain smoother
         self.perlin2 = StackedPerlinNoise2()
-        self.generateStackedPerlin(self.perlin2, self.smoothness, 8, 2, 2.2, self.id + 10)
+        self.generateStackedPerlin(self.perlin2, self.smoothness, 8, 2, 2.2, self.id + 100)
 
 
     def getPrenormalizedHeight(self, p1, p2):
