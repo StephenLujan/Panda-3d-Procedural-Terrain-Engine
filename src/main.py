@@ -14,22 +14,6 @@ __date__ = "$Oct 7, 2010 4:10:23 AM$"
 if __name__ == "__main__":
     print "Hello World"
 
-import sys
-import os
-
-from panda3d.core import ConfigVariableInt
-from panda3d.core import loadPrcFile
-from pandac.PandaModules import Filename
-
-###############################################################################
-# Figure out what directory this program is in.
-MYDIR = os.path.abspath(sys.path[0])
-MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
-print('running from:' + MYDIR)
-
-loadPrcFile("config/config.prc")
-
-###############################################################################
 
 import direct.directbase.DirectStart
 from direct.filter.CommonFilters import CommonFilters
@@ -38,6 +22,7 @@ from direct.task.Task import Task
 from pandac.PandaModules import LightRampAttrib
 from pandac.PandaModules import PStatClient
 
+from config import *
 from gui import *
 from sky import *
 from terrain import *
@@ -153,8 +138,7 @@ class World(DirectObject):
         populator = TerrainPopulator()
         populator.addObject(makeTree, {}, 5)
 
-        maxRange = ConfigVariableInt("max-view-range", 400).getValue()
-        self.terrain = Terrain('Terrain', base.camera, maxRange, populator, self.bug_text)
+        self.terrain = Terrain('Terrain', base.camera, MAX_VIEW_RANGE, populator, self.bug_text, id = 666)
         self.terrain.reparentTo(render)
 
     def _loadWater(self):

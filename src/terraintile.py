@@ -9,6 +9,9 @@
 __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
 
+from collections import deque
+
+from config import *
 from pandac.PandaModules import Filename
 from pandac.PandaModules import GeoMipTerrain
 from pandac.PandaModules import NodePath
@@ -18,7 +21,7 @@ from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pstat_debug import pstat
 
-from collections import deque
+
 
 ###############################################################################
 #   TerrainTile
@@ -81,7 +84,7 @@ class TerrainTile(GeoMipTerrain):
         """Sets the height field to match the height map image."""
 
         self.setHeightField(self.image)
-
+        
     @pstat
     def makeHeightMap(self):
         """Generate a new heightmap image.
@@ -91,6 +94,12 @@ class TerrainTile(GeoMipTerrain):
         tile's position and the Terrain's getHeight() function.
 
         """
+
+        if SAVED_HEIGHT_MAPS:
+            fileName = "maps/height/" + self.name + ".png"
+            if self.image.read(Filename(fileName)):
+                print "read heightmap from " + fileName
+                return
 
         heightMapSize = self.terrain.tileSize * self.detail + 1
         self.image = PNMImage(heightMapSize, heightMapSize, 1, 65535)
@@ -109,8 +118,11 @@ class TerrainTile(GeoMipTerrain):
                 # why is it necessary to invert the y axis I wonder?
                 setGray(x, ySize - y, height)
         #self.postProcessImage()
-        #print "saving to "+self.fileName
-        #self.image.write(Filename("heightmaps/" + self.name + ".png"))
+        if SAVED_HEIGHT_MAPS:
+            fileName = "maps/height/" + self.name + ".png"
+            print "saving heightmap to " + fileName
+            self.image.write(Filename(fileName))
+
 
     def postProcessImage(self):
         """Perform filters and manipulations on the heightmap image."""
@@ -121,6 +133,12 @@ class TerrainTile(GeoMipTerrain):
         self.getRoot().setRenderModeWireframe()
 
     def makeSlopeMap(self):
+
+        if SAVED_SLOPE_MAPS:
+            fileName = "maps/slope/" + self.name + ".png"
+            if self.slopeMap.read(Filename(fileName)):
+                print "read slopemap from " + fileName
+                return
 
         self.slopeMap = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
         self.slopeMap.makeGrayscale()
@@ -139,16 +157,18 @@ class TerrainTile(GeoMipTerrain):
                 #print normal
                 normal.z /= self.terrain.getSz()
                 normal.normalize()
-                slope = 1.0 - normal.dot( Vec3(0,0,1))
+                slope = 1.0 - normal.dot(Vec3(0, 0, 1))
                 setGray(x, y, slope)
-        #self.getNormal (int x, int y)
- 	#Fetches the terrain normal at (x, y), where the input coordinate is specified in pixels.
-        #self.slopeMap.write(Filename("slopemaps/" + self.name + ".png"))
-        #print "makeSlopeMap", self.terrain.heightMapSize
+
+        if SAVED_SLOPE_MAPS:
+            fileName = "maps/slope/" + self.name + ".png"
+            print "saving slopemap to " + fileName
+            self.slopeMap.write(Filename(fileName))
+
 
     def createGroups(self):
-        self.statics = self.getRoot().attachNewNode(self.name+"_statics")
-        self.statics.setSz(1.0/self.terrain.getSz())
+        self.statics = self.getRoot().attachNewNode(self.name + "_statics")
+        self.statics.setSz(1.0 / self.terrain.getSz())
         self.statics.setShaderAuto()
 
     @pstat
@@ -197,16 +217,16 @@ class TextureMappedTerrainTile(TerrainTile):
         for tex in self.terrain.texturer.textureMapper.textures:
             texNum += 1
             self.maps.append(tex.image)
-            tex.image.write(Filename("texture maps/" + self.name +"+_texture" + str(texNum) + ".png"))
+            tex.image.write(Filename("texture maps/" + self.name + "+_texture" + str(texNum) + ".png"))
             
 
         num = 0
         for tex in self.maps:
             #tex.write(Filename("texture maps/" + self.name + 'tex' + str(num) + ".png"))
-            num+= 1
+            num += 1
             newTexture = Texture()
             newTexture.load(tex)
-            ts = TextureStage('alp'+str(num))
+            ts = TextureStage('alp' + str(num))
             self.getRoot().setTexture(ts, newTexture)
         #print self.getRoot().findAllTextureStages()
         self.createGroups()

@@ -264,12 +264,13 @@ void fshader(
             string += '''
             in uniform sampler2D map_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
             texNum += 1
-        return string[:-1] #trim last comma
-
-    def getTerrainPrepCode(self):
-        fshader = '''
+        string = string[:-1] +'''
 ) {
 '''
+        return string #trim last comma
+
+    def getTerrainPrepCode(self):
+        fshader = ''
 #        if self.fogDensity:
         if False:
             fshader += '''

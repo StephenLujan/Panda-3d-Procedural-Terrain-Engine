@@ -35,9 +35,6 @@ default-fov 60
 default-far 10000
 default-near 0.01
 
-# The distance below which terrain is guaranteed to be loaded and rendered
-max-view-range 250
-
 # Portal support so we can clip large chunks of geometry...
 allow-portal-cull 1
 
@@ -55,3 +52,13 @@ threading-model Cull/Draw
 # Sound off as there are issues right now...
 audio-library-name null
 
+############################################################################
+# --- Terrain Engine Specific Settings ---
+
+# The distance below which terrain is guaranteed to be loaded and rendered
+max-view-range 250
+
+save-height-maps #t
+save-slope-maps #f
+save-texture-maps #f
+save-vegetation-maps #f
