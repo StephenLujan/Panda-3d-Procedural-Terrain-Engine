@@ -1,9 +1,10 @@
 # To change this template, choose Tools | Templates
 # and open the template in the editor.
 
-import os
 import sys
 
+from direct.showbase import AppRunnerGlobal
+import os
 from panda3d.core import ConfigVariableBool
 from panda3d.core import ConfigVariableInt
 from panda3d.core import loadPrcFile
@@ -14,6 +15,16 @@ loadPrcFile("config/config.prc")
 MYDIR = os.path.abspath(sys.path[0])
 MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
 print('running from:' + MYDIR)
+
+#http://www.panda3d.org/forums/viewtopic.php?t=10222
+if AppRunnerGlobal.appRunner is None:
+    RUNTYPE = 'python'
+else:
+    print "dom", AppRunnerGlobal.appRunner.dom
+    if AppRunnerGlobal.appRunner.dom:
+        RUNTYPE = 'website'
+    else:
+        RUNTYPE = 'local'
 
 SAVED_HEIGHT_MAPS = ConfigVariableBool("save-height-maps", False).getValue()
 SAVED_SLOPE_MAPS = ConfigVariableBool("save-slope-maps", False).getValue()

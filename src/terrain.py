@@ -31,6 +31,7 @@ from pstat_debug import pstat
 from terraintexturer import *
 from terraintile import *
 from pandac.PandaModules import PTAFloat
+from config import *
 
 """
     Panda3d GeoMipTerrain tips:
@@ -234,7 +235,6 @@ class Terrain(NodePath):
 
     def initializeRenderingProperties(self):
         print "initializing terrain rendering properties..."
-        self.bakedTextures = False
         self.bruteForce = True
         #self.bruteForce = False
         if self.bruteForce:
@@ -421,7 +421,7 @@ class Terrain(NodePath):
     def _generateTile(self, x, y):
         """Creates a terrain tile at the input coordinates."""
         
-        if self.bakedTextures:
+        if SAVED_TEXTURE_MAPS:
             tile = TextureMappedTerrainTile(self, x, y)
         else:
             tile = TerrainTile(self, x, y)

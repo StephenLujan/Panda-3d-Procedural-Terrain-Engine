@@ -138,7 +138,11 @@ class World(DirectObject):
         populator = TerrainPopulator()
         populator.addObject(makeTree, {}, 5)
 
-        self.terrain = Terrain('Terrain', base.camera, MAX_VIEW_RANGE, populator, self.bug_text, id = 666)
+        if SAVED_HEIGHT_MAPS:
+            seed = 666
+        else:
+            seed = 0
+        self.terrain = Terrain('Terrain', base.camera, MAX_VIEW_RANGE, populator, self.bug_text, id = seed)
         self.terrain.reparentTo(render)
 
     def _loadWater(self):

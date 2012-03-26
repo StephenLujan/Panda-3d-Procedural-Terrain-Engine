@@ -15,7 +15,7 @@ class TerrainShaderTexture:
         self.regions = []
         self.terrain = terrain
         size = self.terrain.tileSize + 1
-        self.image = PNMImage(size, size, 3)
+        self.image = PNMImage()
         self.weight = 0.0
 
     def addRegion(self, region):
@@ -45,7 +45,7 @@ class TextureMapper:
 
         self.textures[textureNumber].addRegion(region)
 
-    def calculateWeight(self, value, minimum, maximum ):
+    def calculateWeight(self, value, minimum, maximum):
 
         if value > maximum:
             #print "value > maximum"
@@ -60,7 +60,7 @@ class TextureMapper:
         return weight
 
 
-    def calculateFinalWeight(self, height, slope, limits ):
+    def calculateFinalWeight(self, height, slope, limits):
         #print "calculateFinalWeight(",height, slope, limits,")"
 
         height = self.calculateWeight(height, limits.x, limits.y)
@@ -71,7 +71,7 @@ class TextureMapper:
 
     def calculateTextures(self, terrainTile):
 
-        size = terrainTile.slopeMap.getYSize()
+        size = self.terrain.tileSize + 1
         #getNormal = self.getNormal
         getSlope = terrainTile.slopeMap.getGray
         #slopeMult = self.terrain.maxHeight / self.terrain.horizontalScale
@@ -80,10 +80,13 @@ class TextureMapper:
         calculateFinalWeight = self.calculateFinalWeight
         textures = self.textures
 
+        for tex in textures:
+            tex.image = PNMImage(size, size, 3)
+
         for x in range(size):
             for y in range(size):
-                slope = getSlope(x,y)
-                height = getHeight(x,y) * maxHeight
+                slope = getSlope(x, y)
+                height = getHeight(x, y) * maxHeight
                 textureWeightTotal = 0.000001;
 
                 for tex in textures:

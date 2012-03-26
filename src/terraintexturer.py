@@ -8,25 +8,15 @@ __author__ = "Stephen"
 __date__ = "$Dec 15, 2010 2:14:33 AM$"
 
 
+from config import *
 from panda3d.core import Shader
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
-from direct.showbase import AppRunnerGlobal
 from terrainshadergenerator import *
 from terraintexturemap import *
-
-#http://www.panda3d.org/forums/viewtopic.php?t=10222
-if AppRunnerGlobal.appRunner is None:
-  RUNTYPE = 'python'
-else:
-  print "dom", AppRunnerGlobal.appRunner.dom
-  if AppRunnerGlobal.appRunner.dom:
-    RUNTYPE = 'website'
-  else:
-    RUNTYPE = 'local'
 
 ###############################################################################
 #   TerrainTexturer
@@ -215,7 +205,7 @@ class ShaderTexturer(TerrainTexturer):
 
         print "intializing terrain shader generator..."
         file = 'shaders/terrain.sha'
-        if self.terrain.bakedTextures:
+        if SAVED_TEXTURE_MAPS:
             sg = BakedTerrainShaderGenerator(self.terrain, self.textureMapper)
             file = 'shaders/bakedTerrain.sha'
         else:
@@ -232,7 +222,7 @@ class ShaderTexturer(TerrainTexturer):
         self.terrain.setShaderInput("normalMap", self.normalMap)
         self.terrain.setShaderInput("detailTex", self.detailTex)
         self.terrain.setShaderInput('tscale', self.texScale)
-        self.terrain.setShaderInput("fogColor", Vec4(1.0,1.0,1.0,1.0))
+        self.terrain.setShaderInput("fogColor", Vec4(1.0, 1.0, 1.0, 1.0))
         self.terrain.setShaderInput("camPos", base.camera.getPos())
 
     def apply(self, input):
@@ -254,7 +244,7 @@ class ShaderTexturer(TerrainTexturer):
         #input.setShaderInput('tscale', self.texScale)
         #input.setShaderInput("fogColor", Vec4(1.0,1.0,1.0,1.0))
         #input.setShaderInput("camPos", base.camera.getPos())
-        
+
         input.setShader(self.shader)
 
     def test(self):

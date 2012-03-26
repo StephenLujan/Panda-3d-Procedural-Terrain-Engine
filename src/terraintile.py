@@ -10,7 +10,6 @@ __author__ = "Stephen"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
 
 from collections import deque
-
 from config import *
 from pandac.PandaModules import Filename
 from pandac.PandaModules import GeoMipTerrain
@@ -48,7 +47,7 @@ class TerrainTile(GeoMipTerrain):
         GeoMipTerrain.__init__(self, name=self.name)
 
         self.image = PNMImage()
- 
+
 
         self.setAutoFlatten(GeoMipTerrain.AFMOff)
         self.getRoot().setPos(x, y, 0)
@@ -61,7 +60,7 @@ class TerrainTile(GeoMipTerrain):
             self.setBorderStitching(1)
             self.setNear(self.terrain.near)
             self.setFar(self.terrain.far)
-        
+
 
     def update(self, dummy):
         """Updates the GeoMip to use the correct LOD on each block."""
@@ -84,7 +83,7 @@ class TerrainTile(GeoMipTerrain):
         """Sets the height field to match the height map image."""
 
         self.setHeightField(self.image)
-        
+
     @pstat
     def makeHeightMap(self):
         """Generate a new heightmap image.
@@ -134,6 +133,7 @@ class TerrainTile(GeoMipTerrain):
 
     def makeSlopeMap(self):
 
+        self.slopeMap = PNMImage()
         if SAVED_SLOPE_MAPS:
             fileName = "maps/slope/" + self.name + ".png"
             if self.slopeMap.read(Filename(fileName)):
@@ -174,14 +174,14 @@ class TerrainTile(GeoMipTerrain):
     @pstat
     def make(self):
         """Build a finished renderable heightMap."""
-        
+
         # apply shader
         self.terrain.texturer.apply(self.getRoot())
-        
+
         # detail settings
         #self.getRoot().setSx(1.0 / self.detail)
         #self.getRoot().setSy(1.0 / self.detail)
-        
+
         self.makeHeightMap()
         self.setHeight()
         #self.getRoot().setSz(self.maxHeight)
@@ -205,32 +205,43 @@ class TextureMappedTerrainTile(TerrainTile):
         TerrainTile.__init__(self, terrain, x, y)
 
         # this sort of thing should really be done in c++
-        self.maps = deque()
+        self.textureMaps = deque()
 
     def make(self):
         TerrainTile.make(self)
-        #self.terrain.texturer.apply(self.getRoot())
         self.makeSlopeMap()
-        self.terrain.texturer.textureMapper.calculateTextures(self)
+        textureMapper = self.terrain.texturer.textureMapper
 
+        #try to read textureMaps
+        readTexMaps = True
+        texNum = 0
+        for tex in textureMapper.textures:
+            texNum += 1
+            fileName = "maps/textures/" + self.name + "+_texture" + str(texNum) + ".png"
+            if not tex.image.read(Filename(fileName)):
+                readTexMaps = False
+
+        #otherwise calculate textureMaps
+        if not readTexMaps:
+            self.terrain.texturer.textureMapper.calculateTextures(self)
+
+        #copy textureMaps to this terrainTile and save if necessary
         texNum = 0
         for tex in self.terrain.texturer.textureMapper.textures:
             texNum += 1
-            self.maps.append(tex.image)
-            tex.image.write(Filename("texture maps/" + self.name + "+_texture" + str(texNum) + ".png"))
-            
+            self.textureMaps.append(tex.image)
+            if not readTexMaps:
+                tex.image.write(Filename("maps/textures/" + self.name + "+_texture" + str(texNum) + ".png"))
 
+        #load textureMaps as actual textures for the shaders use
         num = 0
-        for tex in self.maps:
-            #tex.write(Filename("texture maps/" + self.name + 'tex' + str(num) + ".png"))
+        for tex in self.textureMaps:
             num += 1
             newTexture = Texture()
             newTexture.load(tex)
             ts = TextureStage('alp' + str(num))
             self.getRoot().setTexture(ts, newTexture)
         #print self.getRoot().findAllTextureStages()
-        self.createGroups()
-
 
 
 ###############################################################################
