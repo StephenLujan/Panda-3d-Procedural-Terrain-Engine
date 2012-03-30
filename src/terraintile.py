@@ -41,7 +41,7 @@ class TerrainTile(GeoMipTerrain):
         self.terrain = terrain
         self.xOffset = x
         self.yOffset = y
-        self.detail = 1 # higher means greater detail
+        self.heightMapDetail = 1 # higher means greater detail
 
         self.name = "ID" + str(terrain.id) + "_X" + str(x) + "_Y" + str(y)
         GeoMipTerrain.__init__(self, name=self.name)
@@ -54,7 +54,7 @@ class TerrainTile(GeoMipTerrain):
         GeoMipTerrain.setFocalPoint(self, terrain.focus)
         if self.terrain.bruteForce:
             GeoMipTerrain.setBruteforce(self, True)
-            GeoMipTerrain.setBlockSize(self, self.terrain.heightMapSize * self.detail)
+            GeoMipTerrain.setBlockSize(self, self.terrain.heightMapSize * self.heightMapDetail)
         else:
             GeoMipTerrain.setBlockSize(self, 16)
             self.setBorderStitching(1)
@@ -100,7 +100,7 @@ class TerrainTile(GeoMipTerrain):
                 print "read heightmap from " + fileName
                 return
 
-        heightMapSize = self.terrain.tileSize * self.detail + 1
+        heightMapSize = self.terrain.tileSize * self.heightMapDetail + 1
         self.image = PNMImage(heightMapSize, heightMapSize, 1, 65535)
 
         ySize = self.image.getYSize() - 1
@@ -108,7 +108,7 @@ class TerrainTile(GeoMipTerrain):
         setGray = self.image.setGray
         xo = self.xOffset
         yo = self.yOffset
-        d = self.detail
+        d = self.heightMapDetail
 
         for x in range(self.image.getXSize()):
             for y in range(ySize + 1):
@@ -128,7 +128,7 @@ class TerrainTile(GeoMipTerrain):
 
         #self.image.gaussianFilter()
 
-    def wireframe(self):
+    def setWireFrame(self, state):
         self.getRoot().setRenderModeWireframe()
 
     def makeSlopeMap(self):
@@ -179,8 +179,8 @@ class TerrainTile(GeoMipTerrain):
         self.terrain.texturer.apply(self.getRoot())
 
         # detail settings
-        #self.getRoot().setSx(1.0 / self.detail)
-        #self.getRoot().setSy(1.0 / self.detail)
+        #self.getRoot().setSx(1.0 / self.heightMapDetail)
+        #self.getRoot().setSy(1.0 / self.heightMapDetail)
 
         self.makeHeightMap()
         self.setHeight()
@@ -245,40 +245,6 @@ class TextureMappedTerrainTile(TerrainTile):
 
 
 ###############################################################################
-#   CachingTerrainTile !! UNUSED !!
-###############################################################################
-
-class CachingTerrainTile(TerrainTile):
-    """Unused!
-
-    This TerrainTile will use cached heightmap images if possible.
-    If it is not possible it will create new images and save them to disk.
-
-    """
-
-
-    def setHeightField(self, filename):
-        """Set the GeoMip heightfield from a heightmap image."""
-
-        GeoMipTerrain.setHeightfield(self, filename)
-
-    def setHeight(self):
-        """Set the heightfield to the the image file or generate a new one."""
-
-        if (self.image.getXSize() < 1):
-            self.image.read(Filename(self.mapName))
-            if (self.image.getXSize() < 1):
-                self.makeHeightMap()
-                self.image.read(Filename(self.mapName))
-        self.setHeightField(Filename(self.mapName))
-
-    def makeHeightMap(self):
-        """Generate a new heightmap image to use."""
-        TerrainTile.makeHeightMap(self)
-        self.image.write(Filename(self.mapName))
-
-
-###############################################################################
 #   LodTerrainTile !! UNUSED !!
 ###############################################################################
 
@@ -292,13 +258,16 @@ class LodTerrainTile(TerrainTile):
         TerrainTile.__init__(self, terrain, x, y)
         self.detail = 2
         self.setMinLevel(2)
-        self.make()
+        
+    def make(self):
+        TerrainTile.make(self)
 
     def setDetail(self, detail):
         if self.detail == detail:
             return
         self.detail = detail
         self.setMinLevel(detail)
+        #self.update(None)
         self.generate()
         self.getRoot().setPos(self.xOffset, self.yOffset, 0)
 
@@ -318,6 +287,11 @@ class LodTerrainTile2(NodePath):
         self.make()
 
     def setDetail(self, detail):
+        """This will switch to the necessary detail level.
+
+        If the necessary detail level does not yet exist, it will add it to the
+        build Queue on terrain.
+        """
         if self.detail == detail:
             return
         self.detail = detail
@@ -327,6 +301,7 @@ class LodTerrainTile2(NodePath):
             self.terrain.buildQueue.append((self, detail))
 
     def _setDetail(self, detail):
+        """This is used internally to swap the correct detail level in."""
         for d, tile in self.detailLevels.iteritems():
             if not d == detail:
                 #PandaNode.stashChild(self, tile)

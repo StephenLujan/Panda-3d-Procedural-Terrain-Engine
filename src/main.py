@@ -38,14 +38,13 @@ class World(DirectObject):
     def __init__(self):
         # set here your favourite background color - this will be used to fade to
 
-        bgcolor=(0, 0, 0, 1)
-#        base.setBackgroundColor(*bgcolor)
+        bgcolor=(0.2, 0.2, 0.2, 1)
+        base.setBackgroundColor(*bgcolor)
         self.splash = splashCard.splashCard('textures/loading.png', bgcolor)
         taskMgr.doMethodLater(0.01, self.load, "Load Task")
         self.bug_text = addText(-0.95, "Loading...", True, scale = 0.1)
 
     def load(self, task):
-        #yield task.cont
 
         PStatClient.connect()
 
@@ -62,8 +61,8 @@ class World(DirectObject):
         showFrame()
         self._loadTerrain()
 
-        self.bug_text.setText("loading fog...")
-        showFrame()
+        #self.bug_text.setText("loading fog...")
+        #showFrame()
         #self._loadFog()
 
         self.bug_text.setText("loading player...")
@@ -170,7 +169,7 @@ class World(DirectObject):
     def _loadPlayer(self):
         # Create the main character, Ralph
         
-        self.ralph = Player(self.terrain.getElevation, 50, 90)
+        self.ralph = Player(self.terrain.getElevation, 0, 0)
         self.focus = self.ralph
         self.terrain.focus = self.focus
         # Accept the control keys for movement
