@@ -1,8 +1,8 @@
-###
-# Author: Stephen Lujan
-###
-# This file contains code to populate terrain tiles with objects
-###
+"""
+populator.py: This file contains code to populate terrain tiles with objects
+"""
+__author__ = "Stephen Lujan"
+
 from terraintile import *
 from direct.showbase.RandomNumGen import *
 from pandac.PandaModules import TextNode, CardMaker
@@ -41,7 +41,7 @@ class LeafModel():
         self.np.flattenStrong()
         #np.flattenLight()
         #np.setTwoSided( True )
-        
+
         if jitter == -1:
             self.jitter = height/width/2
         else:
@@ -99,7 +99,7 @@ class TerrainPopulator():
 
         seed = terrain.heightMap.getHeight(yOff * -2, xOff * -2) * 2147483647
         dice = RandomNumGen(seed)
-        
+
         for factory in self.factories:
             #num = dice.randint(0, factory.averageNumber) + dice.randint(0, factory.averageNumber)
             num = int((dice.random() + dice.random()) * factory.averageNumber)

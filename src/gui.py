@@ -1,3 +1,10 @@
+"""
+gui.py: This file contains a gui for the real-time manipulation of settings
+related to the terrain engine. This is currently an implementation of Panda3d's
+DirectGui.
+"""
+__author__ = "Stephen Lujan"
+
 from direct.gui.DirectGui import *
 from direct.gui.DirectGuiBase import DirectGuiWidget
 from pandac.PandaModules import TextNode
@@ -44,7 +51,7 @@ class SlideControl():
 
 class ShaderRegionControl():
     def __init__(self, x, y, regionNumber, terrain, parent = aspect2d):
-        
+
         size = 0.5
         self.size = (-size,size,-size,size)
         self.frame = DirectFrame(frameColor=(0, 0, 0, 0),
@@ -94,7 +101,7 @@ class ShaderRegionControl():
         self.terrain.setShaderInput(key, value)
         #print 'setShaderInput' + str(value)
         #self.terrain.setShader(self.terrain.texturer.shader)
- 
+
     def resize(self, size):
         self.size = size
         vertical = size[1]- size[0]
@@ -160,7 +167,7 @@ class ShaderMiscellaniousControl():
 class TerrainShaderControl():
     def __init__(self, x, y, terrain, parent = aspect2d):
         self.terrain = terrain
-        
+
         size = 1.0
         self.size = (-size,size,-size,size)
         self.frame = DirectFrame(frameColor=(0, 0, 0, 0),
@@ -196,7 +203,7 @@ class TerrainShaderControl():
 
         for button in self.buttons:
             button.setOthers(self.buttons)
-        
+
     # Callback function for radio buttons
     def switchShaderControl(self, status=None):
         self.shaderControl.destroy()

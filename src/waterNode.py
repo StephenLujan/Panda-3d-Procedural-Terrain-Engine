@@ -1,3 +1,10 @@
+"""
+waterNode.py: This file contains the WaterNode used to render water in the
+terrain. This code is originally based on the WaterNode class from the Yet
+Another Roaming Ralph demo.
+"""
+__author__ = "Stephen Lujan"
+
 from panda3d.core import BoundingBox
 from pandac.PandaModules import CardMaker
 from pandac.PandaModules import CullFaceAttrib

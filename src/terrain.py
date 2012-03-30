@@ -1,18 +1,18 @@
-###
-# This file contains the terrain engine for panda 3d.
-#
-# The TerrainTile is a customized version of Panda3d's GeoMipTerrain.
-#
-# The HeightMap coverts world x,y coordinates into terrain height and is
-# therefore responsible for the appearance of terrain geometry.
-#
-# The TerrainTexturer handles all textures and or shaders on the terrain and is
-# generally responsible for the appearance of the terrain.
-#
-# The Terrain class ties all of these elements together. It is responsible for
-# tiling together the terrain tiles and storing their common attributes.
-###
-__author__ = "Stephen"
+"""
+terrain.py: This file contains the terrain engine for panda 3d.
+
+The TerrainTile is a customized version of Panda3d's GeoMipTerrain.
+
+The HeightMap coverts world x,y coordinates into terrain height and is
+therefore responsible for the appearance of terrain geometry.
+
+The TerrainTexturer handles all textures and or shaders on the terrain and is
+generally responsible for the appearance of the terrain.
+
+The Terrain class ties all of these elements together. It is responsible for
+tiling together the terrain tiles and storing their common attributes.
+"""
+__author__ = "Stephen Lujan"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
 
 import math

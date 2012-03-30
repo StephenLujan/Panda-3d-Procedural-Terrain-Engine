@@ -1,9 +1,15 @@
-from pandac.PandaModules import WindowProperties
+"""
+basicfunctions.py: This file contains simple useful functions for Panda3d
+"""
+__author__ = "Stephen Lujan"
+
+import time
+
+from direct.gui.OnscreenText import OnscreenText
+from direct.stdpy import thread
 from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import TextNode
-from direct.gui.OnscreenText import OnscreenText
-import time
-from direct.stdpy import thread
+from pandac.PandaModules import WindowProperties
 
 # Function returns the width / height ratio of the window or screen
 def getScreenRatio():
@@ -41,7 +47,7 @@ def disableMouse():
     props = WindowProperties()
     props.setCursorHidden(True)
     base.win.requestProperties(props)
-        
+
 _MOUSELOOK = True
 def toggleMouseLook():
     global _MOUSELOOK
@@ -50,16 +56,16 @@ def toggleMouseLook():
     props.setCursorHidden(_MOUSELOOK)
     base.win.requestProperties(props)
     return _MOUSELOOK
-    
+
 def getMouseLook():
     global _MOUSELOOK
     return _MOUSELOOK
 
 def screenShot():
-        base.screenshot()
-        print 'screenshot taken.'
+    base.screenshot()
+    print 'screenshot taken.'
 
-def setResolution(x = 800, y = 600, fullScreen = False):
+def setResolution(x=800, y=600, fullScreen=False):
     wp = WindowProperties()
     wp.setSize(x, y)
     wp.setFullscreen(fullScreen)

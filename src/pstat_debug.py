@@ -1,3 +1,10 @@
+"""
+pstat_debug.py
+
+This pstat function decorator will track a function within the pstat tool.
+This is the easiest way to profile slow code for Panda3d.
+"""
+
 def pstat(func):
     from pandac.PandaModules import PStatCollector
     collectorName = "Debug:%s" % func.__name__

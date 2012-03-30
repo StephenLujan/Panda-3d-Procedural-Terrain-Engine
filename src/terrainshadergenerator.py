@@ -1,12 +1,12 @@
-###
-# Author: Stephen Lujan
-###
-# This file contains a shader generator specific to the terrain
-###
+"""
+terrainshadergenerator.py: This file contains a shader generator
+specific to the terrain in this engine.
+"""
+__author__ = "Stephen Lujan"
 
-from terraintexturemap import *
-from pandac.PandaModules import PTAFloat
 from panda3d.core import Shader
+from pandac.PandaModules import PTAFloat
+from terraintexturemap import *
 
 ###############################################################################
 #   TerrainShaderGenerator
@@ -14,7 +14,7 @@ from panda3d.core import Shader
 
 class TerrainShaderGenerator:
 
-    def __init__(self, terrain, textureMapper = None):
+    def __init__(self, terrain, textureMapper=None):
 
         self.terrain = terrain
         if not textureMapper:
@@ -51,7 +51,7 @@ float FogAmount( float maxDistance, float3 PositionVS )
     float z = length( PositionVS ); // viewer position is at origin
     return saturate( 1-(z / maxDistance));
 }'''
-        
+
     def fogExponential(self):
         # We need to figure out what fog density we want.
         # Lets find out what density results in 75% fog at max view distance
@@ -91,7 +91,7 @@ float FogAmount( float density, float3 PositionVS )
 
     def createShader(self):
         self.feedThePanda()
-        
+
         shader = self.getHeader()
         shader += self.getFunctions()
         shader += self.getVertexFragmentConnector()
@@ -125,7 +125,7 @@ class BakedTerrainShaderGenerator(TerrainShaderGenerator):
         header += 'const float slopeScale = '
         header += str(self.terrain.maxHeight / self.terrain.horizontalScale) + ';'
         return header
-    
+
     def getFunctions(self):
         functions = ''
         if self.fogDensity:
@@ -146,10 +146,10 @@ float3 reflectVector( float3 input, float3 normal)
 }
 '''
         return functions
-    
-    
+
+
     def getVertexFragmentConnector(self):
-        vfconn ='''
+        vfconn = '''
 struct vfconn
 {
     //from terrain shader
@@ -157,22 +157,22 @@ struct vfconn
     float2 l_tex_coord3 : TEXCOORD3;
     float3 l_normal : TEXCOORD1;
     float3 l_world_pos : TEXCOORD2;
-    
+
     //from auto shader
     float4 l_eye_position : TEXCOORD4;
     float4 l_eye_normal : TEXCOORD5;
 '''
         if self.fogDensity:
-            vfconn +='''
+            vfconn += '''
     float l_fog : FOG;'''
 
-        vfconn +='''
+        vfconn += '''
 };
 '''
         return vfconn
-    
+
     def getVertexShader(self):
-        vShader ='''
+        vShader = '''
 void vshader(
         in float2 vtx_texcoord0 : TEXCOORD0,
         in float2 vtx_texcoord3 : TEXCOORD3,
@@ -203,14 +203,14 @@ void vshader(
         output.l_world_pos = mul(trans_model_to_world, vtx_position);
 '''
         if self.fogDensity:
-            vShader +='''
+            vShader += '''
         // there has to be a faster way to get the camera's coordinates in a shader
         float3 cam_to_vertex = output.l_world_pos - camPos;
         output.l_fog = FogAmount(fogDensity, cam_to_vertex);
 
 '''
 
-        vShader +='''
+        vShader += '''
         output.l_normal = vtx_normal.xyz;
         output.l_normal.x *= slopeScale;
         output.l_normal.y *= slopeScale;
@@ -223,9 +223,9 @@ void vshader(
 }
 '''
         return vShader
-    
+
     def getFragmentShaderTop(self):
-        fshader ='''
+        fshader = '''
 void fshader(
         in vfconn input,
         uniform float4 alight_alight0,
@@ -264,7 +264,7 @@ void fshader(
             string += '''
             in uniform sampler2D map_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
             texNum += 1
-        string = string[:-1] +'''
+        string = string[:-1] + '''
 ) {
 '''
         return string #trim last comma
@@ -288,7 +288,7 @@ void fshader(
 
 '''
         return fshader
-    
+
 
     def getTerrainTextureCode(self):
 
@@ -296,25 +296,25 @@ void fshader(
         string = ''
         for tex in self.textureMapper.textures:
             string += '''
-            float4 tex'''+ str(texNum) +' = tex2D(tex_'+ str(texNum) +', input.l_tex_coord);'
+                float4 tex''' + str(texNum) + ' = tex2D(tex_' + str(texNum) + ', input.l_tex_coord);'
             texNum += 1
-            
+
         texNum = 0
         for tex in self.textureMapper.textures:
             string += '''
-            float alpha'''+ str(texNum) +' = tex2D(map_'+ str(texNum) +', input.l_tex_coord3).a;'
+                float alpha''' + str(texNum) + ' = tex2D(map_' + str(texNum) + ', input.l_tex_coord3).a;'
             texNum += 1
-          
+
         texNum = 0
         for tex in self.textureMapper.textures:
             string += '''
-            terrainColor += tex'''+ str(texNum) +' * alpha'+ str(texNum) +' * 1.0;'
+                terrainColor += tex''' + str(texNum) + ' * alpha' + str(texNum) + ' * 1.0;'
             #terrainColor = tex2D(tex_2, input.l_tex_coord) * tex2D(tex_4, input.l_tex_coord).a* 5.5;'''
             #terrainColor += tex'''+ str(texNum) +'*1.5;'''
-            
+
             texNum += 1
         return string
-    
+
     def getFragmentShaderEnd(self):
 
         fshader = '''
@@ -381,7 +381,7 @@ void fshader(
         // Debug view DLight only
         // result = tot_diffuse;
 
-        
+
         //hdr0   brightness drop 1 -> 3/4
         //result.rgb = (result*result*result + result*result + result) / (result*result*result + result*result + result + 1);
         //hdr1   brightness drop 1 -> 2/3
@@ -403,12 +403,12 @@ void fshader(
     def feedThePanda(self):
 
         return
-            
-   
+
+
 ###############################################################################
 #   FullTerrainShaderGenerator
-###############################################################################           
-            
+###############################################################################
+
 class FullTerrainShaderGenerator(TerrainShaderGenerator):
 
     def getHeader(self):
@@ -422,7 +422,7 @@ class FullTerrainShaderGenerator(TerrainShaderGenerator):
         header += 'const float slopeScale = '
         header += str(self.terrain.maxHeight / self.terrain.horizontalScale) + ';'
         return header
-    
+
     def getFunctions(self):
         functions = ''
         if self.fogDensity:
@@ -476,10 +476,10 @@ float3 reflectVector( float3 input, float3 normal)
 }
 '''
         return functions
-    
-    
+
+
     def getVertexFragmentConnector(self):
-        vfconn ='''
+        vfconn = '''
 struct vfconn
 {
     //from terrain shader
@@ -492,16 +492,16 @@ struct vfconn
     float4 l_eye_normal : TEXCOORD4;
 '''
         if self.fogDensity:
-            vfconn +='''
+            vfconn += '''
     float l_fog : FOG;'''
 
-        vfconn +='''
+        vfconn += '''
 };
 '''
         return vfconn
-    
+
     def getVertexShader(self):
-        vShader ='''
+        vShader = '''
 void vshader(
         in float2 vtx_texcoord0 : TEXCOORD0,
         in float4 vtx_position : POSITION,
@@ -530,14 +530,14 @@ void vshader(
         output.l_world_pos = mul(trans_model_to_world, vtx_position);
 '''
         if self.fogDensity:
-            vShader +='''
+            vShader += '''
         // there has to be a faster way to get the camera's coordinates in a shader
         float3 cam_to_vertex = output.l_world_pos - camPos;
         output.l_fog = FogAmount(fogDensity.x, cam_to_vertex);
 
 '''
 
-        vShader +='''
+        vShader += '''
         output.l_normal = vtx_normal.xyz;
         output.l_normal.x *= slopeScale;
         output.l_normal.y *= slopeScale;
@@ -550,9 +550,9 @@ void vshader(
 }
 '''
         return vShader
-    
+
     def getFragmentShaderTop(self):
-        fshader ='''
+        fshader = '''
 void fshader(
         in vfconn input,
         uniform float4 alight_alight0,
@@ -575,7 +575,7 @@ void fshader(
         in uniform float4 fogColor : FOGCOLOR,
 '''
         return fshader
-    
+
     def getFShaderTerrainParameters(self):
 
         texNum = 0
@@ -596,7 +596,7 @@ void fshader(
         fshader = '''
 ) {
 '''
-#        if self.fogDensity:
+    #        if self.fogDensity:
         if False:
             fshader += '''
         if (input.l_fog == 1.0)
@@ -616,7 +616,7 @@ void fshader(
 
 '''
         return fshader
-    
+
     def getTerrainTextureCode(self):
 
         texNum = 0
@@ -647,7 +647,7 @@ void fshader(
             texNum += 1
         return string
 
-    
+
     def getFragmentShaderEnd(self):
 
         fshader = '''
@@ -716,9 +716,9 @@ void fshader(
         // Debug view DLight only
         // result = tot_diffuse;
         //result = float4(1.0,0,0,0.5);
-        
 
-        
+
+
         //hdr0   brightness drop 1 -> 3/4
         //result.rgb = (result*result*result + result*result + result) / (result*result*result + result*result + result + 1);
         //hdr1   brightness drop 1 -> 2/3
@@ -735,7 +735,7 @@ void fshader(
 }
 '''
         return fshader
- 
+
     def feedThePanda(self):
 
         texNum = 0

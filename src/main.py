@@ -1,12 +1,14 @@
-###
-# Author: Stephen Lujan
-# iModels: Jeff Styers, Reagan Heller, Gsk
-# Additional code from:
-# The panda3d roaming ralph demo, Gsk, Merlinson
-#
-# This is my Panda 3d Terrain Engine.
-# My aim is to create the best possible 100% procedurally generated terrain
-###
+"""
+main.py: This file is the starting point for a demo of the Panda3d Procedural
+Terrain Engine.
+
+iModels: Jeff Styers, Reagan Heller, Gsk
+Additional code from:
+The panda3d roaming ralph demo, Gsk, Merlinson
+
+This is my Panda 3d Terrain Engine.
+My aim is to create the best possible 100% procedurally generated terrain
+"""
 
 __author__ = "Stephen Lujan"
 __date__ = "$Oct 7, 2010 4:10:23 AM$"
@@ -30,7 +32,7 @@ from waterNode import *
 from creature import *
 from camera import *
 from basicfunctions import *
-import splashCard
+from splashCard import *
 
 
 class World(DirectObject):
@@ -40,7 +42,7 @@ class World(DirectObject):
 
         bgcolor=(0.2, 0.2, 0.2, 1)
         base.setBackgroundColor(*bgcolor)
-        self.splash = splashCard.splashCard('textures/loading.png', bgcolor)
+        self.splash = SplashCard('textures/loading.png', bgcolor)
         taskMgr.doMethodLater(0.01, self.load, "Load Task")
         self.bug_text = addText(-0.95, "Loading...", True, scale = 0.1)
 

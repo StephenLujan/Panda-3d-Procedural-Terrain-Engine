@@ -1,5 +1,10 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
+"""
+populator.py: This file handles all elements of an animated sky, affected by
+the time of day. Additionally it will introduce lighting to the scene,
+updated as appropriate for the skies condition.
+"""
+__author__ = "Stephen Lujan"
+
 
 from panda3d.core import PNMImage
 from pandac.PandaModules import AmbientLight
@@ -29,13 +34,13 @@ class ColoredByTime():
 
 class SkyBox(ColoredByTime):
     def __init__(self):
-        
+
         #self.skybox = loader.loadModel('models/skydome')
         #self.skybox.setTexture(loader.loadTexture('models/early.png'))
         skynode = base.cam.attachNewNode('skybox')
         self.skybox = loader.loadModel('models/rgbCube')
         self.skybox.reparentTo(skynode)
-        
+
         self.skybox.setTextureOff(1)
         self.skybox.setShaderOff(1)
         self.skybox.setTwoSided(True)
@@ -48,7 +53,7 @@ class SkyBox(ColoredByTime):
         self.skybox.setShaderOff(1)
         self.skybox.setFogOff(1)
         self.skybox.hide(BitMask32.bit(2)) # Hide from the volumetric lighting camera
-        
+
         self.dayColor = Vec4(.55, .65, .95, 1.0)
         self.nightColor = Vec4(.05, .05, .20, 1.0)
         self.sunsetColor = Vec4(.45, .5, .65, 1.0)
@@ -138,14 +143,14 @@ class CloudLayer(ColoredByTime):
     def setTime(self, time):
         self.colorize(time)
         self.clouds.setTexOffset(self.ts1, self.time * self.speed, self.time * self.speed);
-        
+
     def update(self, elapsed):
         self.time += elapsed
         self.clouds.setPos(base.cam.getPos(render) + Vec3(0, 0, self.z))
 
 class Sky():
     def __init__(self, filters):
-        
+
         self.skybox = SkyBox()
         self.sun = Sun(filters)
         self.clouds = CloudLayer()
@@ -163,10 +168,10 @@ class Sky():
         alnp = render.attachNewNode(alight)
         render.setLight(alnp)
         render.setShaderInput('alight0', alnp)
-        
+
     def addDirectLight(self):
         """Adds just a direct light as an alternative to adding a Sun."""
-        
+
         direct = Vec4(2.0, 1.9, 1.8, 1) #bright for hdr
         #direct = Vec4(0.7, 0.65, 0.6, 1)
         self.dlight = DirectionalLight('dlight')
@@ -175,7 +180,7 @@ class Sky():
         render.setLight(dlnp)
         render.setShaderInput('dlight0', dlnp)
         return dlnp
-        
+
     def setTime(self, time):
         self.time = time
         self.skybox.setTime(time)
@@ -189,7 +194,7 @@ class Sky():
     def stop(self):
         if self.updateTask != None:
             taskMgr.remove(self.updateTask)
-            
+
     def update(self, task):
         elapsed = task.time - self.previousTime
         self.previousTime = task.time

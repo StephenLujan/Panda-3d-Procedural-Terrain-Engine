@@ -1,8 +1,11 @@
-###
-# Author: Stephen Lujan
-###
-# This file contains the TextureMapper class and its constituents
-###
+"""
+ terraintexturemap.py:  This file contains the TextureMapper class
+ and its constituents. The TextureMapper is used to store the terrain textures,
+ their parameters for use on the terrain, and to generate weight maps to
+ describe the use of each texture on a TerrainTile. This last feature is an
+ alternative to a shader that calculates texture weights in realtime.
+"""
+__author__ = "Stephen Lujan"
 
 from pandac.PandaModules import PNMImage
 from pandac.PandaModules import Vec4

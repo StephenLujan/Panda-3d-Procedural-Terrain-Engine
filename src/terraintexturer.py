@@ -1,10 +1,10 @@
-###
-# Author: Stephen Lujan
-###
-# This file contains all of the TerrainTexturers
-###
+"""
+terraintexturer.py: This file contains the TerrainTextur class.
 
-__author__ = "Stephen"
+The TerrainTexturer handles all textures and or shaders on the terrain and is
+generally responsible for the appearance of the terrain.
+"""
+__author__ = "Stephen Lujan"
 __date__ = "$Dec 15, 2010 2:14:33 AM$"
 
 

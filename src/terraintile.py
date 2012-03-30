@@ -1,12 +1,9 @@
-###
-# This file contains the terrain tile used by Terrain.
-#
-# The TerrainTile is a customized instance of Panda3d's GeoMipTerrain.
-# The Terrain class holds all of the common properties TerrainTiles
-# can use, such as the height function, tile size, and the TerrainTexturer.
-#
-###
-__author__ = "Stephen"
+"""
+terraintile.py: This file contains the terrain tile used by the Terrain class.
+
+TerrainTile is a custom implementation of Panda3d's GeoMipMap.
+"""
+__author__ = "Stephen Lujan"
 __date__ = "$Oct 27, 2010 4:47:05 AM$"
 
 from collections import deque
@@ -258,7 +255,7 @@ class LodTerrainTile(TerrainTile):
         TerrainTile.__init__(self, terrain, x, y)
         self.detail = 2
         self.setMinLevel(2)
-        
+
     def make(self):
         TerrainTile.make(self)
 
