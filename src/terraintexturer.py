@@ -162,7 +162,7 @@ class ShaderTexturer(TerrainTexturer):
     def loadShader(self):
         """Textures based on altitude and slope."""
 
-        print "loading texures..."
+        print "loading textures..."
         ### texture scaling
         texScale = self.terrain.tileSize / 32 * self.terrain.horizontalScale
         self.texScale = Vec4(texScale, texScale, texScale, 1.0)

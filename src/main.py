@@ -17,22 +17,21 @@ if __name__ == "__main__":
     print "Hello World"
 
 
+from basicfunctions import *
+from camera import *
+from config import *
+from creature import *
 import direct.directbase.DirectStart
 from direct.filter.CommonFilters import CommonFilters
 from direct.showbase.DirectObject import DirectObject
 from direct.task.Task import Task
+from gui import *
 from pandac.PandaModules import LightRampAttrib
 from pandac.PandaModules import PStatClient
-
-from config import *
-from gui import *
 from sky import *
+from splashCard import *
 from terrain import *
 from waterNode import *
-from creature import *
-from camera import *
-from basicfunctions import *
-from splashCard import *
 
 
 class World(DirectObject):
@@ -40,51 +39,73 @@ class World(DirectObject):
     def __init__(self):
         # set here your favourite background color - this will be used to fade to
 
-        bgcolor=(0.2, 0.2, 0.2, 1)
+        bgcolor = (0.2, 0.2, 0.2, 1)
         base.setBackgroundColor(*bgcolor)
         self.splash = SplashCard('textures/loading.png', bgcolor)
         taskMgr.doMethodLater(0.01, self.load, "Load Task")
-        self.bug_text = addText(-0.95, "Loading...", True, scale = 0.1)
+        self.bug_text = addText(-0.95, "Loading...", True, scale=0.1)
 
     def load(self, task):
 
         PStatClient.connect()
 
         self.bug_text.setText("loading Display...")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self._loadDisplay()
 
         self.bug_text.setText("loading sky...")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self._loadSky()
 
         # Definitely need to make sure this loads before terrain
         self.bug_text.setText("loading terrain...")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self._loadTerrain()
+        yield Task.cont
+        yield Task.cont
+        while taskMgr.hasTaskNamed("preloadWaitTask"):
+            print "waiting"
+            yield Task.cont
+        print "terrain preloaded"
 
         #self.bug_text.setText("loading fog...")
         #showFrame()
         #self._loadFog()
 
         self.bug_text.setText("loading player...")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self._loadPlayer()
         
         self.bug_text.setText("loading water...")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self._loadWater()
 
         self.bug_text.setText("loading filters")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self._loadFilters()
         
         self.bug_text.setText("loading gui controls...")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self._loadGui()
 
         self.bug_text.setText("loading miscellanious")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         
         taskMgr.add(self.move, "moveTask")
 
@@ -96,9 +117,13 @@ class World(DirectObject):
         disableMouse()
 
         self.bug_text.setText("")
-        showFrame()
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
         self.splash.destroy()
         self.splash = None
+
+        yield Task.done
         
     def _loadGui(self):
         try: 
@@ -143,7 +168,7 @@ class World(DirectObject):
             seed = 666
         else:
             seed = 0
-        self.terrain = Terrain('Terrain', base.camera, MAX_VIEW_RANGE, populator, self.bug_text, id = seed)
+        self.terrain = Terrain('Terrain', base.camera, MAX_VIEW_RANGE, populator, feedBackString=self.bug_text, id=seed)
         self.terrain.reparentTo(render)
 
     def _loadWater(self):
@@ -157,7 +182,7 @@ class World(DirectObject):
         # load default shaders
         cf = CommonFilters(base.win, base.cam)
         #bloomSize
-        cf.setBloom(size='small', desat= 0.7, intensity = 1.5, mintrigger = 0.6, maxtrigger = 0.95)
+        cf.setBloom(size='small', desat=0.7, intensity=1.5, mintrigger=0.6, maxtrigger=0.95)
         #hdrtype:
         render.setAttrib(LightRampAttrib.makeHdr1())
         #perpixel:
@@ -251,17 +276,17 @@ class World(DirectObject):
         deltaX = md.getX() -200
         deltaY = md.getY() -200
         if self.mouseInvertY:
-            deltaY*= -1
+            deltaY *= -1
             
         if base.win.movePointer(0, 200, 200):
-            self.camera.update(deltaX,deltaY)
+            self.camera.update(deltaX, deltaY)
             
         self.ralph.update(elapsed)
         self.critter1.update(elapsed)
         self.critter2.update(elapsed)
 
         self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
-        self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor()*0.9)
+        self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor() * 0.9)
         #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \

@@ -180,9 +180,11 @@ class Terrain(NodePath):
             populator = TerrainPopulator()
         self.populator = populator
 
+        self.tileBuilder = TerrainTileBuilder(self)
+
         ##### Terrain Tile physical properties
         self.maxHeight = 300.0
-        self.tileSize = 64
+        self.tileSize = 128
         self.heightMapSize = self.tileSize + 1
 
         ##### Terrain scale and tile distances
@@ -221,7 +223,7 @@ class Terrain(NodePath):
         # this has to be initialized last because it requires values from self
         #self.newTile = TerrainTile(self, 0, 0)
         # loads all terrain tiles in range immediately
-        #self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
+        self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
     def initializeHeightMap(self, id=0):
         """ """
@@ -235,7 +237,8 @@ class Terrain(NodePath):
 
         #Remove old tiles that will not conform to a new heightmap
         for pos, tile in self.tiles.items():
-            self.removeTile(pos)
+            self.deleteTile(pos)
+        self.storage.clear()
 
         self.heightMap = HeightMap(id, self.waterHeight + 0.03)
         self.getHeight = self.heightMap.getHeight
@@ -273,6 +276,8 @@ class Terrain(NodePath):
 
         self.makeNewTile()
         self.removeOldTiles()
+        self.grabBuiltTile()
+
         #self.tileLodUpdate()
         #self.buildDetailLevels()
         
@@ -379,15 +384,21 @@ class Terrain(NodePath):
                     distanceSquared = deltaX * deltaX + deltaY * deltaY
 
                     if distanceSquared < buildDistanceSquared:
-                        self.buildQueue.append((x, y))
+                        self.tileBuilder.preload((x, y))
+        self.preloadTotal = self.tileBuilder.queue.qsize()
+        taskMgr.add(self.preloadWait, "preloadWaitTask")
 
-        total = len(self.buildQueue)
-        while len(self.buildQueue):
-            if self.feedBackString:
-                self.feedBackString = "Loading Terrain " + str(total-len(self.buildQueue)) + "/" + str(total)
-                #showFrame()
-            tile = self.buildQueue.popleft()
-            self._generateTile(tile)
+    def preloadWait(self, task):
+        print "preloadWait()"
+        if self.feedBackString:
+            done = self.preloadTotal - self.tileBuilder.queue.qsize()
+            self.feedBackString.setText("Loading Terrain " + str(done) + "/" + str(self.preloadTotal))
+
+        self.grabBuiltTile()
+        if self.tileBuilder.queue.qsize() > 2:
+            #print self.tileBuilder.queue.qsize()
+            return Task.cont
+        return Task.done
 
     #@pstat
     def makeNewTile(self):
@@ -401,7 +412,7 @@ class Terrain(NodePath):
         ystart = (int(y) / self.tileSize) * self.tileSize
         # radius is rounded up from minTileDistance to nearest multiple of tile size
         # not every tile within checkRadius will be made
-        checkRadius = (self.minTileDistance / self.tileSize + 1) * self.tileSize
+        checkRadius = (int(self.minTileDistance) / self.tileSize + 1) * self.tileSize
         halfTile = self.tileSize * 0.49
         tiles = self.tiles
 
@@ -423,18 +434,22 @@ class Terrain(NodePath):
         if not vec == 0:
             #print distance," < ",self.minTileDistance," and ",distance," < ",minDistance
             #self.generateTile(vec.getX(), vec.getY())
-            self._generateTile(vec)
+            self.dispatchTile(vec)
 
-    def dispatchNewTileAt(self, x, y):
-        """Dispatch a task to create a tile at the input coordinates."""
+    #@pstat
+    def dispatchTile(self, pos):
+        """Creates a terrain tile at the input coordinates."""
 
-        #self.newTile.xOffset = x
-        #self.newTile.yOffset = y
-        #self.tiles[(x, y)] = self.newTile
-        #_generateTile((x,y))
-        taskMgr.add(self._generateTileTask, name="_generateTile",
-                    extraArgs=[(x, y)], appendTask=True,
-                    taskChain='tileGenerationQueue', sort=1, priority=1)
+        if pos in self.storage:
+            tile = self.storage[pos]
+            self.tiles[pos] = tile
+            tile.getRoot().reparentTo(self)
+            del self.storage[pos]
+            print "tile recovered from storage at", pos
+            return
+
+        self.tileBuilder.build(pos)
+        self.tiles[pos] = 1
 
     #@pstat
     def _generateTile(self, pos):
@@ -447,22 +462,30 @@ class Terrain(NodePath):
             del self.storage[pos]
             print "tile recovered from storage at", pos
             return
-        
+
         if SAVED_TEXTURE_MAPS:
             tile = TextureMappedTerrainTile(self, pos[0], pos[1])
         else:
             tile = TerrainTile(self, pos[0], pos[1])
         tile.make()
+        self.populator.populate(tile)
         tile.getRoot().reparentTo(self)
         self.tiles[pos] = tile
-
-        #texturize tile
-        #self.texturer.texturize(tile)
-
-        self.populator.populate(tile)
-
         print "tile generated at", pos
+        
         return tile
+
+    def grabBuiltTile(self):
+        #print "grabBuiltTile()"
+        tile = self.tileBuilder.grab()
+        #print "tlie = ", tile
+        if tile:
+            pos = (tile.xOffset, tile.yOffset)
+            tile.getRoot().reparentTo(self)
+            self.tiles[pos] = tile
+            print "tile generated at", pos
+            return tile
+        return None
 
     #@pstat
     def removeOldTiles(self):
@@ -482,8 +505,9 @@ class Terrain(NodePath):
 
     def storeTile(self, pos):
         tile = self.tiles[pos]
-        tile.getRoot().detachNode()
-        self.storage[pos]= tile
+        if tile != 1:
+            tile.getRoot().detachNode()
+            self.storage[pos]= tile
         del self.tiles[pos]
         print "Tile removed from", pos
 

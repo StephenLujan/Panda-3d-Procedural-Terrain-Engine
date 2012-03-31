@@ -16,6 +16,9 @@ from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pstat_debug import pstat
+from direct.stdpy import threading2 as threading
+import Queue
+import time
 
 
 
@@ -310,3 +313,71 @@ class LodTerrainTile2(NodePath):
     def buildAndSet(self, detail):
         self.detailLevels[detail] = self.build(detail)
         self._setDetail(detail)
+
+###############################################################################
+#  ThreadTile
+###############################################################################
+class ThreadTile(threading.Thread):
+    def __init__(self, queue, out_queue, terrain):
+        threading.Thread.__init__(self)
+        self.queue = queue
+        self.out_queue = out_queue
+        self.terrain = terrain
+
+    def run(self):
+        # Have our thread serve "forever":
+        while True:
+            #print self.getName()
+            pos = self.queue.get()
+            if pos:
+                if SAVED_TEXTURE_MAPS:
+                    tile = TextureMappedTerrainTile(self.terrain, pos[0], pos[1])
+                else:
+                    tile = TerrainTile(self.terrain, pos[0], pos[1])
+                tile.make()
+                self.terrain.populator.populate(tile)
+                #place tile into out queue
+                self.out_queue.put(tile)
+                self.queue.task_done()
+          
+###############################################################################
+#  TerrainTileBuilder
+###############################################################################
+
+class TerrainTileBuilder():
+
+    def __init__(self, terrain):
+        self.queue = Queue.Queue()
+        self.out_queue = Queue.Queue()
+        self.terrain = terrain
+
+        #spawn a pool of threads, and pass them queue instance
+        print "Loading tile builder threads."
+        for i in range(2):
+            #try:
+            t = ThreadTile(self.queue, self.out_queue, terrain)
+            t.setName("TileBuilderThread"+str(i))
+            print "Created ", t.getName()
+            t.setDaemon(True)
+            t.start()
+            #except:
+            #print "Unable to start TileBuilderThread!"
+
+    def clearQueue(self):
+        while self.queue.qsize() > 1:
+            pos = self.queue.get_nowait()
+            if pos in self.terrain.tiles:
+                del self.terrain.tiles[pos]
+
+    def preload(self, pos):
+        self.queue.put(pos)
+
+    def build(self, pos):
+        self.clearQueue()
+        self.queue.put(pos)
+
+    def grab(self):
+        try:
+            return self.out_queue.get_nowait()
+        except:
+            return None
