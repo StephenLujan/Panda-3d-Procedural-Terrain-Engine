@@ -89,7 +89,7 @@ class HeightMap():
         self.normalizerSub = min
         self.normalizerMult = 1.0 / (max-min)
 
-        print "height normalized from [", min, ",", max, "]"
+        logging.info( "height normalized from ["+ str(min)+ ","+ str(max)+ "]")
 
     def generateStackedPerlin(self, perlin, frequency, layers, frequencySpread, amplitudeSpread, id):
 
@@ -228,7 +228,7 @@ class Terrain(NodePath):
     def initializeHeightMap(self, id=0):
         """ """
 
-        print "initializing heightmap..."
+        logging.info( "initializing heightmap...")
 
         if id == 0:
             self.dice = RandomNumGen(TimeVal().getUsec())
@@ -244,7 +244,7 @@ class Terrain(NodePath):
         self.getHeight = self.heightMap.getHeight
 
     def initializeRenderingProperties(self):
-        print "initializing terrain rendering properties..."
+        logging.info( "initializing terrain rendering properties...")
         self.bruteForce = True
         #self.bruteForce = False
         if self.bruteForce:
@@ -259,28 +259,28 @@ class Terrain(NodePath):
         #self.texturer = DetailTexturer(self)
         #self.texturer.apply(self)
         #self.setShaderInput("zMultiplier", )
-        print "rendering properties initialized..."
+        logging.info( "rendering properties initialized...")
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""
 
-        print "initializing terrain update task..."
+        logging.info( "initializing terrain update task...")
 
         ##Add tasks to keep updating the terrain
         #taskMgr.add(self.updateTilesTask, "updateTiles", sort=9, priority=0)
         self.buildQueue = deque()
         taskMgr.add(self.update, "update", sort=9, priority=0)
-        
+
     def update(self, task):
         """This task updates terrain as needed."""
 
         self.makeNewTile()
         self.removeOldTiles()
-        self.grabBuiltTile()
+        #self.grabBuiltTile()
 
         #self.tileLodUpdate()
         #self.buildDetailLevels()
-        
+
         return task.again
 
     def updateLight(self):
@@ -301,17 +301,17 @@ class Terrain(NodePath):
 
         for pos, tile in self.tiles.items():
             tile.update(task)
-    
+
     def tileLodUpdate(self):
         """Unused! LOD causes exposed terrain seams.
-        
+
         Updates tiles to LOD appropriate for their distance.
-        
+
         setMinDetailLevel() doesn't flag a geomipterrain as dirty, so update
         will not alter detail level. It would have to be regenerated.
         Instead we will use a special LodTerrainTile.
         """
-        
+
         x = self.focus.getX() / self.horizontalScale
         y = self.focus.getY() / self.horizontalScale
         center = self.tileSize * 0.5
@@ -327,7 +327,7 @@ class Terrain(NodePath):
         midOuter *= midOuter
         lowInner = self.minTileDistance * 0.55 + center
         lowInner *= lowInner
-        
+
         for pos, tile in self.tiles.items():
             deltaX = x - pos[0] + center
             deltaY = y - pos[1] + center
@@ -338,20 +338,20 @@ class Terrain(NodePath):
                 tile.setDetail(1)
             elif distance > lowInner:
                 tile.setDetail(2)
-             
+
     def buildDetailLevels(self):
         """Unused."""
-        
+
         n = len(self.buildQueue) / 5.0
         if n > 0 and n < 1:
             n = 1
         else:
             n = int(n)
-        
+
         for i in range(n):
             request = self.buildQueue.popleft()
             request[0].buildAndSet(request[1])
-            
+
     def preload(self, xpos=1, ypos=1):
         """Loads all tiles in range immediately.
 
@@ -362,7 +362,7 @@ class Terrain(NodePath):
 
         """
 
-        print "preloading terrain tiles..."
+        logging.info( "preloading terrain tiles...")
 
         # x and y start are rounded to the nearest multiple of tile size
         xstart = (int(xpos / self.horizontalScale) / self.tileSize) * self.tileSize
@@ -389,14 +389,16 @@ class Terrain(NodePath):
         taskMgr.add(self.preloadWait, "preloadWaitTask")
 
     def preloadWait(self, task):
-        print "preloadWait()"
+        #logging.info( "preloadWait()")
         if self.feedBackString:
             done = self.preloadTotal - self.tileBuilder.queue.qsize()
-            self.feedBackString.setText("Loading Terrain " + str(done) + "/" + str(self.preloadTotal))
+            feedback = "Loading Terrain " + str(done) + "/" + str(self.preloadTotal)
+            logging.info( feedback)
+            self.feedBackString.setText(feedback)
 
-        self.grabBuiltTile()
-        if self.tileBuilder.queue.qsize() > 2:
-            #print self.tileBuilder.queue.qsize()
+        #self.grabBuiltTile()
+        if self.tileBuilder.queue.qsize() > 0:
+            #logging.info( self.tileBuilder.queue.qsize())
             return Task.cont
         return Task.done
 
@@ -416,7 +418,7 @@ class Terrain(NodePath):
         halfTile = self.tileSize * 0.49
         tiles = self.tiles
 
-        #print xstart, ystart, checkRadius
+        #logging.info( xstart, ystart, checkRadius)
         vec = 0
         minFoundDistance = 9999999999.0
         minDistanceSq = self.minTileDistance * self.minTileDistance
@@ -432,7 +434,7 @@ class Terrain(NodePath):
                         minFoundDistance = distanceSq
                         vec = (checkX, checkY)
         if not vec == 0:
-            #print distance," < ",self.minTileDistance," and ",distance," < ",minDistance
+            #logging.info( distance," < ",self.minTileDistance," and ",distance," < ",minDistance)
             #self.generateTile(vec.getX(), vec.getY())
             self.dispatchTile(vec)
 
@@ -445,7 +447,7 @@ class Terrain(NodePath):
             self.tiles[pos] = tile
             tile.getRoot().reparentTo(self)
             del self.storage[pos]
-            print "tile recovered from storage at", pos
+            logging.info( "tile recovered from storage at "+ str(pos))
             return
 
         self.tileBuilder.build(pos)
@@ -460,7 +462,7 @@ class Terrain(NodePath):
             self.tiles[pos] = tile
             tile.getRoot().reparentTo(self)
             del self.storage[pos]
-            print "tile recovered from storage at", pos
+            logging.info( "tile recovered from storage at "+ str(pos))
             return
 
         if SAVED_TEXTURE_MAPS:
@@ -471,19 +473,19 @@ class Terrain(NodePath):
         self.populator.populate(tile)
         tile.getRoot().reparentTo(self)
         self.tiles[pos] = tile
-        print "tile generated at", pos
-        
+        logging.info( "tile generated at "+ str(pos))
+
         return tile
 
     def grabBuiltTile(self):
-        #print "grabBuiltTile()"
+        #logging.info( "grabBuiltTile()")
         tile = self.tileBuilder.grab()
-        #print "tlie = ", tile
+        #logging.info( "tlie = "+ str(tile))
         if tile:
             pos = (tile.xOffset, tile.yOffset)
             tile.getRoot().reparentTo(self)
             self.tiles[pos] = tile
-            print "tile generated at", pos
+            logging.info( "tile generated at "+ str(pos))
             return tile
         return None
 
@@ -500,7 +502,7 @@ class Terrain(NodePath):
             deltaY = y - (pos[1] + center)
             distance = deltaX * deltaX + deltaY * deltaY
             if distance > maxDistanceSquared:
-                #print distance, " > ", self.maxTileDistance * self.maxTileDistance
+                #logging.info( distance+ " > "+ self.maxTileDistance * self.maxTileDistance)
                 self.storeTile(pos)
 
     def storeTile(self, pos):
@@ -509,14 +511,14 @@ class Terrain(NodePath):
             tile.getRoot().detachNode()
             self.storage[pos]= tile
         del self.tiles[pos]
-        print "Tile removed from", pos
+        logging.info( "Tile removed from "+ str(pos))
 
     def deleteTile(self, pos):
         """Removes a specific tile from the Terrain."""
 
         self.tiles[pos].getRoot().detachNode()
         del self.tiles[pos]
-        print "Tile deleted from", pos
+        logging.info( "Tile deleted from "+ str(pos))
 
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
@@ -537,7 +539,7 @@ class Terrain(NodePath):
 
     def test(self):
         self.texturer.test()
-        
+
     def setShaderFloatInput(self, name, input):
-        print "set shader input ",name," to ",input
+        logging.info("set shader input "+ name+" to "+str(input))
         self.setShaderInput(name, PTAFloat([input]))

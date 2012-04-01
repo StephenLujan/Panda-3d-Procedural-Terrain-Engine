@@ -24,7 +24,7 @@ from pandac.PandaModules import Vec4
 class WaterNode():
     def __init__(self, world, x1, y1, x2, y2, z):
         self.world = world
-        print('setting up water plane at z=' + str(z))
+        logging.info(('setting up water plane at z=' + str(z)))
 
         # Water surface
         maker = CardMaker('water')

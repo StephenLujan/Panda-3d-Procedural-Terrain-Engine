@@ -127,7 +127,7 @@ class FollowCamera(TerrainCamera):
     def fixHeight(self):
         pos = self.camNode.getPos(render)
         minZ = self.terrain.getElevation(pos.x, pos.y) + 1.2
-        #print minZ
+        #logging.info( minZ)
         if pos.z < minZ:
             pos.z = minZ
         self.camNode.setPos(render, pos)

@@ -97,7 +97,7 @@ class TerrainTile(GeoMipTerrain):
         if SAVED_HEIGHT_MAPS:
             fileName = "maps/height/" + self.name + ".png"
             if self.image.read(Filename(fileName)):
-                print "read heightmap from " + fileName
+                logging.info( "read heightmap from " + fileName)
                 return
 
         heightMapSize = self.terrain.tileSize * self.heightMapDetail + 1
@@ -119,7 +119,7 @@ class TerrainTile(GeoMipTerrain):
         #self.postProcessImage()
         if SAVED_HEIGHT_MAPS:
             fileName = "maps/height/" + self.name + ".png"
-            print "saving heightmap to " + fileName
+            logging.info( "saving heightmap to " + fileName)
             self.image.write(Filename(fileName))
 
 
@@ -137,7 +137,7 @@ class TerrainTile(GeoMipTerrain):
         if SAVED_SLOPE_MAPS:
             fileName = "maps/slope/" + self.name + ".png"
             if self.slopeMap.read(Filename(fileName)):
-                print "read slopemap from " + fileName
+                logging.info( "read slopemap from " + fileName)
                 return
 
         self.slopeMap = PNMImage(self.terrain.heightMapSize, self.terrain.heightMapSize)
@@ -154,7 +154,7 @@ class TerrainTile(GeoMipTerrain):
                 normal = getNormal(x, y)
                 #  feed pixel into image
                 # why is it necessary to invert the y axis I wonder?
-                #print normal
+                #logging.info( normal)
                 normal.z /= self.terrain.getSz()
                 normal.normalize()
                 slope = 1.0 - normal.dot(Vec3(0, 0, 1))
@@ -162,7 +162,7 @@ class TerrainTile(GeoMipTerrain):
 
         if SAVED_SLOPE_MAPS:
             fileName = "maps/slope/" + self.name + ".png"
-            print "saving slopemap to " + fileName
+            logging.info( "saving slopemap to " + fileName)
             self.slopeMap.write(Filename(fileName))
 
 
@@ -241,7 +241,7 @@ class TextureMappedTerrainTile(TerrainTile):
             newTexture.load(tex)
             ts = TextureStage('alp' + str(num))
             self.getRoot().setTexture(ts, newTexture)
-        #print self.getRoot().findAllTextureStages()
+        #logging.info( self.getRoot().findAllTextureStages())
 
 
 ###############################################################################
@@ -327,9 +327,10 @@ class ThreadTile(threading.Thread):
     def run(self):
         # Have our thread serve "forever":
         while True:
-            #print self.getName()
+            
             pos = self.queue.get()
             if pos:
+                logging.info( self.getName()+ "is building the tile at"+ str(pos))
                 if SAVED_TEXTURE_MAPS:
                     tile = TextureMappedTerrainTile(self.terrain, pos[0], pos[1])
                 else:
@@ -352,16 +353,16 @@ class TerrainTileBuilder():
         self.terrain = terrain
 
         #spawn a pool of threads, and pass them queue instance
-        print "Loading tile builder threads."
+        logging.info( "Loading tile builder threads.")
         for i in range(2):
             #try:
             t = ThreadTile(self.queue, self.out_queue, terrain)
             t.setName("TileBuilderThread"+str(i))
-            print "Created ", t.getName()
+            logging.info( "Created "+ t.getName())
             t.setDaemon(True)
             t.start()
             #except:
-            #print "Unable to start TileBuilderThread!"
+            #logging.info( "Unable to start TileBuilderThread!")
 
     def clearQueue(self):
         while self.queue.qsize() > 1:

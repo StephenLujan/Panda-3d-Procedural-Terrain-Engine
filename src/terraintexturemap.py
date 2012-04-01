@@ -51,24 +51,24 @@ class TextureMapper:
     def calculateWeight(self, value, minimum, maximum):
 
         if value > maximum:
-            #print "value > maximum"
+            #logging.info( "value > maximum")
             return 0
         if value < minimum:
-            #print "value < minimum"
+            #logging.info( "value < minimum")
             return 0
 
         weight = min(maximum - value, value - minimum)
-        #print "min(",maximum," - ", value," , ", value ," - ",minimum,") =",weight
+        #logging.info( "min(",maximum," - ", value," , ", value ," - ",minimum,") =",weight)
 
         return weight
 
 
     def calculateFinalWeight(self, height, slope, limits):
-        #print "calculateFinalWeight(",height, slope, limits,")"
+        #logging.info( "calculateFinalWeight(",height, slope, limits,")")
 
         height = self.calculateWeight(height, limits.x, limits.y)
         slope = self.calculateWeight(slope, limits.z, limits.w)
-        #print "height * slope =", height * slope
+        #logging.info( "height * slope =", height * slope)
         return height * slope
 
 
@@ -98,10 +98,10 @@ class TextureMapper:
                         weight = calculateFinalWeight(height, slope, region)
                         tex.weight += weight
                         textureWeightTotal += weight
-                        #print tex.weight
+                        #logging.info( tex.weight)
                 for tex in textures:
-                    #print "setGray(", x, y, "  tex.weight / textureWeightTotal =",tex.weight / textureWeightTotal
+                    #logging.info( "setGray(", x, y, "  tex.weight / textureWeightTotal =",tex.weight / textureWeightTotal)
                     tex.image.setGray(x, y, tex.weight / textureWeightTotal)
-                    #print tex.image.getGray(x,y)
+                    #logging.info( tex.image.getGray(x,y))
                     #tex.image.setAlpha(x, y, 0.3)
                     #tex.image.setAlpha(5, 5, 0.25)

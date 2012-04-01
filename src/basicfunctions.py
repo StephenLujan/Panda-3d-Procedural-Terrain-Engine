@@ -63,7 +63,7 @@ def getMouseLook():
 
 def screenShot():
     base.screenshot()
-    print 'screenshot taken.'
+    logging.info('screenshot taken.')
 
 def setResolution(x=800, y=600, fullScreen=False):
     wp = WindowProperties()

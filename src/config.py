@@ -6,18 +6,26 @@ from panda3d.core import ConfigVariableBool
 from panda3d.core import ConfigVariableInt
 from panda3d.core import loadPrcFile
 from pandac.PandaModules import Filename
+import logging
+
+logging.basicConfig(level=logging.INFO,
+                    format='(%(threadName)-10s) %(message)s',)
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='(%(threadName)-10s) %(message)s',)
+
 
 loadPrcFile("config/config.prc")
 # Figure out what directory this program is in.
 MYDIR = os.path.abspath(sys.path[0])
 MYDIR = Filename.fromOsSpecific(MYDIR).getFullpath()
-print('running from:' + MYDIR)
+logging.info(('running from:' + MYDIR))
 
 #http://www.panda3d.org/forums/viewtopic.php?t=10222
 if AppRunnerGlobal.appRunner is None:
     RUNTYPE = 'python'
 else:
-    print "dom", AppRunnerGlobal.appRunner.dom
+    logging.info("dom"+ str(AppRunnerGlobal.appRunner.dom))
     if AppRunnerGlobal.appRunner.dom:
         RUNTYPE = 'website'
     else:

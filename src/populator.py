@@ -59,7 +59,7 @@ def makeTree():
     #np.setTwoSided( True )
     #np.setHpr(Vec3(heading,0,0))
     #np.setPos(pos)
-    #print np
+    #logging.info( np)
     return np
 
 sphere = loader.loadModel("models/sphere")
@@ -73,7 +73,7 @@ def makeSphere():
     #np.setTwoSided( True )
     #np.setHpr(Vec3(heading,0,0))
     #np.setPos(pos)
-    print np
+    logging.info( np)
     return np
 
 class Factory():
@@ -107,8 +107,8 @@ class TerrainPopulator():
                 x = dice.random() * tileSize
                 y = dice.random() * tileSize
                 object = factory.factoryFunction(*factory.constructorParams)
-                #print object
-                #print factory.factoryFunction
+                #logging.info( object)
+                #logging.info( factory.factoryFunction)
                 self.addToTile(tile, object, x, y)
         tile.statics.flattenStrong()
 

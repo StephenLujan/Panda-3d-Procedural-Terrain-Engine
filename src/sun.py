@@ -121,14 +121,14 @@ class Sun:
         if sunsetStrength < 1.0:
             directColor *= 1-sunsetStrength
             sunsetColor *= sunsetStrength
-            #print directColor, sunsetColor
+            #logging.info( str(directColor)+ str(sunsetColor))
             lightColor = directColor + sunsetColor
 
         else:
             maxSunsetStrength = (1.0 + 1.0 / 6.0) * (1.0 + 1.0 / 6.0)
             duskTime = maxSunsetStrength - 1.0
             duskMultiplier = ((1.0 + duskTime) - sunsetStrength) / duskTime
-            #print duskMultiplier
+            #logging.info( duskMultiplier)
             if duskMultiplier < 0:
                 lightColor = Vec4(0, 0, 0, 1)
             else:
@@ -141,7 +141,7 @@ class Sun:
         sunsetColor = Vec4(1.0, 0.9, 0.7, 1)
         directColor *= 1-sunsetStrength
         sunsetColor *= sunsetStrength
-        #print directColor, sunsetColor
+        #logging.info( str(directColor)+ str(sunsetColor))
         lightColor = directColor + sunsetColor
         self.sun.setColorScale(lightColor, 1000)        
 
@@ -156,7 +156,7 @@ class Sun:
         angle = noonOffset * math.pi / 2
         y = math.sin(angle)
         z = math.cos(angle)
-        #print "sun angle, x, z: ", angle, x, z
+        #logging.info( "sun angle, x, z: ", angle, x, z)
         self.setPos(Vec3(0, y, z))
 
     def start(self):

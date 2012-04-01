@@ -63,7 +63,7 @@ class ShaderRegionControl():
         self.regionNumber = regionNumber
         self.terrain = terrain
         self.currentRegion = Vec4(terrain.getShaderInput('region' + str(self.regionNumber) + 'Limits').getVector())
-        #print "shader control panel for region ", regionNumber, ": ", str(self.currentRegion)
+        #logging.info( "shader control panel for region "+ str(regionNumber)+ ": "+ str(self.currentRegion))
 
         self.minHeight = self.currentRegion[0]
         self.minHeightSlide = SlideControl(0, 0.6, parent = self.frame, range = (-0.1 * terrain.maxHeight, 1.1 * terrain.maxHeight), value = self.minHeight, name = "Min Height", function = self.setMinHeight, ysize = 1.5, xsize = 1.5)
@@ -99,7 +99,7 @@ class ShaderRegionControl():
         key = 'region' + str(self.regionNumber) + 'Limits'
         value = self.regionBounds()
         self.terrain.setShaderInput(key, value)
-        #print 'setShaderInput' + str(value)
+        #logging.info( 'setShaderInput' + str(value))
         #self.terrain.setShader(self.terrain.texturer.shader)
 
     def resize(self, size):

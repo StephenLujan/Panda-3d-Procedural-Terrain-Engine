@@ -217,5 +217,5 @@ class Ai(Walker):
 
         desiredHeading = math.degrees(math.atan2(desiredVelocity.y, desiredVelocity.x)) + 90
         desiredVelocity = Vec3(desiredVelocity.x, desiredVelocity.y, 0)
-        #print desiredVelocity
+        #logging.info( desiredVelocity)
         self.move(desiredVelocity, desiredHeading, elapsed)

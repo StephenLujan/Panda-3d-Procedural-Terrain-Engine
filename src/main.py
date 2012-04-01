@@ -13,9 +13,6 @@ My aim is to create the best possible 100% procedurally generated terrain
 __author__ = "Stephen Lujan"
 __date__ = "$Oct 7, 2010 4:10:23 AM$"
 
-if __name__ == "__main__":
-    print "Hello World"
-
 
 from basicfunctions import *
 from camera import *
@@ -33,6 +30,8 @@ from splashCard import *
 from terrain import *
 from waterNode import *
 
+if __name__ == "__main__":
+    logging.info( "Hello World")
 
 class World(DirectObject):
 
@@ -70,9 +69,9 @@ class World(DirectObject):
         yield Task.cont
         yield Task.cont
         while taskMgr.hasTaskNamed("preloadWaitTask"):
-            print "waiting"
+            logging.info( "waiting")
             yield Task.cont
-        print "terrain preloaded"
+        logging.info( "terrain preloaded")
 
         #self.bug_text.setText("loading fog...")
         #showFrame()
@@ -129,7 +128,7 @@ class World(DirectObject):
         try: 
             self.terrain.texturer.shader
         except: 
-            print "Terrain texturer has no shader to control."
+            logging.info( "Terrain texturer has no shader to control.")
         else:
             self.shaderControl = TerrainShaderControl(-0.4, -0.1, self.terrain)
             self.shaderControl.hide()     
@@ -245,7 +244,7 @@ class World(DirectObject):
 
     def _loadPointLight():
         self.lightpivot = render.attachNewNode("lightpivot")
-        self.lightpivot.hprInterval(10, Point3(360, 0, 0)).loop()
+        self.lightpivot.hprinterval(10, Point3(360, 0, 0)).loop()
         plight = PointLight('plight')
         plight.setColor(Vec4(1, 1, 1, 1))
         plight.setAttenuation(Vec3(0.7, 0.05, 0))
@@ -261,7 +260,7 @@ class World(DirectObject):
     def toggleMenu(self):
         ml = toggleMouseLook()
         try: self.shaderControl
-        except: print "No shader control found."
+        except: logging.info( "No shader control found.")
         else: self.shaderControl.setHidden(ml)
         
     def move(self, task):
@@ -301,8 +300,8 @@ class World(DirectObject):
         self.prevtime = task.time
         return Task.cont
 
-print('instancing world...')
+logging.info('instancing world...')
 w = World()
 
-print('calling run()...')
+logging.info('calling run()...')
 run()
