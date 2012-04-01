@@ -300,8 +300,11 @@ class World(DirectObject):
         self.prevtime = task.time
         return Task.cont
 
-logging.info('instancing world...')
-w = World()
+def launchTerrainDemo():
+    logging.info('instancing world...')
+    w = World()
+    logging.info('calling run()...')
+    run()
 
-logging.info('calling run()...')
-run()
+if __name__ == "__main__":
+    launchTerrainDemo()

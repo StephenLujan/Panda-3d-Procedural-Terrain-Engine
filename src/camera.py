@@ -14,6 +14,7 @@ from panda3d.core import Point3
 from panda3d.core import Vec3
 from panda3d.core import Vec4
 import math
+from config import *
  
 
 origin = Point3(0, 0, 0)

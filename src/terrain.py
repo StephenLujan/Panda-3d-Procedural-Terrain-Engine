@@ -223,7 +223,7 @@ class Terrain(NodePath):
         # this has to be initialized last because it requires values from self
         #self.newTile = TerrainTile(self, 0, 0)
         # loads all terrain tiles in range immediately
-        self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
+        self.oldpreload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
     def initializeHeightMap(self, id=0):
         """ """
@@ -352,7 +352,7 @@ class Terrain(NodePath):
             request = self.buildQueue.popleft()
             request[0].buildAndSet(request[1])
 
-    def preload(self, xpos=1, ypos=1):
+    def oldpreload(self, xpos=1, ypos=1):
         """Loads all tiles in range immediately.
 
         This can suspend the program for a long time and is best used when
@@ -360,6 +360,43 @@ class Terrain(NodePath):
         building any tile that is reasonably within the max distance. It does not
         prioritize tiles closest to the focus.
 
+        """
+
+        print "preloading terrain tiles..."
+
+        # x and y start are rounded to the nearest multiple of tile size
+        xstart = (int(xpos / self.horizontalScale) / self.tileSize) * self.tileSize
+        ystart = (int(ypos / self.horizontalScale) / self.tileSize) * self.tileSize
+        # check radius is rounded up to the nearest tile size from maxTileDistance
+        # not every tile in checkRadius will be made
+        checkRadius = (int(self.maxTileDistance) / self.tileSize + 1) * self.tileSize
+        halfTile = self.tileSize * 0.5
+        # build distance for the preloader will be halfway in between the normal
+        # load distance and the unloading distance
+        buildDistanceSquared = (self.minTileDistance + self.maxTileDistance) / 2
+        buildDistanceSquared = buildDistanceSquared * buildDistanceSquared
+
+        for x in range (xstart - checkRadius, xstart + checkRadius, self.tileSize):
+            for y in range (ystart - checkRadius, ystart + checkRadius, self.tileSize):
+                if not (x, y) in self.tiles:
+                    deltaX = xpos - (x + halfTile)
+                    deltaY = ypos - (y + halfTile)
+                    distanceSquared = deltaX * deltaX + deltaY * deltaY
+
+                    if distanceSquared < buildDistanceSquared:
+                        self.buildQueue.append((x, y))
+
+        total = len(self.buildQueue)
+        while len(self.buildQueue):
+            if self.feedBackString:
+                self.feedBackString = "Loading Terrain " + str(total-len(self.buildQueue)) + "/" + str(total)
+                #showFrame()
+            tile = self.buildQueue.popleft()
+            self._generateTile(tile)
+
+    def preload(self, xpos=1, ypos=1):
+        """
+        
         """
 
         logging.info( "preloading terrain tiles...")

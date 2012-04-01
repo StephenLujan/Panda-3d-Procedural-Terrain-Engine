@@ -10,6 +10,7 @@ from direct.gui.OnscreenImage import OnscreenImage
 from direct.interval.IntervalGlobal import *
 from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import Vec4
+from config import *
 
 class SplashCard(object):
     '''this class shows up a splash message'''

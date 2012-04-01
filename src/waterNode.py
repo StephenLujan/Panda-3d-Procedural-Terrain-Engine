@@ -20,6 +20,7 @@ from pandac.PandaModules import TextureStage
 from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
+from config import *
 
 class WaterNode():
     def __init__(self, world, x1, y1, x2, y2, z):

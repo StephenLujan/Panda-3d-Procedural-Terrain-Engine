@@ -9,6 +9,7 @@ from direct.gui.DirectGui import *
 from direct.gui.DirectGuiBase import DirectGuiWidget
 from pandac.PandaModules import TextNode
 from pandac.PandaModules import Vec4
+from config import *
 
 class SlideControl():
     def __init__(self, x, y, parent = aspect2d, range=(0,100), value = 50, xsize = 1.0, ysize = 1.0, name = "Slider Name", function = 0):

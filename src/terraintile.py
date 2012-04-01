@@ -365,10 +365,14 @@ class TerrainTileBuilder():
             #logging.info( "Unable to start TileBuilderThread!")
 
     def clearQueue(self):
-        while self.queue.qsize() > 1:
-            pos = self.queue.get_nowait()
-            if pos in self.terrain.tiles:
-                del self.terrain.tiles[pos]
+        return
+        while self.queue.qsize() > 2:
+            try:
+                pos = self.queue.get_nowait()
+                if pos in self.terrain.tiles:
+                    del self.terrain.tiles[pos]
+            except:
+                logging.info( "Unable to remove old tile from TileBuilder Queue")
 
     def preload(self, pos):
         self.queue.put(pos)

@@ -8,6 +8,7 @@ from direct.showbase.RandomNumGen import *
 from pandac.PandaModules import TextNode, CardMaker
 from pandac.PandaModules import Vec3,Vec4,Point3,Point2
 from pandac.PandaModules import Shader, Texture, TextureStage, TransparencyAttrib
+from config import *
 
 class LeafModel():
     def __init__(self, name, nrplates, width, height, shaderfile, texturefile, uvlist, jitter=-1):

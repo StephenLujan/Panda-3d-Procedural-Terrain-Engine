@@ -13,6 +13,7 @@ from pandac.PandaModules import TexGenAttrib
 from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from sun import *
+from config import *
 
 class ColoredByTime():
     def __init__(self):

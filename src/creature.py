@@ -13,6 +13,7 @@ from pandac.PandaModules import PandaNode
 from pandac.PandaModules import Vec2
 from pandac.PandaModules import Vec3
 import random
+from config import *
 
 origin = Vec3(0, 0, 0)
 

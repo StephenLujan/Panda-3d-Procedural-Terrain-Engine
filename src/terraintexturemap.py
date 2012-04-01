@@ -9,6 +9,7 @@ __author__ = "Stephen Lujan"
 
 from pandac.PandaModules import PNMImage
 from pandac.PandaModules import Vec4
+from config import *
 
 class TerrainShaderTexture:
 

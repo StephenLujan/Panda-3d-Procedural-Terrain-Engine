@@ -30,6 +30,7 @@ from pandac.PandaModules import Texture
 from pandac.PandaModules import TransparencyAttrib
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
+from config import *
 
 class Sun:
     """Represents the sun, handles godrays, etc."""
