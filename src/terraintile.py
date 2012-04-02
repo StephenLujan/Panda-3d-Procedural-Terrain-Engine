@@ -16,7 +16,8 @@ from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pstat_debug import pstat
-from direct.stdpy import threading2 as threading
+#from direct.stdpy import threading2 as threading
+import threading
 import Queue
 import time
 
@@ -176,18 +177,23 @@ class TerrainTile(GeoMipTerrain):
         """Build a finished renderable heightMap."""
 
         # apply shader
+        logging.info( "applying shader")
         self.terrain.texturer.apply(self.getRoot())
 
         # detail settings
         #self.getRoot().setSx(1.0 / self.heightMapDetail)
         #self.getRoot().setSy(1.0 / self.heightMapDetail)
 
+        logging.info( "making height map")
         self.makeHeightMap()
+        logging.info( "setHeight()")
         self.setHeight()
         #self.getRoot().setSz(self.maxHeight)
+        logging.info( "generate()")
         self.generate()
-        #self.terrain.texturer.apply(self.getRoot())
+
         #self.makeSlopeMap()
+        logging.info( "createGroups()")
         self.createGroups()
 
 
@@ -314,10 +320,29 @@ class LodTerrainTile2(NodePath):
         self.detailLevels[detail] = self.build(detail)
         self._setDetail(detail)
 
+
+    
 ###############################################################################
-#  ThreadTile
+#  makeTile
 ###############################################################################
-class ThreadTile(threading.Thread):
+def makeTile(threadName, terrain, pos):
+    tile = pos
+    logging.info( threadName+ " is instancing the tile at"+ str(pos))
+    if SAVED_TEXTURE_MAPS:
+        tile = TextureMappedTerrainTile(terrain, pos[0], pos[1])
+    else:
+        tile = TerrainTile(terrain, pos[0], pos[1])
+    logging.info( threadName+ " is building the tile at"+ str(pos))
+    tile.make()
+#                self.terrain.populator.populate(tile)
+    logging.info( threadName+ " finished the tile at"+ str(pos))
+    return tile
+
+
+###############################################################################
+#  PermanentTileBuilderThread
+###############################################################################
+class PermanentTileBuilderThread(threading.Thread):
     def __init__(self, queue, out_queue, terrain):
         threading.Thread.__init__(self)
         self.queue = queue
@@ -327,19 +352,25 @@ class ThreadTile(threading.Thread):
     def run(self):
         # Have our thread serve "forever":
         while True:
-            
             pos = self.queue.get()
             if pos:
-                logging.info( self.getName()+ "is building the tile at"+ str(pos))
-                if SAVED_TEXTURE_MAPS:
-                    tile = TextureMappedTerrainTile(self.terrain, pos[0], pos[1])
-                else:
-                    tile = TerrainTile(self.terrain, pos[0], pos[1])
-                tile.make()
-                self.terrain.populator.populate(tile)
-                #place tile into out queue
+                tile = makeTile(self.getName(), self.terrain, pos)
                 self.out_queue.put(tile)
                 self.queue.task_done()
+
+###############################################################################
+#  TransientTileBuilderThread
+###############################################################################
+class TransientTileBuilderThread(threading.Thread):
+    def __init__(self, pos, out_queue, terrain):
+        threading.Thread.__init__(self)
+        self.pos = pos
+        self.out_queue = out_queue
+        self.terrain = terrain
+
+    def run(self):
+            tile = makeTile(self.getName(), self.terrain, self.pos)
+            self.out_queue.put(tile)
           
 ###############################################################################
 #  TerrainTileBuilder
@@ -351,16 +382,17 @@ class TerrainTileBuilder():
         self.queue = Queue.Queue()
         self.out_queue = Queue.Queue()
         self.terrain = terrain
+        self.numTransients = 0
 
         #spawn a pool of threads, and pass them queue instance
-        logging.info( "Loading tile builder threads.")
-        for i in range(2):
-            #try:
-            t = ThreadTile(self.queue, self.out_queue, terrain)
-            t.setName("TileBuilderThread"+str(i))
-            logging.info( "Created "+ t.getName())
-            t.setDaemon(True)
-            t.start()
+#        logging.info( "Loading tile builder threads.")
+#        for i in range(20):
+#            #try:
+#            t = ThreadTile(self.queue, self.out_queue, terrain)
+#            t.setName("TileBuilderThread"+str(i))
+#            logging.info( "Created "+ t.getName())
+#            t.setDaemon(True)
+#            t.start()
             #except:
             #logging.info( "Unable to start TileBuilderThread!")
 
@@ -375,14 +407,25 @@ class TerrainTileBuilder():
                 logging.info( "Unable to remove old tile from TileBuilder Queue")
 
     def preload(self, pos):
-        self.queue.put(pos)
+        #self.queue.put(pos)
+        self.build(pos)
 
     def build(self, pos):
-        self.clearQueue()
-        self.queue.put(pos)
+        #self.clearQueue()
+        #self.queue.put(pos)
+        self.spawnTransientThread(pos)
+
 
     def grab(self):
         try:
             return self.out_queue.get_nowait()
         except:
             return None
+
+    def spawnTransientThread(self,pos):
+        self.numTransients += 1
+        t = TransientTileBuilderThread(pos, self.out_queue, self.terrain)
+        t.setName("TileBuilderThread"+str(self.numTransients))
+        logging.info( "Created "+ t.getName())
+        t.setDaemon(True)
+        t.start()
