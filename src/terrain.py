@@ -473,7 +473,11 @@ class Terrain(NodePath):
         if not vec == 0:
             #logging.info( distance," < ",self.minTileDistance," and ",distance," < ",minDistance)
             #self.generateTile(vec.getX(), vec.getY())
-            self.dispatchTile(vec)
+            if THREAD_LOAD_TERRAIN:
+                self.dispatchTile(vec)
+            else:
+                self._generateTile(vec)
+
 
     #@pstat
     def dispatchTile(self, pos):

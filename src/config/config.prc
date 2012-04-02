@@ -62,3 +62,4 @@ save-height-maps #f
 save-slope-maps #f
 save-texture-maps #f
 save-vegetation-maps #f
+thread-load-terrain #f
