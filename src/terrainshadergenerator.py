@@ -23,7 +23,6 @@ class TerrainShaderGenerator:
         self.textureMapper = textureMapper
         self.normalMapping = True
         self.detailTexture = True
-        self.ambientOcclusion = False
         self.parallax = False
         self.glare = False
         self.avoidConditionals = 1
@@ -36,6 +35,7 @@ class TerrainShaderGenerator:
         self.terrain.setShaderFloatInput("detailSmallScale", 1.3)
         self.terrain.setShaderFloatInput("detailBigScale", 7.0)
         self.terrain.setShaderFloatInput("detailHugeScale", 23.0)
+        self.terrain.setShaderFloatInput("ambientOcclusion", 1.0)
         logging.info( "done")
 
     def addTexture(self, texture):
@@ -96,7 +96,7 @@ float FogAmount( float density, float3 PositionVS )
 
     def getDetailTextureCode(self):
         fshader = '''
-
+        
         // get detail coordinates
         float2 detailCoordSmall = input.l_tex_coord * detailSmallScale;
         float2 detailCoordBig = input.l_tex_coord * detailBigScale;
@@ -553,7 +553,8 @@ struct vfconn
 '''
         if self.fogDensity:
             vfconn += '''
-    float l_fog : FOG;'''
+    float l_fog : FOG;
+    float4 l_color : COLOR;'''
 
         vfconn += '''
 };
@@ -566,6 +567,7 @@ void vshader(
         in float2 vtx_texcoord0 : TEXCOORD0,
         in float4 vtx_position : POSITION,
         in float4 vtx_normal : NORMAL,
+        in float4 vtx_color : COLOR,
 
         out vfconn output,
         out float4 l_position : POSITION,
@@ -586,6 +588,7 @@ void vshader(
         l_position = mul(mat_modelproj, vtx_position);
 
         //for terrain
+        output.l_color = vtx_color;
         output.l_tex_coord = vtx_texcoord0;
         output.l_world_pos = mul(trans_model_to_world, vtx_position);
 '''
@@ -629,6 +632,7 @@ void fshader(
         in uniform float detailSmallScale,
         in uniform float detailBigScale,
         in uniform float detailHugeScale,
+        in uniform float ambientOcclusion,
         '''
         if self.fogDensity:
             fshader += '''
@@ -721,7 +725,7 @@ void fshader(
         if self.detailTexture:
             fshader += '''
         // Add detail texture
-        attr_color *= 1.4 * detailColor;
+        attr_color *= 1.5 * detailColor;
 '''
         fshader += '''
         // Begin view-space light calculations
@@ -754,6 +758,8 @@ void fshader(
         result += tot_ambient * attr_color;
         result += tot_diffuse * attr_color;
         result *= attr_colorscale;
+        if (ambientOcclusion)
+            result *= input.l_color * input.l_color * 1.75;
         // End view-space light calculations
 
         //////////DEBUGGING

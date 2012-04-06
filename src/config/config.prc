@@ -56,7 +56,7 @@ audio-library-name null
 # --- Terrain Engine Specific Settings ---
 
 # The distance below which terrain is guaranteed to be loaded and rendered
-max-view-range 250
+max-view-range 400
 
 save-height-maps #f
 save-slope-maps #f

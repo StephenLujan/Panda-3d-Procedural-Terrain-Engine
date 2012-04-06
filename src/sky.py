@@ -46,7 +46,7 @@ class SkyBox(ColoredByTime):
         self.skybox.setShaderOff(1)
         self.skybox.setTwoSided(True)
         # make big enough to cover whole terrain, else there'll be problems with the water reflections
-        self.skybox.setScale(5000)
+        self.skybox.setScale(1.5* MAX_VIEW_RANGE)
         self.skybox.setBin('background', 1)
         self.skybox.setDepthWrite(False)
         self.skybox.setDepthTest(False)
@@ -63,28 +63,34 @@ class SkyBox(ColoredByTime):
 
     def setTime(self, time):
         self.colorize(time)
+        
 
 class DistanceFog(ColoredByTime):
     def __init__(self):
-        #exponential
-        #self.fog = Fog("Scene-wide exponential Fog object")
-        #self.fog.setExpDensity(0.025)
-        #linear
-        self.fog = Fog("A linear-mode Fog node")
-        self.fog.setLinearRange(0, 320)
-        self.fog.setLinearFallback(5, 20, 50)
 
+        self.exponential()
         render.attachNewNode(self.fog)
         render.setFog(self.fog)
 
-        self.dayColor = Vec4(1.0, 1.0, 1.0, 1.0)
-        self.nightColor = Vec4(.0, .0, .0, 1.0)
-        self.sunsetColor = Vec4(0.8, .65, .7, 1.0)
+        self.dayColor = Vec4(0.98, 0.98, 0.95, 1.0)
+        self.nightColor = Vec4(-0.5, -0.3, .0, 1.0)
+        self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
         ColoredByTime.__init__(self)
         self.setColor = self.fog.setColor
 
     def setTime(self, time):
         self.colorize(time)
+
+    def linear(self):
+        self.fog = Fog("A linear-mode Fog node")
+        self.fog.setLinearRange(0, 320)
+        self.fog.setLinearFallback(5, 20, 50)
+
+    def exponential(self):
+        self.fog = Fog("Scene-wide exponential Fog object")
+        density = 1.38629436 / (MAX_VIEW_RANGE + 30)
+        self.fog.setExpDensity(density)
+
 
 class CloudLayer(ColoredByTime):
     def __init__(self):
@@ -155,7 +161,7 @@ class Sky():
         self.skybox = SkyBox()
         self.sun = Sun(filters)
         self.clouds = CloudLayer()
-        #self.fog = DistanceFog()
+        self.fog = DistanceFog()
         #self.addDirectLight()
         self.dayLength = 120 #in seconds
         self.setTime(800.0)
@@ -187,7 +193,7 @@ class Sky():
         self.skybox.setTime(time)
         self.clouds.setTime(time)
         self.sun.setTime(time)
-        #self.fog.setTime(time)
+        self.fog.setTime(time)
 
     def start(self):
         self.updateTask = taskMgr.add(self.update, 'sky-update')

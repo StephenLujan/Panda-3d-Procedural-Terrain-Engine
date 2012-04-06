@@ -193,12 +193,24 @@ class ShaderMiscellaneousControl():
 
         self.resize(self.size)
 
-        self.occlusionButton = DirectCheckButton(text="Ambient Occlusion", scale=0.1,
+        self.occlusionButton = DirectCheckButton(text="Ambient Occlusion", scale=0.2,
                                            command=self.setAmbientOcclusion, pos=(-0.5, 0, 0.5),
                                            parent=self.frame)
 
+        self.fogDensity = self.terrain.texturer.shaderGenerator.fogDensity
+        #self.fogDensity = float(self.terrain.getShaderInput('fogDensity').getPtr())
+        self.fogDensitySlide = SlideControl(0, -0.6, parent=self.frame, range=(0, 0.1), value=self.fogDensity, name="Fog Density", function=self.setFogDensity, ysize=1.5, xsize=1.5)
+
+
     def setAmbientOcclusion(self, status):
-        logging.info("Ambient occlusion is not yet implemented.")
+        if status:
+            self.terrain.setShaderFloatInput("ambientOcclusion", 1.0)
+        else:
+            self.terrain.setShaderFloatInput("ambientOcclusion", 0.0)
+
+    def setFogDensity(self, input):
+        self.fogDensity = input
+        self.terrain.setShaderFloatInput("fogDensity", self.fogDensity)
 
     def resize(self, size):
         self.size = size

@@ -206,15 +206,15 @@ class ShaderTexturer(TerrainTexturer):
         logging.info( "intializing terrain shader generator...")
         file = 'shaders/terrain.sha'
         if SAVED_TEXTURE_MAPS:
-            sg = BakedTerrainShaderGenerator(self.terrain, self.textureMapper)
+            self.shaderGenerator = BakedTerrainShaderGenerator(self.terrain, self.textureMapper)
             file = 'shaders/bakedTerrain.sha'
         else:
-            sg = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
+            self.shaderGenerator = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
             file = 'shaders/fullTerrain.sha'
         logging.info( "terrain shader generator initialized...")
 
         if RUNTYPE == 'python':
-            sg.saveShader(file)
+            self.shaderGenerator.saveShader(file)
             self.shader = Shader.load(file, Shader.SLCg)
         else:
             self.shader = Shader.make(sg.createShader(), Shader.SLCg);

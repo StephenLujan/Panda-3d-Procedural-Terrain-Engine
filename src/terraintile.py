@@ -191,7 +191,7 @@ class TerrainTile(GeoMipTerrain):
         #self.getRoot().setSz(self.maxHeight)
 
         #http://www.panda3d.org/forums/viewtopic.php?t=12054
-        #self.calcAmbientOcclusion()
+        self.calcAmbientOcclusion()
         #logging.info( "generate()")
         self.generate()
 

@@ -285,7 +285,7 @@ class World(DirectObject):
         self.critter2.update(elapsed)
 
         self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
-        self.terrain.setShaderInput("fogColor", self.sky.clouds.clouds.getColor() * 0.9)
+        self.terrain.setShaderInput("fogColor", self.sky.fog.fog.getColor())
         #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \

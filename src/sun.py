@@ -78,6 +78,7 @@ class Sun:
             initstatenode = NodePath('InitialState')
             initstatenode.setColorScale(0, 0, 0, 1, 10000)
             initstatenode.setShaderOff(10000)
+            initstatenode.setFogOff(1)
             initstatenode.setLightOff(10000)
             initstatenode.setMaterialOff(10000)
             initstatenode.setTransparency(TransparencyAttrib.MBinary, 10000)
