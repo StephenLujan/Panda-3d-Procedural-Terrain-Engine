@@ -177,23 +177,26 @@ class TerrainTile(GeoMipTerrain):
         """Build a finished renderable heightMap."""
 
         # apply shader
-        logging.info( "applying shader")
+        #logging.info( "applying shader")
         self.terrain.texturer.apply(self.getRoot())
 
         # detail settings
         #self.getRoot().setSx(1.0 / self.heightMapDetail)
         #self.getRoot().setSy(1.0 / self.heightMapDetail)
 
-        logging.info( "making height map")
+        #logging.info( "making height map")
         self.makeHeightMap()
-        logging.info( "setHeight()")
+        #logging.info( "setHeight()")
         self.setHeight()
         #self.getRoot().setSz(self.maxHeight)
-        logging.info( "generate()")
+
+        #http://www.panda3d.org/forums/viewtopic.php?t=12054
+        #self.calcAmbientOcclusion()
+        #logging.info( "generate()")
         self.generate()
 
         #self.makeSlopeMap()
-        logging.info( "createGroups()")
+        #logging.info( "createGroups()")
         self.createGroups()
 
 
@@ -251,7 +254,7 @@ class TextureMappedTerrainTile(TerrainTile):
 
 
 ###############################################################################
-#   LodTerrainTile !! UNUSED !!
+#   LodTerrainTile
 ###############################################################################
 
 class LodTerrainTile(TerrainTile):
@@ -262,11 +265,14 @@ class LodTerrainTile(TerrainTile):
         """Builds a Tile for the terrain at input coordinates."""
 
         TerrainTile.__init__(self, terrain, x, y)
-        self.detail = 2
-        self.setMinLevel(2)
+        self.detail = 3
+        self.setMinLevel(3)
 
     def make(self):
         TerrainTile.make(self)
+
+    def getDetail(self):
+        return self.detail
 
     def setDetail(self, detail):
         if self.detail == detail:
@@ -283,7 +289,7 @@ class LodTerrainTile(TerrainTile):
 ###############################################################################
 
 class LodTerrainTile2(NodePath):
-    """Very fast but leaves obvious seams."""
+    """Loads all detail levels at once but leaves obvious seams."""
 
     def __init__(self, terrain, x, y):
         """Builds a Tile for the terrain at input coordinates."""
@@ -385,14 +391,14 @@ class TerrainTileBuilder():
         self.numTransients = 0
 
         #spawn a pool of threads, and pass them queue instance
-#        logging.info( "Loading tile builder threads.")
-#        for i in range(20):
-#            #try:
-#            t = ThreadTile(self.queue, self.out_queue, terrain)
-#            t.setName("TileBuilderThread"+str(i))
-#            logging.info( "Created "+ t.getName())
-#            t.setDaemon(True)
-#            t.start()
+        logging.info( "Loading tile builder threads.")
+        for i in range(3):
+            #try:
+            t = PermanentTileBuilderThread(self.queue, self.out_queue, terrain)
+            t.setName("TileBuilderThread"+str(i))
+            logging.info( "Created "+ t.getName())
+            t.setDaemon(True)
+            t.start()
             #except:
             #logging.info( "Unable to start TileBuilderThread!")
 
@@ -412,8 +418,8 @@ class TerrainTileBuilder():
 
     def build(self, pos):
         #self.clearQueue()
-        #self.queue.put(pos)
-        self.spawnTransientThread(pos)
+        self.queue.put(pos)
+        #self.spawnTransientThread(pos)
 
 
     def grab(self):

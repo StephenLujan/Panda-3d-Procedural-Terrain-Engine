@@ -23,6 +23,7 @@ class TerrainShaderGenerator:
         self.textureMapper = textureMapper
         self.normalMapping = True
         self.detailTexture = True
+        self.ambientOcclusion = False
         self.parallax = False
         self.glare = False
         self.avoidConditionals = 1

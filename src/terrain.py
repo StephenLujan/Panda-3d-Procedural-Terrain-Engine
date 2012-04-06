@@ -18,6 +18,7 @@ __date__ = "$Oct 27, 2010 4:47:05 AM$"
 import math
 
 from collections import deque
+from config import *
 from direct.showbase.RandomNumGen import *
 from direct.task.Task import Task
 from panda3d.core import BitMask32
@@ -30,12 +31,12 @@ from panda3d.core import PerlinNoise2
 from panda3d.core import StackedPerlinNoise2
 from panda3d.core import TimeVal
 from pandac.PandaModules import NodePath
+from pandac.PandaModules import PTAFloat
+from pandac.PandaModules import SceneGraphReducer
 from populator import *
 from pstat_debug import pstat
 from terraintexturer import *
 from terraintile import *
-from pandac.PandaModules import PTAFloat
-from config import *
 
 """
     Panda3d GeoMipTerrain tips:
@@ -89,7 +90,7 @@ class HeightMap():
         self.normalizerSub = min
         self.normalizerMult = 1.0 / (max-min)
 
-        logging.info( "height normalized from ["+ str(min)+ ","+ str(max)+ "]")
+        logging.info("height normalized from [" + str(min) + "," + str(max) + "]")
 
     def generateStackedPerlin(self, perlin, frequency, layers, frequencySpread, amplitudeSpread, id):
 
@@ -180,6 +181,8 @@ class Terrain(NodePath):
             populator = TerrainPopulator()
         self.populator = populator
 
+        self.graphReducer = SceneGraphReducer()
+
         self.tileBuilder = TerrainTileBuilder(self)
 
         ##### Terrain Tile physical properties
@@ -225,10 +228,12 @@ class Terrain(NodePath):
         # loads all terrain tiles in range immediately
         self.oldpreload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
 
+        #self.flattenLight()
+
     def initializeHeightMap(self, id=0):
         """ """
 
-        logging.info( "initializing heightmap...")
+        logging.info("initializing heightmap...")
 
         if id == 0:
             self.dice = RandomNumGen(TimeVal().getUsec())
@@ -244,7 +249,7 @@ class Terrain(NodePath):
         self.getHeight = self.heightMap.getHeight
 
     def initializeRenderingProperties(self):
-        logging.info( "initializing terrain rendering properties...")
+        logging.info("initializing terrain rendering properties...")
         self.bruteForce = True
         #self.bruteForce = False
         if self.bruteForce:
@@ -259,27 +264,39 @@ class Terrain(NodePath):
         #self.texturer = DetailTexturer(self)
         #self.texturer.apply(self)
         #self.setShaderInput("zMultiplier", )
-        logging.info( "rendering properties initialized...")
+        logging.info("rendering properties initialized...")
 
     def _setupSimpleTasks(self):
         """This sets up tasks to maintain the terrain as the focus moves."""
 
-        logging.info( "initializing terrain update task...")
+        logging.info("initializing terrain update task...")
 
         ##Add tasks to keep updating the terrain
         #taskMgr.add(self.updateTilesTask, "updateTiles", sort=9, priority=0)
         self.buildQueue = deque()
         taskMgr.add(self.update, "update", sort=9, priority=0)
 
+    def reduceSceneGraph(self, radius):
+        gr = self.graphReducer
+        gr.applyAttribs(self.node())
+        gr.setCombineRadius(radius)
+        gr.flatten(self.node(), SceneGraphReducer.CSRecurse)
+        gr.makeCompatibleState(self.node())
+        gr.collectVertexData(self.node())
+        gr.unify(self.node(), False)
+
     def update(self, task):
         """This task updates terrain as needed."""
 
         self.makeNewTile()
         self.removeOldTiles()
-        #self.grabBuiltTile()
+        self.grabBuiltTile()
+        #self.updateTiles()
 
-        #self.tileLodUpdate()
+        self.tileLodUpdate()
         #self.buildDetailLevels()
+        
+        #print len(self.tiles)
 
         return task.again
 
@@ -312,32 +329,40 @@ class Terrain(NodePath):
         Instead we will use a special LodTerrainTile.
         """
 
-        x = self.focus.getX() / self.horizontalScale
-        y = self.focus.getY() / self.horizontalScale
-        center = self.tileSize * 0.5
+        focusx = self.focus.getX() / self.horizontalScale
+        focusy = self.focus.getY() / self.horizontalScale
+        halfTile = self.tileSize * 0.5
 
         # switch to high, mid, and low LOD's at these distances
         # having a gap between the zones avoids switching back and forth too
         # if the focus is moving erratically
-        highOuter = self.minTileDistance * 0.20 + center
+        highOuter = self.minTileDistance * 0.05 + self.tileSize
         highOuter *= highOuter
-        midInner = self.minTileDistance * 0.25 + center
+        midInner = self.minTileDistance * 0.05 + self.tileSize + halfTile
         midInner *= midInner
-        midOuter = self.minTileDistance * 0.50 + center
+        midOuter = self.minTileDistance * 0.2 + self.tileSize
         midOuter *= midOuter
-        lowInner = self.minTileDistance * 0.55 + center
+        lowInner = self.minTileDistance * 0.2 + self.tileSize + halfTile
         lowInner *= lowInner
+        lowOuter = self.minTileDistance * 0.55 + self.tileSize
+        lowOuter *= lowInner
+        horizonInner = self.minTileDistance * 0.55 + self.tileSize + halfTile
+        horizonInner *= lowOuter
 
         for pos, tile in self.tiles.items():
-            deltaX = x - pos[0] + center
-            deltaY = y - pos[1] + center
+            deltaX = focusx - (pos[0] + halfTile)
+            deltaY = focusy - (pos[1] + halfTile)
             distance = deltaX * deltaX + deltaY * deltaY
             if distance < highOuter:
                 tile.setDetail(0)
-            elif distance < midOuter and distance > midInner:
-                tile.setDetail(1)
-            elif distance > lowInner:
-                tile.setDetail(2)
+            elif distance < midOuter:
+                if distance > midInner or tile.getDetail() > 1:
+                    tile.setDetail(1)
+            elif distance < lowOuter:
+                if distance > lowInner or tile.getDetail() > 2:
+                    tile.setDetail(2)
+            elif distance > horizonInner:
+                tile.setDetail(3)
 
     def buildDetailLevels(self):
         """Unused."""
@@ -396,10 +421,10 @@ class Terrain(NodePath):
 
     def preload(self, xpos=1, ypos=1):
         """
-        
+
         """
 
-        logging.info( "preloading terrain tiles...")
+        logging.info("preloading terrain tiles...")
 
         # x and y start are rounded to the nearest multiple of tile size
         xstart = (int(xpos / self.horizontalScale) / self.tileSize) * self.tileSize
@@ -430,7 +455,7 @@ class Terrain(NodePath):
         if self.feedBackString:
             done = self.preloadTotal - self.tileBuilder.queue.qsize()
             feedback = "Loading Terrain " + str(done) + "/" + str(self.preloadTotal)
-            logging.info( feedback)
+            logging.info(feedback)
             self.feedBackString.setText(feedback)
 
         #self.grabBuiltTile()
@@ -477,6 +502,7 @@ class Terrain(NodePath):
                 self.dispatchTile(vec)
             else:
                 self._generateTile(vec)
+            
 
 
     #@pstat
@@ -488,7 +514,7 @@ class Terrain(NodePath):
             self.tiles[pos] = tile
             tile.getRoot().reparentTo(self)
             del self.storage[pos]
-            logging.info( "tile recovered from storage at "+ str(pos))
+            logging.info("tile recovered from storage at " + str(pos))
             return
 
         self.tileBuilder.build(pos)
@@ -503,18 +529,20 @@ class Terrain(NodePath):
             self.tiles[pos] = tile
             tile.getRoot().reparentTo(self)
             del self.storage[pos]
-            logging.info( "tile recovered from storage at "+ str(pos))
+            logging.info("tile recovered from storage at " + str(pos))
+            #self.flattenMedium()
             return
 
         if SAVED_TEXTURE_MAPS:
             tile = TextureMappedTerrainTile(self, pos[0], pos[1])
         else:
-            tile = TerrainTile(self, pos[0], pos[1])
+            tile = LodTerrainTile(self, pos[0], pos[1])
         tile.make()
         self.populator.populate(tile)
         tile.getRoot().reparentTo(self)
         self.tiles[pos] = tile
-        logging.info( "tile generated at "+ str(pos))
+        logging.info("tile generated at " + str(pos))
+        #self.flattenMedium()
 
         return tile
 
@@ -526,7 +554,7 @@ class Terrain(NodePath):
             pos = (tile.xOffset, tile.yOffset)
             tile.getRoot().reparentTo(self)
             self.tiles[pos] = tile
-            logging.info( "tile generated at "+ str(pos))
+            logging.info("tile generated at " + str(pos))
             return tile
         return None
 
@@ -550,16 +578,16 @@ class Terrain(NodePath):
         tile = self.tiles[pos]
         if tile != 1:
             tile.getRoot().detachNode()
-            self.storage[pos]= tile
+            self.storage[pos] = tile
         del self.tiles[pos]
-        logging.info( "Tile removed from "+ str(pos))
+        logging.info("Tile removed from " + str(pos))
 
     def deleteTile(self, pos):
         """Removes a specific tile from the Terrain."""
 
         self.tiles[pos].getRoot().detachNode()
         del self.tiles[pos]
-        logging.info( "Tile deleted from "+ str(pos))
+        logging.info("Tile deleted from " + str(pos))
 
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
@@ -582,5 +610,5 @@ class Terrain(NodePath):
         self.texturer.test()
 
     def setShaderFloatInput(self, name, input):
-        logging.info("set shader input "+ name+" to "+str(input))
+        logging.info("set shader input " + name + " to " + str(input))
         self.setShaderInput(name, PTAFloat([input]))

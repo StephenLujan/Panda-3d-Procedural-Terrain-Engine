@@ -41,7 +41,7 @@ class FollowCamera(TerrainCamera):
         self.cameraPitch = 10
         self.focus = self.fulcrum.attachNewNode("focus")
         
-        self.maxDistance = 250.0
+        self.maxDistance = 500.0
         self.minDistance = 2
         self.maxPitch = 80
         self.minPitch = -70
