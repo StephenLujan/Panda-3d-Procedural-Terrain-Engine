@@ -118,6 +118,9 @@ class TerrainPopulator():
         #logging.info("addToTile")
         test = tile.statics
         object.reparentTo(tile.statics)
-        z = tile.terrain.getElevation(x + tile.xOffset, y + tile.yOffset)
+        #z = tile.terrain.getElevation(x + tile.xOffset, y + tile.yOffset)
+        #print z
+        z = tile.terrain.getHeight(x + tile.xOffset, y + tile.yOffset)
+        #print z
         object.setPos(render, x + tile.xOffset, y + tile.yOffset, z)
         #object.setScale(100.0)

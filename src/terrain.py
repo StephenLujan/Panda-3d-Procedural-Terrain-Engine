@@ -228,7 +228,7 @@ class Terrain(NodePath):
         if THREAD_LOAD_TERRAIN:
             self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
         else:
-            taskMgr.add(self.oldPreload, "preloadTask", extraArgs =[self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale])
+            taskMgr.add(self.oldPreload, "preloadTask", extraArgs=[self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale])
 
         #self.flattenLight()
 
@@ -296,7 +296,7 @@ class Terrain(NodePath):
 
         self.tileLodUpdate()
         #self.buildDetailLevels()
-        
+
         #print len(self.tiles)
 
         return task.again
@@ -388,7 +388,7 @@ class Terrain(NodePath):
 
         """
 
-        print "preloading terrain tiles..."
+        logging.info("preloading terrain tiles...")
         self.buildQueue = deque()
 
         # x and y start are rounded to the nearest multiple of tile size
@@ -512,7 +512,7 @@ class Terrain(NodePath):
                 self.dispatchTile(vec)
             else:
                 self._generateTile(vec)
-            
+
 
 
     #@pstat
@@ -548,7 +548,6 @@ class Terrain(NodePath):
         else:
             tile = LodTerrainTile(self, pos[0], pos[1])
         tile.make()
-        #self.populator.populate(tile)
         tile.getRoot().reparentTo(self)
         self.tiles[pos] = tile
         logging.info("tile generated at " + str(pos))

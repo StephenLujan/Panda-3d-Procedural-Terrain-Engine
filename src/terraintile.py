@@ -196,7 +196,7 @@ class TerrainTile(GeoMipTerrain):
         #http://www.panda3d.org/forums/viewtopic.php?t=12054
         self.calcAmbientOcclusion()
         #logging.info( "generate()")
-        #self.generate()
+        self.generate()
 
         #self.makeSlopeMap()
         #logging.info( "createGroups()")
@@ -285,7 +285,8 @@ class LodTerrainTile(TerrainTile):
         self.setMinLevel(detail)
         #self.update(None)
         self.generate()
-        self.getRoot().setPos(self.xOffset, self.yOffset, 0)
+        self.statics.reparentTo(self.getRoot())
+        #self.getRoot().setPos(self.xOffset, self.yOffset, 0)
 
 
 ###############################################################################
