@@ -34,7 +34,8 @@
 				'gameInfo', 'gameInfo',
 				'noplugin_href', 'http://www.panda3d.org/download.php?runtime',
 				
-				'noplugin_img', 'noplugin.jpg'
+				'noplugin_img', 'noplugin.jpg',
+				'MAX_VIEW_RANGE', '<?php printf( $_GET['max_view_range']);?>'
 				/*
 				'splash_img', 'noplugin.jpg',
 				'download_img', 'noplugin.jpg',

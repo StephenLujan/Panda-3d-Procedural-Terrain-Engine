@@ -9,10 +9,10 @@ from pandac.PandaModules import Filename
 import logging
 
 logging.basicConfig(level=logging.INFO,
-                    format='(%(threadName)-10s) %(message)s',)
+                    format='*(%(threadName)-10s) %(filename)s:%(lineno)-4d %(message)s',)
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='(%(threadName)-10s) %(message)s',)
+                    format='*(%(threadName)-10s) %(filename)s:%(lineno)-4d %(message)s',)
 
 
 loadPrcFile("config/config.prc")
@@ -37,3 +37,7 @@ SAVED_TEXTURE_MAPS = ConfigVariableBool("save-texture-maps", False).getValue()
 SAVED_VEGETATION_MAPS = ConfigVariableBool("save-vegetation-maps", False).getValue()
 MAX_VIEW_RANGE = ConfigVariableInt("max-view-range", 400).getValue()
 THREAD_LOAD_TERRAIN = ConfigVariableBool("thread-load-terrain", False).getValue()
+
+if RUNTYPE != 'python':
+    if AppRunnerGlobal.appRunner.getTokenInt('MAX_VIEW_RANGE'):
+        MAX_VIEW_RANGE = AppRunnerGlobal.appRunner.getTokenInt('MAX_VIEW_RANGE')

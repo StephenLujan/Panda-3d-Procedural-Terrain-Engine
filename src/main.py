@@ -30,8 +30,8 @@ from splashCard import *
 from terrain import *
 from waterNode import *
 
-if __name__ == "__main__":
-    logging.info( "Hello World")
+#if __name__ == "__main__":
+logging.info( "Hello World")
 
 class World(DirectObject):
 
@@ -285,7 +285,8 @@ class World(DirectObject):
         self.critter2.update(elapsed)
 
         self.terrain.setShaderInput("camPos", self.camera.camNode.getPos(render))
-        self.terrain.setShaderInput("fogColor", self.sky.fog.fog.getColor())
+        self.terrain.setShaderInput("fogColor", self.sky.fog.getColor())
+        #print self.sky.fog.fog.getColor()
         #self.bug_text.setText('')
         # Ralph location output
         self.loc_text.setText('[LOC]: %03.1f, %03.1f,%03.1f ' % \
@@ -306,5 +307,5 @@ def launchTerrainDemo():
     logging.info('calling run()...')
     run()
 
-if __name__ == "__main__":
-    launchTerrainDemo()
+#if __name__ == "__main__":
+launchTerrainDemo()

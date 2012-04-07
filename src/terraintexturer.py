@@ -217,7 +217,7 @@ class ShaderTexturer(TerrainTexturer):
             self.shaderGenerator.saveShader(file)
             self.shader = Shader.load(file, Shader.SLCg)
         else:
-            self.shader = Shader.make(sg.createShader(), Shader.SLCg);
+            self.shader = Shader.make(self.shaderGenerator.createShader(), Shader.SLCg);
 
         self.terrain.setShaderInput("normalMap", self.normalMap)
         self.terrain.setShaderInput("detailTex", self.detailTex)

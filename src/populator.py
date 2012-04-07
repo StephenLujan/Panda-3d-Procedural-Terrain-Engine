@@ -12,13 +12,14 @@ from config import *
 
 class LeafModel():
     def __init__(self, name, nrplates, width, height, shaderfile, texturefile, uvlist, jitter=-1):
+        #print name, nrplates, width, height, shaderfile, texturefile, uvlist, jitter
         self.name = name
         self.texturefile = texturefile
         self.shaderfile = shaderfile
 
         self.np = NodePath('leaf')
 
-        self.tex = loader.loadTexture(texturefile)
+        self.tex = loader.loadTexture('textures/' + texturefile)
         self.tex.setMinfilter( Texture.FTLinearMipmapLinear )
         self.tex.setMagfilter( Texture.FTLinearMipmapLinear )
         self.tex.setAnisotropicDegree(2)
@@ -50,7 +51,7 @@ class LeafModel():
 
 copy = NodePath()
 
-tree = LeafModel("Tree 1", 3, 5.0, 5.0, None, 'textures/Bleech.png', None)
+tree = LeafModel("Tree 1", 3, 5.0, 5.0, None, 'Bleech.png', None)
 
 def makeTree():
     np = tree.np.copyTo( copy )
