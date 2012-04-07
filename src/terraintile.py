@@ -170,6 +170,9 @@ class TerrainTile(GeoMipTerrain):
     def createGroups(self):
         self.statics = self.getRoot().attachNewNode(self.name + "_statics")
         self.statics.setSz(1.0 / self.terrain.getSz())
+        self.statics.setSx(1.0 / self.terrain.getSx())
+        self.statics.setSy(1.0 / self.terrain.getSy())
+
         self.statics.setShaderAuto()
 
     @pstat
@@ -193,11 +196,12 @@ class TerrainTile(GeoMipTerrain):
         #http://www.panda3d.org/forums/viewtopic.php?t=12054
         self.calcAmbientOcclusion()
         #logging.info( "generate()")
-        self.generate()
+        #self.generate()
 
         #self.makeSlopeMap()
         #logging.info( "createGroups()")
         self.createGroups()
+        self.terrain.populator.populate(self)
 
 
 
@@ -337,7 +341,7 @@ def makeTile(threadName, terrain, pos):
     if SAVED_TEXTURE_MAPS:
         tile = TextureMappedTerrainTile(terrain, pos[0], pos[1])
     else:
-        tile = TerrainTile(terrain, pos[0], pos[1])
+        tile = LodTerrainTile(terrain, pos[0], pos[1])
     logging.info( threadName+ " is building the tile at"+ str(pos))
     tile.make()
 #                self.terrain.populator.populate(tile)
@@ -392,7 +396,7 @@ class TerrainTileBuilder():
 
         #spawn a pool of threads, and pass them queue instance
         logging.info( "Loading tile builder threads.")
-        for i in range(3):
+        for i in range(1):
             #try:
             t = PermanentTileBuilderThread(self.queue, self.out_queue, terrain)
             t.setName("TileBuilderThread"+str(i))

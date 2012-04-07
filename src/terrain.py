@@ -219,14 +219,16 @@ class Terrain(NodePath):
         self.initializeRenderingProperties()
 
         ##### task handling
-        self._setupSimpleTasks()
         #self._setupThreadedTasks()
 
         # newTile is a placeholder for a tile currently under construction
         # this has to be initialized last because it requires values from self
         #self.newTile = TerrainTile(self, 0, 0)
         # loads all terrain tiles in range immediately
-        self.oldpreload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
+        if THREAD_LOAD_TERRAIN:
+            self.preload(self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale)
+        else:
+            taskMgr.add(self.oldPreload, "preloadTask", extraArgs =[self.focus.getX() / self.horizontalScale, self.focus.getY() / self.horizontalScale])
 
         #self.flattenLight()
 
@@ -273,7 +275,6 @@ class Terrain(NodePath):
 
         ##Add tasks to keep updating the terrain
         #taskMgr.add(self.updateTilesTask, "updateTiles", sort=9, priority=0)
-        self.buildQueue = deque()
         taskMgr.add(self.update, "update", sort=9, priority=0)
 
     def reduceSceneGraph(self, radius):
@@ -377,7 +378,7 @@ class Terrain(NodePath):
             request = self.buildQueue.popleft()
             request[0].buildAndSet(request[1])
 
-    def oldpreload(self, xpos=1, ypos=1):
+    def oldPreload(self, task, xpos=0, ypos=0):
         """Loads all tiles in range immediately.
 
         This can suspend the program for a long time and is best used when
@@ -388,6 +389,7 @@ class Terrain(NodePath):
         """
 
         print "preloading terrain tiles..."
+        self.buildQueue = deque()
 
         # x and y start are rounded to the nearest multiple of tile size
         xstart = (int(xpos / self.horizontalScale) / self.tileSize) * self.tileSize
@@ -414,10 +416,16 @@ class Terrain(NodePath):
         total = len(self.buildQueue)
         while len(self.buildQueue):
             if self.feedBackString:
-                self.feedBackString = "Loading Terrain " + str(total-len(self.buildQueue)) + "/" + str(total)
-                #showFrame()
+                done = total - len(self.buildQueue)
+                feedback = "Loading Terrain " + str(done) + "/" + str(total)
+                logging.info(feedback)
+                self.feedBackString.setText(feedback)
             tile = self.buildQueue.popleft()
             self._generateTile(tile)
+            yield Task.cont
+
+        self._setupSimpleTasks()
+        yield Task.done
 
     def preload(self, xpos=1, ypos=1):
         """
@@ -462,6 +470,8 @@ class Terrain(NodePath):
         if self.tileBuilder.queue.qsize() > 0:
             #logging.info( self.tileBuilder.queue.qsize())
             return Task.cont
+
+        self._setupSimpleTasks()
         return Task.done
 
     #@pstat
@@ -538,7 +548,7 @@ class Terrain(NodePath):
         else:
             tile = LodTerrainTile(self, pos[0], pos[1])
         tile.make()
-        self.populator.populate(tile)
+        #self.populator.populate(tile)
         tile.getRoot().reparentTo(self)
         self.tiles[pos] = tile
         logging.info("tile generated at " + str(pos))

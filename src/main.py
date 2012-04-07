@@ -68,8 +68,8 @@ class World(DirectObject):
         self._loadTerrain()
         yield Task.cont
         yield Task.cont
-        while taskMgr.hasTaskNamed("preloadWaitTask"):
-            logging.info( "waiting")
+        while taskMgr.hasTaskNamed("preloadTask"):
+            #logging.info( "waiting")
             yield Task.cont
         logging.info( "terrain preloaded")
 

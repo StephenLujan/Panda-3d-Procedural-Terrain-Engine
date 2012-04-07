@@ -72,7 +72,7 @@ class DistanceFog(ColoredByTime):
         render.attachNewNode(self.fog)
         render.setFog(self.fog)
 
-        self.dayColor = Vec4(0.98, 0.98, 0.95, 1.0)
+        self.dayColor = Vec4(0.72, 0.86, 0.97, 1.0)
         self.nightColor = Vec4(-0.5, -0.3, .0, 1.0)
         self.sunsetColor = Vec4(0.75, .60, .65, 1.0)
         ColoredByTime.__init__(self)
