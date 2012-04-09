@@ -15,7 +15,8 @@ from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pandac.PandaModules import Vec4
-from terrainshadergenerator import *
+from fullterrainshadergenerator import *
+from bakedterrainshadergenerator import *
 from terraintexturemap import *
 
 ###############################################################################

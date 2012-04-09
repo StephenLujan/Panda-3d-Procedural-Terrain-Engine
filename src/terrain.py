@@ -183,7 +183,8 @@ class Terrain(NodePath):
 
         self.graphReducer = SceneGraphReducer()
 
-        self.tileBuilder = TerrainTileBuilder(self)
+        if THREAD_LOAD_TERRAIN:
+            self.tileBuilder = TerrainTileBuilder(self)
 
         ##### Terrain Tile physical properties
         self.maxHeight = 300.0
@@ -291,7 +292,8 @@ class Terrain(NodePath):
 
         self.makeNewTile()
         self.removeOldTiles()
-        self.grabBuiltTile()
+        if THREAD_LOAD_TERRAIN:
+            self.grabBuiltTile()
         #self.updateTiles()
 
         self.tileLodUpdate()

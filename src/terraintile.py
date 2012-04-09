@@ -16,6 +16,9 @@ from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
 from pandac.PandaModules import Vec3
 from pstat_debug import pstat
+from pandac.PandaModules import AsyncTask
+from pandac.PandaModules import AsyncTaskManager
+from direct.task.Task import Task
 #from direct.stdpy import threading2 as threading
 import threading
 import Queue
@@ -204,59 +207,6 @@ class TerrainTile(GeoMipTerrain):
         self.terrain.populator.populate(self)
 
 
-
-
-###############################################################################
-#   TextureMappedTerrainTile
-###############################################################################
-
-class TextureMappedTerrainTile(TerrainTile):
-    """This terrain tile stores a pnm image map of textures to use."""
-
-    def __init__(self, terrain, x, y):
-
-        TerrainTile.__init__(self, terrain, x, y)
-
-        # this sort of thing should really be done in c++
-        self.textureMaps = deque()
-
-    def make(self):
-        TerrainTile.make(self)
-        self.makeSlopeMap()
-        textureMapper = self.terrain.texturer.textureMapper
-
-        #try to read textureMaps
-        readTexMaps = True
-        texNum = 0
-        for tex in textureMapper.textures:
-            texNum += 1
-            fileName = "maps/textures/" + self.name + "+_texture" + str(texNum) + ".png"
-            if not tex.image.read(Filename(fileName)):
-                readTexMaps = False
-
-        #otherwise calculate textureMaps
-        if not readTexMaps:
-            self.terrain.texturer.textureMapper.calculateTextures(self)
-
-        #copy textureMaps to this terrainTile and save if necessary
-        texNum = 0
-        for tex in self.terrain.texturer.textureMapper.textures:
-            texNum += 1
-            self.textureMaps.append(tex.image)
-            if not readTexMaps:
-                tex.image.write(Filename("maps/textures/" + self.name + "+_texture" + str(texNum) + ".png"))
-
-        #load textureMaps as actual textures for the shaders use
-        num = 0
-        for tex in self.textureMaps:
-            num += 1
-            newTexture = Texture()
-            newTexture.load(tex)
-            ts = TextureStage('alp' + str(num))
-            self.getRoot().setTexture(ts, newTexture)
-        #logging.info( self.getRoot().findAllTextureStages())
-
-
 ###############################################################################
 #   LodTerrainTile
 ###############################################################################
@@ -332,6 +282,56 @@ class LodTerrainTile2(NodePath):
         self._setDetail(detail)
 
 
+###############################################################################
+#   TextureMappedTerrainTile
+###############################################################################
+
+class TextureMappedTerrainTile(LodTerrainTile):
+    """This terrain tile stores a pnm image map of textures to use."""
+
+    def __init__(self, terrain, x, y):
+
+        LodTerrainTile.__init__(self, terrain, x, y)
+
+        # this sort of thing should really be done in c++
+        self.textureMaps = deque()
+
+    def make(self):
+        TerrainTile.make(self)
+        self.makeSlopeMap()
+        textureMapper = self.terrain.texturer.textureMapper
+
+        #try to read textureMaps
+        readTexMaps = True
+        texNum = 0
+        for tex in textureMapper.textures:
+            texNum += 1
+            fileName = "maps/textures/" + self.name + "+_texture" + str(texNum) + ".png"
+            if not tex.image.read(Filename(fileName)):
+                readTexMaps = False
+
+        #otherwise calculate textureMaps
+        if not readTexMaps:
+            self.terrain.texturer.textureMapper.calculateTextures(self)
+
+        #copy textureMaps to this terrainTile and save if necessary
+        texNum = 0
+        for tex in self.terrain.texturer.textureMapper.textures:
+            texNum += 1
+            self.textureMaps.append(tex.image)
+            if not readTexMaps:
+                tex.image.write(Filename("maps/textures/" + self.name + "+_texture" + str(texNum) + ".png"))
+
+        #load textureMaps as actual textures for the shaders use
+        num = 0
+        for tex in self.textureMaps:
+            num += 1
+            newTexture = Texture()
+            newTexture.load(tex)
+            ts = TextureStage('alp' + str(num))
+            self.getRoot().setTexture(ts, newTexture)
+        #logging.info( self.getRoot().findAllTextureStages())
+
     
 ###############################################################################
 #  makeTile
@@ -349,7 +349,7 @@ def makeTile(threadName, terrain, pos):
     logging.info( threadName+ " finished the tile at"+ str(pos))
     return tile
 
-
+    
 ###############################################################################
 #  PermanentTileBuilderThread
 ###############################################################################
@@ -397,15 +397,21 @@ class TerrainTileBuilder():
 
         #spawn a pool of threads, and pass them queue instance
         logging.info( "Loading tile builder threads.")
-        for i in range(1):
-            #try:
-            t = PermanentTileBuilderThread(self.queue, self.out_queue, terrain)
-            t.setName("TileBuilderThread"+str(i))
-            logging.info( "Created "+ t.getName())
-            t.setDaemon(True)
-            t.start()
-            #except:
-            #logging.info( "Unable to start TileBuilderThread!")
+#        for i in range(1):
+#            #try:
+#            t = PermanentTileBuilderThread(self.queue, self.out_queue, terrain)
+#            t.setName("TileBuilderThread"+str(i))
+#            logging.info( "Created "+ t.getName())
+#            t.setDaemon(True)
+#            t.start()
+#            #except:
+#            #logging.info( "Unable to start TileBuilderThread!")
+
+        taskMgr.setupTaskChain('tileBuilder', numThreads = 1, tickClock = False,
+                           threadPriority = None, frameBudget = -1,
+                           frameSync = False, timeslicePriority = True)
+
+        taskMgr.add(self.makeTileTask, 'tileBuilderTask', taskChain = 'tileBuilder')
 
     def clearQueue(self):
         return
@@ -440,3 +446,10 @@ class TerrainTileBuilder():
         logging.info( "Created "+ t.getName())
         t.setDaemon(True)
         t.start()
+
+    def makeTileTask(self, task):
+        pos = self.queue.get()
+        if pos:
+            tile = makeTile("tileBuilderTaskChain", self.terrain, pos)
+            self.out_queue.put(tile)
+        return Task.cont
