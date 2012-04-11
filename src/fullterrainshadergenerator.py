@@ -43,11 +43,11 @@ struct vfconn
         string = ''
         for tex in self.textureMapper.textures:
             string += '''
-            in uniform sampler2D texUnit''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
+            in uniform sampler2D texUnit''' + str(texNum) + ','
             texNum += 1
             for region in tex.regions:
                 string += '''
-                in uniform float4 region''' + str(regionNum) + 'Limits : REGION' + str(regionNum) + 'LIMITS,'
+                in uniform float4 region''' + str(regionNum) + 'Limits,'
                 regionNum += 1
         string = string[:-1] #trim last comma
         string +='''

@@ -295,6 +295,7 @@ class TextureMappedTerrainTile(LodTerrainTile):
 
         # this sort of thing should really be done in c++
         self.textureMaps = deque()
+        self.fourChannel = True
 
     def make(self):
         TerrainTile.make(self)

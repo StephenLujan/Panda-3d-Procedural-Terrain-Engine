@@ -603,7 +603,18 @@ class Terrain(NodePath):
     def getElevation(self, x, y):
         """Returns the height of the terrain at the input world coordinates."""
 
-        return self.getHeight(x / self.horizontalScale, y / self.horizontalScale) * self.getSz()
+        x /= self.horizontalScale
+        y /= self.horizontalScale
+        if SAVED_HEIGHT_MAPS:
+            tilex = (int(x) / self.tileSize) * self.tileSize
+            tiley = (int(y) / self.tileSize) * self.tileSize
+            x -= tilex
+            y -= tiley
+            if (tilex,tiley) in self.tiles:
+                return self.tiles[tilex,tiley].getElevation(x,y) * self.getSz()
+            if (tilex,tiley) in self.storage:
+                return self.tiles[tilex,tiley].getElevation(x,y) * self.getSz()
+        return self.getHeight(x, y) * self.getSz()
 
     def setWireFrame(self, state):
         self.wireFrame = state

@@ -45,13 +45,13 @@ struct vfconn
         #base textures
         for tex in self.textureMapper.textures:
             string += '''
-            in uniform sampler2D tex_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
+            in uniform sampler2D tex_''' + str(texNum) + ','
             texNum += 1
         texNum = 0
         #alpha maps
         for tex in self.textureMapper.textures:
             string += '''
-            in uniform sampler2D map_''' + str(texNum) + ' : TEXUNIT' + str(texNum) + ','
+            in uniform sampler2D map_''' + str(texNum) + ','
             texNum += 1
         string = string[:-1] + '''
 ) {
