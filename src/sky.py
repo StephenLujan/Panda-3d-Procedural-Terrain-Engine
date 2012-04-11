@@ -214,8 +214,8 @@ class Sky():
         if self.paused:
             return task.cont
         if self.nightSkip:
-            if self.time > 1950.0:
-                self.time = 450.0
+            if self.time > 1925.0:
+                self.time = 475.0
         else:
             if self.time > 2400.0:
                 self.time -= 2400.0

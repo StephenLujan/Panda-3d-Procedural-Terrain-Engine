@@ -222,6 +222,7 @@ class World(DirectObject):
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
         self.accept("t", self.terrain.test)
+        #self.accept("e", self.edit)
         self.accept("w-up", self.ralph.setControl, ["forward", 0])
         self.accept("a-up", self.ralph.setControl, ["left", 0])
         self.accept("s-up", self.ralph.setControl, ["back", 0])

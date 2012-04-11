@@ -138,14 +138,14 @@ class ShaderDetailControl():
         self.normalStregth = 2.5
         self.normalStregthSlide = SlideControl(0, 0.6, parent=self.frame, range=(0.0001, 10), value=self.normalStregth, name="Normal Strength", function=self.setNormalStrength, ysize=1.5, xsize=1.5)
 
-        self.detailSmallScale = 23.0
-        self.detailHugeSlide = SlideControl(0, 0.2, parent=self.frame, range=(0, 100), value=self.detailSmallScale, name="Small Detail", function=self.setSmallDetail, ysize=1.5, xsize=1.5)
+        self.detailSmallScale = 23.0 * TERRAIN_HORIZONTAL_STRETCH
+        self.detailHugeSlide = SlideControl(0, 0.2, parent=self.frame, range=(0, 100 * TERRAIN_HORIZONTAL_STRETCH), value=self.detailSmallScale, name="Small Detail", function=self.setSmallDetail, ysize=1.5, xsize=1.5)
 
-        self.detailBigScale = 7.0
-        self.detailBigeSlide = SlideControl(0, -0.2, parent=self.frame, range=(0, 20), value=self.detailBigScale, name="BigDetail", function=self.setBigDetail, ysize=1.5, xsize=1.5)
+        self.detailBigScale = 7.0 * TERRAIN_HORIZONTAL_STRETCH
+        self.detailBigeSlide = SlideControl(0, -0.2, parent=self.frame, range=(0, 20 * TERRAIN_HORIZONTAL_STRETCH), value=self.detailBigScale, name="BigDetail", function=self.setBigDetail, ysize=1.5, xsize=1.5)
 
-        self.detailHugeScale = 1.3
-        self.detailHugeSlide = SlideControl(0, -0.6, parent=self.frame, range=(0, 4), value=self.detailHugeScale, name="Huge Detail", function=self.setHugeDetail, ysize=1.5, xsize=1.5)
+        self.detailHugeScale = 1.3 * TERRAIN_HORIZONTAL_STRETCH
+        self.detailHugeSlide = SlideControl(0, -0.6, parent=self.frame, range=(0, 4 * TERRAIN_HORIZONTAL_STRETCH), value=self.detailHugeScale, name="Huge Detail", function=self.setHugeDetail, ysize=1.5, xsize=1.5)
 
         self.resize(self.size)
 
@@ -194,8 +194,8 @@ class ShaderMiscellaneousControl():
         self.resize(self.size)
 
         self.occlusionButton = DirectCheckButton(text="Ambient Occlusion", scale=0.2,
-                                           command=self.setAmbientOcclusion, pos=(-0.5, 0, 0.5),
-                                           parent=self.frame)
+                                                 command=self.setAmbientOcclusion, pos=(-0.5, 0, 0.5),
+                                                 parent=self.frame)
 
         self.fogDensity = self.terrain.texturer.shaderGenerator.fogDensity
         #self.fogDensity = float(self.terrain.getShaderInput('fogDensity').getPtr())

@@ -187,7 +187,7 @@ class Terrain(NodePath):
             self.tileBuilder = TerrainTileBuilder(self)
 
         ##### Terrain Tile physical properties
-        self.maxHeight = 300.0
+        self.maxHeight = MAX_TERRAIN_HEIGHT
         self.tileSize = 128
         self.heightMapSize = self.tileSize + 1
 
@@ -198,7 +198,7 @@ class Terrain(NodePath):
         # scale the terrain vertically to its maximum height
         self.setSz(self.maxHeight)
         # scale horizontally to appearance/performance balance
-        self.horizontalScale = 1.0
+        self.horizontalScale = TERRAIN_HORIZONTAL_STRETCH
         self.setSx(self.horizontalScale)
         self.setSy(self.horizontalScale)
         # waterHeight is expressed as a multiplier to the max height
@@ -208,10 +208,10 @@ class Terrain(NodePath):
         self.maxViewRange = maxRange
         # Add half the tile size because distance is checked from the center,
         # not from the closest edge.
-        self.minTileDistance = self.maxViewRange + self.tileSize * self.horizontalScale / 2
-        # make larger to avoid excess loading when milling about a small area
-        # make smaller to reduce geometry and other overhead
-        self.maxTileDistance = self.minTileDistance + self.tileSize * 0.5
+        self.minTileDistance = self.maxViewRange / self.horizontalScale + self.tileSize / 2
+        # to avoid excessive store / retrieve behavior on tiles we have a small
+        # buffer where it doesn't matter whether or not the tile is present
+        self.maxTileDistance = self.minTileDistance + self.tileSize / 2
 
         ##### heightmap properties
         self.initializeHeightMap(id)
@@ -613,7 +613,7 @@ class Terrain(NodePath):
             if (tilex,tiley) in self.tiles:
                 return self.tiles[tilex,tiley].getElevation(x,y) * self.getSz()
             if (tilex,tiley) in self.storage:
-                return self.tiles[tilex,tiley].getElevation(x,y) * self.getSz()
+                return self.storage[tilex,tiley].getElevation(x,y) * self.getSz()
         return self.getHeight(x, y) * self.getSz()
 
     def setWireFrame(self, state):

@@ -57,6 +57,8 @@ audio-library-name null
 
 # The distance below which terrain is guaranteed to be loaded and rendered
 max-view-range 600
+max-terrain-height 300.0
+terrain-horizontal-stretch 1.0
 
 save-height-maps #f
 save-slope-maps #f

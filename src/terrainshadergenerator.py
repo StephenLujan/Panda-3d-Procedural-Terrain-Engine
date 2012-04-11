@@ -4,10 +4,10 @@ specific to the terrain in this engine.
 """
 __author__ = "Stephen Lujan"
 
+from config import *
 from panda3d.core import Shader
 from pandac.PandaModules import PTAFloat
 from terraintexturemap import *
-from config import *
 
 ###############################################################################
 #   TerrainShaderGenerator
@@ -27,16 +27,16 @@ class TerrainShaderGenerator:
         self.glare = False
         self.avoidConditionals = 1
         self.fogExponential()
-        logging.info( "setting basic terrain shader input...")
+        logging.info("setting basic terrain shader input...")
 
         self.terrain.setShaderFloatInput("fogDensity", self.fogDensity)
         #self.terrain.setShaderFloatInput("fogDensity", 0)
         self.terrain.setShaderFloatInput("normalMapStrength", 2.5)
-        self.terrain.setShaderFloatInput("detailSmallScale", 1.3)
-        self.terrain.setShaderFloatInput("detailBigScale", 7.0)
-        self.terrain.setShaderFloatInput("detailHugeScale", 23.0)
+        self.terrain.setShaderFloatInput("detailSmallScale", 1.3 * TERRAIN_HORIZONTAL_STRETCH)
+        self.terrain.setShaderFloatInput("detailBigScale", 7.0 * TERRAIN_HORIZONTAL_STRETCH)
+        self.terrain.setShaderFloatInput("detailHugeScale", 23.0 * TERRAIN_HORIZONTAL_STRETCH)
         self.terrain.setShaderFloatInput("ambientOcclusion", 1.0)
-        logging.info( "done")
+        logging.info("done")
 
     def addTexture(self, texture):
         self.textureMapper.addTexture(texture)
@@ -374,10 +374,10 @@ void fshader(
 
 
     def createShader(self):
-        logging.info( "loading terrain settings into shader input...")
+        logging.info("loading terrain settings into shader input...")
         self.initializeShaderInput()
 
-        logging.info( "assembling shader cg code")
+        logging.info("assembling shader cg code")
         shader = self.getHeader()
         shader += self.getFunctions()
         shader += self.getVertexFragmentConnector()

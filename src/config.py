@@ -4,6 +4,7 @@ from direct.showbase import AppRunnerGlobal
 import os
 from panda3d.core import ConfigVariableBool
 from panda3d.core import ConfigVariableInt
+from panda3d.core import ConfigVariableDouble
 from panda3d.core import loadPrcFile
 from pandac.PandaModules import Filename
 import logging
@@ -31,13 +32,43 @@ else:
     else:
         RUNTYPE = 'local'
 
-SAVED_HEIGHT_MAPS = ConfigVariableBool("save-height-maps", False).getValue()
-SAVED_SLOPE_MAPS = ConfigVariableBool("save-slope-maps", False).getValue()
-SAVED_TEXTURE_MAPS = ConfigVariableBool("save-texture-maps", False).getValue()
-SAVED_VEGETATION_MAPS = ConfigVariableBool("save-vegetation-maps", False).getValue()
-MAX_VIEW_RANGE = ConfigVariableInt("max-view-range", 400).getValue()
-THREAD_LOAD_TERRAIN = ConfigVariableBool("thread-load-terrain", False).getValue()
 
-if RUNTYPE != 'python':
-    if AppRunnerGlobal.appRunner.getTokenInt('MAX_VIEW_RANGE'):
-        MAX_VIEW_RANGE = AppRunnerGlobal.appRunner.getTokenInt('MAX_VIEW_RANGE')
+def getConfigInt(name, default):
+    output = ConfigVariableInt(name, default).getValue()
+    if RUNTYPE != 'python':
+        if AppRunnerGlobal.appRunner.getTokenInt(name):
+            output = AppRunnerGlobal.appRunner.getTokenInt(name)
+    return output
+
+def getConfigBool(name, default):
+    output = ConfigVariableBool(name, default).getValue()
+    if RUNTYPE != 'python':
+        if AppRunnerGlobal.appRunner.getTokenBool(name):
+            output = AppRunnerGlobal.appRunner.getTokenBool(name)
+    return output
+
+def getConfigDouble(name, default):
+    output = ConfigVariableDouble(name, default).getValue()
+    if RUNTYPE != 'python':
+        if AppRunnerGlobal.appRunner.getTokenFloat(name):
+            output = AppRunnerGlobal.appRunner.getTokenFloat(name)
+    return output
+
+def getConfigString(name, default):
+    output = ConfigVariableString(name, default).getValue()
+    if RUNTYPE != 'python':
+        if AppRunnerGlobal.appRunner.getToken(name):
+            output = AppRunnerGlobal.appRunner.getToken(name)
+    return output
+
+
+MAX_VIEW_RANGE = getConfigInt("max-view-range", 400)
+MAX_TERRAIN_HEIGHT = getConfigDouble("max-terrain-height", 300.0)
+TERRAIN_HORIZONTAL_STRETCH = getConfigDouble("terrain-horizontal-stretch", 1.0)
+
+SAVED_HEIGHT_MAPS = getConfigBool("save-height-maps", False)
+SAVED_SLOPE_MAPS = getConfigBool("save-slope-maps", False)
+SAVED_TEXTURE_MAPS = getConfigBool("save-texture-maps", False)
+SAVED_VEGETATION_MAPS = getConfigBool("save-vegetation-maps", False)
+
+THREAD_LOAD_TERRAIN = getConfigBool("thread-load-terrain", False)

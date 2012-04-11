@@ -27,15 +27,20 @@
 				// I'll drop an extra 10 pixels for a nice border and take 
 				// 973 by 520 as a result. That's a nice wide 1.871 ratio.
 				
-				P3D_RunContent('data', 'myapp.p3d', 'id', 'Terrain',
+				P3D_RunContent(
+				'data', 'myapp.p3d',
+				'id', 'Terrain',
+				<?php 
+				foreach ($_GET as $key => $val) {
+					 echo "				'$key', '$val',\n"; 
+				} 
+				?>
 				'width', '973', 'height', '520',
 				'auto_start', '0',
 				'onpythonload', 'OnPythonLoad()',
 				'gameInfo', 'gameInfo',
 				'noplugin_href', 'http://www.panda3d.org/download.php?runtime',
-				
-				'noplugin_img', 'noplugin.jpg',
-				'MAX_VIEW_RANGE', '<?php printf( $_GET['max_view_range']);?>'
+				'noplugin_img', 'noplugin.jpg'
 				/*
 				'splash_img', 'noplugin.jpg',
 				'download_img', 'noplugin.jpg',
