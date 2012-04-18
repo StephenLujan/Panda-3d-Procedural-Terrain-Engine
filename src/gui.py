@@ -134,18 +134,19 @@ class ShaderDetailControl():
                                  )
 
         self.terrain = terrain
+        sg = self.terrain.texturer.shaderGenerator
         #self.normalStregth = terrain.getShaderInput('normalMapStrength').getVector().x
-        self.normalStregth = 2.0
+        self.normalStregth = sg.normalMapStrength
         self.normalStregthSlide = SlideControl(0, 0.6, parent=self.frame, range=(0.0001, 10), value=self.normalStregth, name="Normal Strength", function=self.setNormalStrength, ysize=1.5, xsize=1.5)
 
-        self.detailSmallScale = 23.0 * TERRAIN_HORIZONTAL_STRETCH
-        self.detailHugeSlide = SlideControl(0, 0.2, parent=self.frame, range=(0, 100 * TERRAIN_HORIZONTAL_STRETCH), value=self.detailSmallScale, name="Small Detail", function=self.setSmallDetail, ysize=1.5, xsize=1.5)
+        self.detailSmallScale = sg.detailSmallScale
+        self.detailHugeSlide = SlideControl(0, 0.2, parent=self.frame, range=(0, self.detailSmallScale * 5), value=self.detailSmallScale, name="Small Detail", function=self.setSmallDetail, ysize=1.5, xsize=1.5)
 
-        self.detailBigScale = 7.0 * TERRAIN_HORIZONTAL_STRETCH
-        self.detailBigeSlide = SlideControl(0, -0.2, parent=self.frame, range=(0, 20 * TERRAIN_HORIZONTAL_STRETCH), value=self.detailBigScale, name="BigDetail", function=self.setBigDetail, ysize=1.5, xsize=1.5)
+        self.detailBigScale = sg.detailBigScale
+        self.detailBigeSlide = SlideControl(0, -0.2, parent=self.frame, range=(0, self.detailBigScale * 5), value=self.detailBigScale, name="BigDetail", function=self.setBigDetail, ysize=1.5, xsize=1.5)
 
-        self.detailHugeScale = 1.3 * TERRAIN_HORIZONTAL_STRETCH
-        self.detailHugeSlide = SlideControl(0, -0.6, parent=self.frame, range=(0, 4 * TERRAIN_HORIZONTAL_STRETCH), value=self.detailHugeScale, name="Huge Detail", function=self.setHugeDetail, ysize=1.5, xsize=1.5)
+        self.detailHugeScale = sg.detailHugeScale
+        self.detailHugeSlide = SlideControl(0, -0.6, parent=self.frame, range=(0, self.detailHugeScale * 5), value=self.detailHugeScale, name="Huge Detail", function=self.setHugeDetail, ysize=1.5, xsize=1.5)
 
         self.resize(self.size)
 
@@ -190,6 +191,7 @@ class ShaderMiscellaneousControl():
                                  )
 
         self.terrain = terrain
+        sg = self.terrain.texturer.shaderGenerator
 
         self.resize(self.size)
 
@@ -197,7 +199,7 @@ class ShaderMiscellaneousControl():
                                                  command=self.setAmbientOcclusion, pos=(-0.5, 0, 0.5),
                                                  parent=self.frame)
 
-        self.fogDensity = self.terrain.texturer.shaderGenerator.fogDensity
+        self.fogDensity = sg.fogDensity
         #self.fogDensity = float(self.terrain.getShaderInput('fogDensity').getPtr())
         self.fogDensitySlide = SlideControl(0, -0.6, parent=self.frame, range=(0, 0.1), value=self.fogDensity, name="Fog Density", function=self.setFogDensity, ysize=1.5, xsize=1.5)
 
