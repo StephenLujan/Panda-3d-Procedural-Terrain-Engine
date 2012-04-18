@@ -29,6 +29,7 @@ from sky import *
 from splashCard import *
 from terrain import *
 from waterNode import *
+from mapeditor import *
 
 #if __name__ == "__main__":
 logging.info( "Hello World")
@@ -167,8 +168,9 @@ class World(DirectObject):
             seed = 666
         else:
             seed = 0
-        self.terrain = Terrain('Terrain', base.camera, MAX_VIEW_RANGE, populator, feedBackString=self.bug_text, id=seed)
+        self.terrain = Terrain('Terrain', base.cam, MAX_VIEW_RANGE, populator, feedBackString=self.bug_text, id=seed)
         self.terrain.reparentTo(render)
+        self.editor = MapEditor(self.terrain)
 
     def _loadWater(self):
         self._water_level = self.terrain.maxHeight * self.terrain.waterHeight
@@ -197,10 +199,11 @@ class World(DirectObject):
         
         self.ralph = Player(self.terrain.getElevation, 0, 0)
         self.focus = self.ralph
-        self.terrain.focus = self.focus
+        self.terrain.setFocus(self.focus)
         # Accept the control keys for movement
                 
         self.camera = FollowCamera(self.ralph, self.terrain)
+        
         self.mouseInvertY = False
         self.accept("escape", sys.exit)
         self.accept("w", self.ralph.setControl, ["forward", 1])
@@ -222,7 +225,7 @@ class World(DirectObject):
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
         self.accept("t", self.terrain.test)
-        #self.accept("e", self.edit)
+        self.accept("e", self.toggleEditor)
         self.accept("w-up", self.ralph.setControl, ["forward", 0])
         self.accept("a-up", self.ralph.setControl, ["left", 0])
         self.accept("s-up", self.ralph.setControl, ["back", 0])
@@ -263,7 +266,11 @@ class World(DirectObject):
         try: self.shaderControl
         except: logging.info( "No shader control found.")
         else: self.shaderControl.setHidden(ml)
-        
+
+    def toggleEditor(self):
+        ml = toggleMouseLook()
+        self.editor.toggle(not ml)
+
     def move(self, task):
         #self.lightpivot.setPos(self.focus.getPos() + Vec3(0, 0, 4))
         if not getMouseLook():

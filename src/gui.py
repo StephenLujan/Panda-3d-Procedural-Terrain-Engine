@@ -135,7 +135,7 @@ class ShaderDetailControl():
 
         self.terrain = terrain
         #self.normalStregth = terrain.getShaderInput('normalMapStrength').getVector().x
-        self.normalStregth = 2.5
+        self.normalStregth = 2.0
         self.normalStregthSlide = SlideControl(0, 0.6, parent=self.frame, range=(0.0001, 10), value=self.normalStregth, name="Normal Strength", function=self.setNormalStrength, ysize=1.5, xsize=1.5)
 
         self.detailSmallScale = 23.0 * TERRAIN_HORIZONTAL_STRETCH

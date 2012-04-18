@@ -173,7 +173,7 @@ class ShaderTexturer(TerrainTexturer):
         self.testOn = False
         self.detailTex = self.loadTexture("Detail_COLOR.png")
         self.tex1 = self.loadTexture("dirt.jpg")
-        self.tex2 = self.loadTexture("grass.jpg")
+        self.tex2 = self.loadTexture("grass1b.jpg")
         self.tex3 = self.loadTexture("rock.jpg")
         self.tex4 = self.loadTexture("snow.jpg")
 

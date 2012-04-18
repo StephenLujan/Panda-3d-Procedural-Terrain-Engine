@@ -18,11 +18,13 @@ sync-video 0
 
 # windowed
 # 4:3
-win-size 800 600
+#win-size 800 600
+# small 16:9
+win-size 1067 600
 # HD
 #win-size 1280 720
 
-# fullscreen
+# fullscreen full HD
 #win-size 1920 1080
 #fullscreen #t
 
@@ -64,4 +66,6 @@ save-height-maps #f
 save-slope-maps #f
 save-texture-maps #f
 save-vegetation-maps #f
+
 thread-load-terrain #f
+brute-force-tiles #t

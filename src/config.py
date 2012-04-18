@@ -12,9 +12,11 @@ import logging
 logging.basicConfig(level=logging.INFO,
                     format='*(%(threadName)-10s) %(filename)s:%(lineno)-4d %(message)s',)
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='*(%(threadName)-10s) %(filename)s:%(lineno)-4d %(message)s',)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.debug('debug messages working')
 
+logging.basicConfig(level=logging.ERROR,
+                    format='*(%(threadName)-10s) %(filename)s:%(lineno)-4d %(message)s',)
 
 loadPrcFile("config/config.prc")
 # Figure out what directory this program is in.
@@ -66,9 +68,11 @@ MAX_VIEW_RANGE = getConfigInt("max-view-range", 400)
 MAX_TERRAIN_HEIGHT = getConfigDouble("max-terrain-height", 300.0)
 TERRAIN_HORIZONTAL_STRETCH = getConfigDouble("terrain-horizontal-stretch", 1.0)
 
+
 SAVED_HEIGHT_MAPS = getConfigBool("save-height-maps", False)
 SAVED_SLOPE_MAPS = getConfigBool("save-slope-maps", False)
 SAVED_TEXTURE_MAPS = getConfigBool("save-texture-maps", False)
 SAVED_VEGETATION_MAPS = getConfigBool("save-vegetation-maps", False)
 
 THREAD_LOAD_TERRAIN = getConfigBool("thread-load-terrain", False)
+BRUTE_FORCE_TILES = getConfigBool("brute-force-tiles", True)

@@ -14,6 +14,7 @@ from pandac.PandaModules import NodePath
 from pandac.PandaModules import PNMImage
 from pandac.PandaModules import Texture
 from pandac.PandaModules import TextureStage
+from pandac.PandaModules import BitMask32
 from pandac.PandaModules import Vec3
 from pstat_debug import pstat
 from pandac.PandaModules import AsyncTask
@@ -53,34 +54,41 @@ class TerrainTile(GeoMipTerrain):
         self.image = PNMImage()
 
 
+        #self.setAutoFlatten(GeoMipTerrain.AFMOff)
+        self.setFocalPoint(self.terrain.focus)
         self.setAutoFlatten(GeoMipTerrain.AFMOff)
         self.getRoot().setPos(x, y, 0)
-        GeoMipTerrain.setFocalPoint(self, terrain.focus)
         if self.terrain.bruteForce:
             GeoMipTerrain.setBruteforce(self, True)
             GeoMipTerrain.setBlockSize(self, self.terrain.heightMapSize * self.heightMapDetail)
         else:
-            GeoMipTerrain.setBlockSize(self, 16)
-            self.setBorderStitching(1)
+            GeoMipTerrain.setBlockSize(self, self.terrain.blockSize/2)
+            #self.setBorderStitching(1)
             self.setNear(self.terrain.near)
             self.setFar(self.terrain.far)
 
 
-    def update(self, dummy):
+    def update(self):
         """Updates the GeoMip to use the correct LOD on each block."""
 
+        #logging.info("TerrainTile.update()")
         GeoMipTerrain.update(self)
 
+    @pstat
     def updateTask(self, task):
         """Updates the GeoMip to use the correct LOD on each block."""
 
-        self.update(task)
+        self.update()
         return task.again
     #@pstat
     def setHeightField(self, filename):
         """Set the GeoMip heightfield from a heightmap image."""
 
         GeoMipTerrain.setHeightfield(self, filename)
+
+    @pstat
+    def generate(self):
+        GeoMipTerrain.generate(self)
 
     @pstat
     def setHeight(self):
@@ -100,6 +108,7 @@ class TerrainTile(GeoMipTerrain):
 
         if SAVED_HEIGHT_MAPS:
             fileName = "maps/height/" + self.name + ".png"
+            self.getRoot().setTag('EditableTerrain', '1')
             if self.image.read(Filename(fileName)):
                 logging.info( "read heightmap from " + fileName)
                 return
@@ -200,6 +209,7 @@ class TerrainTile(GeoMipTerrain):
         self.calcAmbientOcclusion()
         #logging.info( "generate()")
         self.generate()
+        self.getRoot().setCollideMask(BitMask32.bit(1)) 
 
         #self.makeSlopeMap()
         #logging.info( "createGroups()")

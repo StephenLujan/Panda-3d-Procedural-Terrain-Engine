@@ -253,14 +253,15 @@ class Terrain(NodePath):
 
     def initializeRenderingProperties(self):
         logging.info("initializing terrain rendering properties...")
-        self.bruteForce = True
-        #self.bruteForce = False
+        #self.bruteForce = True
+        self.bruteForce = BRUTE_FORCE_TILES
         if self.bruteForce:
             self.blockSize = self.tileSize
         else:
-            self.blockSize = 16
-            self.near = 40
-            self.far = 100
+            #self.blockSize = 16
+            self.blockSize = self.tileSize
+            self.near = 100
+            self.far = self.maxViewRange * 0.5 + self.blockSize
         self.wireFrame = 0
         #self.texturer = MonoTexturer(self)
         self.texturer = ShaderTexturer(self)
@@ -276,7 +277,8 @@ class Terrain(NodePath):
 
         ##Add tasks to keep updating the terrain
         #taskMgr.add(self.updateTilesTask, "updateTiles", sort=9, priority=0)
-        taskMgr.add(self.update, "update", sort=9, priority=0)
+        taskMgr.doMethodLater(5, self.update, "update", sort=9, priority=0)
+        self.updateStep = 1
 
     def reduceSceneGraph(self, radius):
         gr = self.graphReducer
@@ -290,18 +292,21 @@ class Terrain(NodePath):
     def update(self, task):
         """This task updates terrain as needed."""
 
-        self.makeNewTile()
-        self.removeOldTiles()
-        if THREAD_LOAD_TERRAIN:
-            self.grabBuiltTile()
-        #self.updateTiles()
+        if self.updateStep == 1:
+            self.makeNewTile()
+            if THREAD_LOAD_TERRAIN:
+                self.grabBuiltTile()
 
+            self.removeOldTiles()
+            self.updateStep += 1
+            return Task.cont
+
+        #self.updateTiles()
         self.tileLodUpdate()
         #self.buildDetailLevels()
 
-        #print len(self.tiles)
-
-        return task.again
+        self.updateStep = 1
+        return Task.cont
 
     def updateLight(self):
         """This task moves point and directional lights.
@@ -318,19 +323,25 @@ class Terrain(NodePath):
 
         GeoMipMap updates are slow however and may cause unacceptable lag.
         """
-
+        #logging.info(self.focus.getPos())
         for pos, tile in self.tiles.items():
-            tile.update(task)
+            tile.update()
+            #logging.info(str(tile.getFocalPoint().getPos()))
+            #if tile.update():
+                #logging.info("update success")
+                #yield Task.cont
 
     def tileLodUpdate(self):
-        """Unused! LOD causes exposed terrain seams.
-
-        Updates tiles to LOD appropriate for their distance.
+        """Updates tiles to LOD appropriate for their distance.
 
         setMinDetailLevel() doesn't flag a geomipterrain as dirty, so update
         will not alter detail level. It would have to be regenerated.
         Instead we will use a special LodTerrainTile.
         """
+
+        if not self.bruteForce:
+            self.updateTiles()
+            return
 
         focusx = self.focus.getX() / self.horizontalScale
         focusy = self.focus.getY() / self.horizontalScale
@@ -339,18 +350,18 @@ class Terrain(NodePath):
         # switch to high, mid, and low LOD's at these distances
         # having a gap between the zones avoids switching back and forth too
         # if the focus is moving erratically
-        highOuter = self.minTileDistance * 0.05 + self.tileSize
+        highOuter = self.minTileDistance * 0.02 + self.tileSize
         highOuter *= highOuter
-        midInner = self.minTileDistance * 0.05 + self.tileSize + halfTile
+        midInner = self.minTileDistance * 0.02 + self.tileSize + halfTile
         midInner *= midInner
         midOuter = self.minTileDistance * 0.2 + self.tileSize
         midOuter *= midOuter
         lowInner = self.minTileDistance * 0.2 + self.tileSize + halfTile
         lowInner *= lowInner
-        lowOuter = self.minTileDistance * 0.55 + self.tileSize
-        lowOuter *= lowInner
-        horizonInner = self.minTileDistance * 0.55 + self.tileSize + halfTile
-        horizonInner *= lowOuter
+        lowOuter = self.minTileDistance * 0.5 + self.tileSize
+        lowOuter *= lowOuter
+        horizonInner = self.minTileDistance * 0.5 + self.tileSize + halfTile
+        horizonInner *= horizonInner
 
         for pos, tile in self.tiles.items():
             deltaX = focusx - (pos[0] + halfTile)
@@ -481,8 +492,8 @@ class Terrain(NodePath):
         """Generate the closest terrain tile needed."""
 
         # tiles are placed under the terrain node path which may be scaled
-        x = self.focus.getX() / self.horizontalScale
-        y = self.focus.getY() / self.horizontalScale
+        x = self.focus.getX(self) / self.horizontalScale
+        y = self.focus.getY(self) / self.horizontalScale
         # start position is the focus position rounded to the multiple of tile size
         xstart = (int(x) / self.tileSize) * self.tileSize
         ystart = (int(y) / self.tileSize) * self.tileSize
@@ -547,8 +558,10 @@ class Terrain(NodePath):
 
         if SAVED_TEXTURE_MAPS:
             tile = TextureMappedTerrainTile(self, pos[0], pos[1])
-        else:
+        elif self.bruteForce:
             tile = LodTerrainTile(self, pos[0], pos[1])
+        else:
+            tile = TerrainTile(self, pos[0], pos[1])
         tile.make()
         tile.getRoot().reparentTo(self)
         self.tiles[pos] = tile
@@ -573,8 +586,8 @@ class Terrain(NodePath):
     def removeOldTiles(self):
         """Remove distant tiles to free system resources."""
 
-        x = self.focus.getX() / self.horizontalScale
-        y = self.focus.getY() / self.horizontalScale
+        x = self.focus.getX(self) / self.horizontalScale
+        y = self.focus.getY(self) / self.horizontalScale
         center = self.tileSize * 0.5
         maxDistanceSquared = self.maxTileDistance * self.maxTileDistance
         for pos, tile in self.tiles.items():
@@ -610,10 +623,10 @@ class Terrain(NodePath):
             tiley = (int(y) / self.tileSize) * self.tileSize
             x -= tilex
             y -= tiley
-            if (tilex,tiley) in self.tiles:
-                return self.tiles[tilex,tiley].getElevation(x,y) * self.getSz()
-            if (tilex,tiley) in self.storage:
-                return self.storage[tilex,tiley].getElevation(x,y) * self.getSz()
+            if (tilex, tiley) in self.tiles:
+                return self.tiles[tilex, tiley].getElevation(x, y) * self.getSz()
+            if (tilex, tiley) in self.storage:
+                return self.storage[tilex, tiley].getElevation(x, y) * self.getSz()
         return self.getHeight(x, y) * self.getSz()
 
     def setWireFrame(self, state):
@@ -634,3 +647,8 @@ class Terrain(NodePath):
     def setShaderFloatInput(self, name, input):
         logging.info("set shader input " + name + " to " + str(input))
         self.setShaderInput(name, PTAFloat([input]))
+
+    def setFocus(self, nodePath):
+        self.focus = nodePath
+        for pos, tile in self.tiles.items():
+            tile.setFocalPoint(self.focus)

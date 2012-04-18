@@ -99,7 +99,7 @@ class TerrainPopulator():
         yOff = tile.yOffset
         tileSize = terrain.tileSize
 
-        seed = terrain.heightMap.getHeight(yOff * -2, xOff * -2) * 2147483647
+        seed = terrain.heightMap.getHeight(yOff * -2, xOff * -2)+1 * 2147483647
         dice = RandomNumGen(seed)
 
         for factory in self.factories:
@@ -108,10 +108,11 @@ class TerrainPopulator():
             for iterator in range(num):
                 x = dice.random() * tileSize
                 y = dice.random() * tileSize
-                object = factory.factoryFunction(*factory.constructorParams)
-                #logging.info( object)
-                #logging.info( factory.factoryFunction)
-                self.addToTile(tile, object, x, y)
+                if terrain.getHeight(x+xOff, y+yOff) > terrain.waterHeight:
+                    object = factory.factoryFunction(*factory.constructorParams)
+                    #logging.info( object)
+                    #logging.info( factory.factoryFunction)
+                    self.addToTile(tile, object, x, y)
         tile.statics.flattenStrong()
 
     def addToTile(self, tile, object, x, y):

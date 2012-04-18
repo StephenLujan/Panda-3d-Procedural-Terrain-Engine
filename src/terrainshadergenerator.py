@@ -31,7 +31,7 @@ class TerrainShaderGenerator:
 
         self.terrain.setShaderFloatInput("fogDensity", self.fogDensity)
         #self.terrain.setShaderFloatInput("fogDensity", 0)
-        self.terrain.setShaderFloatInput("normalMapStrength", 2.5)
+        self.terrain.setShaderFloatInput("normalMapStrength", 2.0)
         self.terrain.setShaderFloatInput("detailSmallScale", 1.3 * TERRAIN_HORIZONTAL_STRETCH)
         self.terrain.setShaderFloatInput("detailBigScale", 7.0 * TERRAIN_HORIZONTAL_STRETCH)
         self.terrain.setShaderFloatInput("detailHugeScale", 23.0 * TERRAIN_HORIZONTAL_STRETCH)

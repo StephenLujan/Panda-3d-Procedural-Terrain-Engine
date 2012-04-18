@@ -1,5 +1,5 @@
 """
-terraineditor.py: This file contains a map editor class for this terrain system
+mapeditor.py: This file contains a map editor class for this terrain system
 
 Adapted some code from here
 http://tolleybot.wordpress.com/2010/10/03/panda3d-simple-mouse-picking/
@@ -7,10 +7,7 @@ http://tolleybot.wordpress.com/2010/10/03/panda3d-simple-mouse-picking/
 __author__ = "Stephen Lujan"
 
 #An event handler test
-from direct.showbase import DirectObject
-from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
-from panda3d.core import PointLight
 from panda3d.core import Vec3,Vec4,Point3
 from panda3d.core import CollisionRay,CollisionNode,GeomNode,CollisionTraverser
 from panda3d.core import CollisionHandlerQueue, CollisionSphere, BitMask32
@@ -20,58 +17,91 @@ class MapEditor():
     def __init__(self, terrain):
         self.terrain = terrain
         self.terrain.setTag('EditableTerrain', '1')
-        self.cursor = terrain.attachNewNode('EditCursor')
+        self.cursor = render.attachNewNode('EditCursor')
         loader.loadModel("models/sphere").reparentTo(self.cursor)
+        self.size = 10.0
+        self.cursor.setScale(self.size)
+        #self.cursor.setSz(self.size / self.terrain.getSz())
+        self.cursor.setRenderModeWireframe()
+        self.setupMouseCollision()
+        self.on = False
+        self.disable()
 
     def enable(self):
         taskMgr.add(self.update, "terrainEditor")
+        self.cursor.unstash()
 
     def disable(self):
         taskMgr.remove("terrainEditor")
+        self.cursor.stash()
 
-    def update(self):
+    def toggle(self, value = None):
+        if value == None:
+            self.on = not self.on
+        else:
+            self.on = value
+        if self.on:
+            self.enable()
+        else:
+            self.disable()
+
+    def update(self, task):
         self.onMouseTask()
+        return Task.cont
 
     def onMouseTask(self):
         """ """
         #do we have a mouse
-        if (self.mouseWatcherNode.hasMouse() == False):
-                return
+        logging.info("onMouseTask")
+        if (base.mouseWatcherNode.hasMouse() == False):
+
+            logging.error("no mouse")
+            return
 
         #get the mouse position
         mpos = base.mouseWatcherNode.getMouse()
 
         #Set the position of the ray based on the mouse position
 
-        self.mPickRay.setFromLens(self.camNode, mpos.getX(), mpos.getY())
+        if not self.mPickRay.setFromLens(base.camNode, mpos.getX(), mpos.getY()):
+            logging.error("point is not acceptable")
+
 
         #for this small example I will traverse everything, for bigger projects
         #this is probably a bad idea
-        self.mPickerTraverser.traverse(self.render)
+        self.mPickerTraverser.traverse(render)
+        logging.info("Mouse pick ray traversing terrain.")
 
-        if (self.mCollisionQue.getNumEntries() > 0):
-                self.mCollisionQue.sortEntries()
-                entry     = self.mCollisionQue.getEntry(0);
-                pickedObj = entry.getIntoNodePath()
+        if (self.mCollisionQueue.getNumEntries() > 0):
+            self.mCollisionQueue.sortEntries()
+            entry     = self.mCollisionQueue.getEntry(0);
+            pickedObj = entry.getIntoNodePath()
+            pickedObj = pickedObj.findNetTag('EditableTerrain')
+            if not pickedObj.isEmpty():
+                #here is how you get the surface collsion
+                pos = entry.getSurfacePoint(render)
+                #pos.z *= self.terrain.getSz()
+                logging.info(str(pickedObj))
+                logging.info(str(pos))
+                self.cursor.setPos(pos)
+                #handlePickedObject(pickedObj)
+            else:
+                logging.info("picked object is empty")
+        else:
+            logging.info("Nothing collided with mouse pick ray")
 
-                pickedObj = pickedObj.findNetTag('MyObjectTag')
-                if not pickedObj.isEmpty():
-                        #here is how you get the surface collsion
-                        pos = entry.getSurfacePoint(self.render)
-                        print pickedObj
-                        #handlePickedObject(pickedObj)
 
     def setupMouseCollision(self):
         """ """
         #Since we are using collision detection to do picking, we set it up
         #any other collision detection system with a traverser and a handler
         self.mPickerTraverser = CollisionTraverser()            #Make a traverser
-        self.mCollisionQue    = CollisionHandlerQueue()
+        self.mCollisionQueue  = CollisionHandlerQueue()
 
         #create a collision solid ray to detect against
         self.mPickRay = CollisionRay()
-        self.mPickRay.setOrigin(self.camera.getPos(self.render))
-        self.mPickRay.setDirection(render.getRelativeVector(camera, Vec3(0,1,0)))
+        #self.mPickRay.setOrigin(base.camera.getPos(render))
+        #self.mPickRay.setDirection(render.getRelativeVector(base.camera, Vec3(0,1,0)))
 
         #create our collison Node to hold the ray
         self.mPickNode = CollisionNode('pickRay')
@@ -82,7 +112,7 @@ class MapEditor():
         #well use the default geometry mask
         #this is inefficent but its for mouse picking only
 
-        self.mPickNP = self.camera.attachNewNode(self.mPickNode)
+        self.mPickNP = base.camera.attachNewNode(self.mPickNode)
 
         #well use what panda calls the "from" node.  This is reall a silly convention
         #but from nodes are nodes that are active, while into nodes are usually passive environments
@@ -94,6 +124,6 @@ class MapEditor():
         self.mPickNode.setFromCollideMask(GeomNode.getDefaultCollideMask())
 
         #Register the ray as something that can cause collisions
-        self.mPickerTraverser.addCollider(self.mPickNP, self.mCollisionQue)
+        self.mPickerTraverser.addCollider(self.mPickNP, self.mCollisionQueue)
         #if you want to show collisions for debugging turn this on
-        #self.mPickerTraverser.showCollisions(self.render)
+        #self.mPickerTraverser.showCollisions(render)
