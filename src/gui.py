@@ -137,13 +137,16 @@ class ShaderDetailControl():
         sg = self.terrain.texturer.shaderGenerator
         #self.normalStregth = terrain.getShaderInput('normalMapStrength').getVector().x
         self.normalStregth = sg.normalMapStrength
-        self.normalStregthSlide = SlideControl(0, 0.6, parent=self.frame, range=(0.0001, 10), value=self.normalStregth, name="Normal Strength", function=self.setNormalStrength, ysize=1.5, xsize=1.5)
+        self.normalStregthSlide = SlideControl(0, 0.6, parent=self.frame, range=(0.0001, 10.0), value=self.normalStregth, name="Normal Strength", function=self.setNormalStrength, ysize=1.5, xsize=1.5)
+
+        self.parallaxStrength = sg.parallaxStrength
+        self.parallaxStrengthSlide = SlideControl(0, 0.3, parent=self.frame, range=(0.0, sg.parallaxStrength * 5.0), value=self.parallaxStrength, name="Parallax Strength", function=self.setParallaxStrength, ysize=1.5, xsize=1.5)
 
         self.detailSmallScale = sg.detailSmallScale
-        self.detailHugeSlide = SlideControl(0, 0.2, parent=self.frame, range=(0, self.detailSmallScale * 5), value=self.detailSmallScale, name="Small Detail", function=self.setSmallDetail, ysize=1.5, xsize=1.5)
+        self.detailHugeSlide = SlideControl(0, 0.0, parent=self.frame, range=(0, self.detailSmallScale * 5), value=self.detailSmallScale, name="Small Detail", function=self.setSmallDetail, ysize=1.5, xsize=1.5)
 
         self.detailBigScale = sg.detailBigScale
-        self.detailBigeSlide = SlideControl(0, -0.2, parent=self.frame, range=(0, self.detailBigScale * 5), value=self.detailBigScale, name="BigDetail", function=self.setBigDetail, ysize=1.5, xsize=1.5)
+        self.detailBigeSlide = SlideControl(0, -0.3, parent=self.frame, range=(0, self.detailBigScale * 5), value=self.detailBigScale, name="BigDetail", function=self.setBigDetail, ysize=1.5, xsize=1.5)
 
         self.detailHugeScale = sg.detailHugeScale
         self.detailHugeSlide = SlideControl(0, -0.6, parent=self.frame, range=(0, self.detailHugeScale * 5), value=self.detailHugeScale, name="Huge Detail", function=self.setHugeDetail, ysize=1.5, xsize=1.5)
@@ -153,6 +156,10 @@ class ShaderDetailControl():
     def setNormalStrength(self, input):
         self.normalStregth = input
         self.terrain.setShaderFloatInput("normalMapStrength", self.normalStregth)
+
+    def setParallaxStrength(self, input):
+        self.parallaxStrength = input
+        self.terrain.setShaderFloatInput("parallaxStrength", self.parallaxStrength)
 
     def setSmallDetail(self, input):
         self.detailSmallScale = input
@@ -195,20 +202,46 @@ class ShaderMiscellaneousControl():
 
         self.resize(self.size)
 
-        self.occlusionButton = DirectCheckButton(text="Ambient Occlusion", scale=0.2,
-                                                 command=self.setAmbientOcclusion, pos=(-0.5, 0, 0.5),
+        self.occlusionButton = DirectCheckButton(text="Ambient Occlusion", scale=0.15,
+                                                 command=self.setAmbientOcclusion, pos=(-0.6, 0, 0.5),
                                                  parent=self.frame)
+
+        self.diffuseButton = DirectCheckButton(text="Disable Diffuse", scale=0.15,
+                                                 command=self.setDiffuseTextures, pos=(-0.6, 0, 0.1),
+                                                 parent=self.frame)
+        self.detail = [0]
+        self.detailTexButtons = []
+        for number in range(2):
+            mypos = (number * 1.5 - 0.6, 0, -0.3)
+            button = DirectRadioButton(text='DetailTex'+str(number), variable=self.detail,
+                                       value=[number], scale=0.15, pos=mypos,
+                                       command=self.switchDetailTexture,
+                                       parent=self.frame)
+            self.detailTexButtons.append(button)
+        for button in self.detailTexButtons:
+            button.setOthers(self.detailTexButtons)
 
         self.fogDensity = sg.fogDensity
         #self.fogDensity = float(self.terrain.getShaderInput('fogDensity').getPtr())
-        self.fogDensitySlide = SlideControl(0, -0.6, parent=self.frame, range=(0, 0.1), value=self.fogDensity, name="Fog Density", function=self.setFogDensity, ysize=1.5, xsize=1.5)
+        self.fogDensitySlide = SlideControl(0, -0.7, parent=self.frame, range=(0, 0.1), value=self.fogDensity, name="Fog Density", function=self.setFogDensity, ysize=1.5, xsize=1.5)
 
+    def setDiffuseTextures(self, status):
+        if status:
+            self.terrain.setShaderFloatInput("debugDisableDiffuse", 1.0)
+        else:
+            self.terrain.setShaderFloatInput("debugDisableDiffuse", 0.0)
 
     def setAmbientOcclusion(self, status):
         if status:
             self.terrain.setShaderFloatInput("ambientOcclusion", 1.0)
         else:
             self.terrain.setShaderFloatInput("ambientOcclusion", 0.0)
+
+    def switchDetailTexture(self, status=None):
+        if self.detail[0] == 0:
+            self.terrain.texturer.shaderGenerator.setDetail(self.terrain.texturer.detailTex)
+        if self.detail[0] == 1:
+            self.terrain.texturer.shaderGenerator.setDetail(self.terrain.texturer.detailTex2)
 
     def setFogDensity(self, input):
         self.fogDensity = input

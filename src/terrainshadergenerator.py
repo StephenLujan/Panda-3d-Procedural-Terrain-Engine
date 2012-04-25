@@ -15,24 +15,33 @@ from terraintexturemap import *
 
 class TerrainShaderGenerator:
 
-    def __init__(self, terrain, textureMapper=None):
+    def __init__(self, terrain, texturer, textureMapper=None):
 
         self.terrain = terrain
+        self.texturer = texturer
         if not textureMapper:
             textureMapper = TextureMapper(terrain)
         self.textureMapper = textureMapper
         self.normalMapping = True
         self.detailTexture = True
+        self.detailPnm = PNMImage()
+
         self.parallax = False
         self.glare = False
         self.avoidConditionals = 1
         self.fogExponential()
         logging.info("setting basic terrain shader input...")
+        self.setDetail(self.texturer.detailTex)
 
         self.terrain.setShaderFloatInput("fogDensity", self.fogDensity)
         #self.terrain.setShaderFloatInput("fogDensity", 0)
         self.normalMapStrength = 1.6
         self.terrain.setShaderFloatInput("normalMapStrength", self.normalMapStrength)
+        self.parallaxStrength = 0.01
+        self.terrain.setShaderFloatInput("parallaxStrength", self.parallaxStrength)
+
+        self.debugDisableDiffuse = 0
+        self.terrain.setShaderFloatInput("debugDisableDiffuse", self.debugDisableDiffuse)
 
         self.detailHugeScale = self.terrain.tileSize / 50 * TERRAIN_HORIZONTAL_STRETCH
         self.detailBigScale = self.terrain.tileSize / 9 * TERRAIN_HORIZONTAL_STRETCH
@@ -40,8 +49,18 @@ class TerrainShaderGenerator:
         self.terrain.setShaderFloatInput("detailHugeScale", self.detailHugeScale)
         self.terrain.setShaderFloatInput("detailBigScale", self.detailBigScale)
         self.terrain.setShaderFloatInput("detailSmallScale", self.detailSmallScale)
+        
         self.terrain.setShaderFloatInput("ambientOcclusion", 1.0)
         logging.info("done")
+
+    def setDetail(self, texture):
+        texture.store(self.detailPnm)
+        # compensate for darkness of detail texture
+        self.detailBrightnessCompensation = 1.0 / self.detailPnm.getAverageGray()
+        # 3 layers of detail texture actually
+        self.detailBrightnessCompensation *= self.detailBrightnessCompensation * self.detailBrightnessCompensation
+        self.terrain.setShaderInput("detailTex", texture)
+        self.terrain.setShaderFloatInput("brightnessAdjust", self.detailBrightnessCompensation)
 
     def addTexture(self, texture):
         self.textureMapper.addTexture(texture)
@@ -102,6 +121,8 @@ float FogAmount( float density, float3 PositionVS )
 
         header = '''
 //Cg
+//
+//Cg profile arbvp1 arbfp1
 // Should use per-pixel lighting, hdr1, and medium bloom
 // input alight0, dlight0
 
@@ -174,21 +195,14 @@ void vshader(
         in float4 vtx_position : POSITION,
         in float4 vtx_normal : NORMAL,
         in float4 vtx_color : COLOR,
-
-        out vfconn output,
-        out float4 l_position : POSITION,
-
+        uniform float4 mspos_view,
         uniform float fogDensity: FOGDENSITY,
         uniform float3 camPos : CAMPOS,
         uniform float4x4 trans_model_to_world,
         uniform float4x4 mat_modelproj,
-        uniform float4x4 trans_model_to_view,
-        uniform float4x4 tpose_view_to_model,
-        //test
-        //uniform float4x4 tpose_model_to_world,
-        uniform float4x4 itp_modelview,
-        uniform float4x4 itp_projection,
-        uniform float4x4 itp_modelproj
+
+        out vfconn output,
+        out float4 l_position : POSITION
 ) {
         // Transform the current vertex from object space to clip space
         l_position = mul(mat_modelproj, vtx_position);
@@ -198,30 +212,35 @@ void vshader(
         output.l_tex_coord = vtx_texcoord0;
         output.l_world_pos = mul(trans_model_to_world, vtx_position);
 
-        //from autoshader - for parallax map
-        //output.l_tangent.xyz = mul((float3x3)tpose_view_to_model, vtx_tangent1.xyz);
-        //output.l_tangent.w = 0;
-        //output.l_binormal.xyz = mul((float3x3)tpose_view_to_model, -vtx_binormal1.xyz);
-        //output.l_binormal.w = 0;
+        //get world normal for texture selection
+        output.l_normal = vtx_normal.xyz;
+        //flip the x http://www.panda3d.org/forums/viewtopic.php?p=83854
+        output.l_normal.x *= -slopeScale;
+        output.l_normal.y *= slopeScale;
+        output.l_normal = normalize(output.l_normal);
 '''
         if self.fogDensity:
             vShader += '''
-        // there has to be a faster way to get the camera's coordinates in a shader
+
+        // get fog
+        // there has to be a faster way to get the camera's distance in a shader
         float3 cam_to_vertex = output.l_world_pos - camPos;
         output.l_fog = FogAmount(fogDensity.x, cam_to_vertex);
+'''
+        if self.parallax:
+            vShader += '''
 
+        //for parallax mapping
+        float3 dirEye = (float3)mspos_view - (float3)vtx_position;
+        float3 tangent = float3(output.l_normal.x, output.l_normal.z, -output.l_normal.y);
+        float3 binormal = float3(output.l_normal.z, output.l_normal.y, -output.l_normal.x);
+        output.l_eyeVec.x = dot(tangent, dirEye);
+        output.l_eyeVec.y = dot(binormal, dirEye);
+        output.l_eyeVec.z = dot(output.l_normal, dirEye);
+        output.l_eyeVec = normalize(output.l_eyeVec);
 '''
 
         vShader += '''
-        output.l_normal = vtx_normal.xyz;
-        output.l_normal.x *= slopeScale;
-        output.l_normal.y *= slopeScale;
-        output.l_normal = normalize(output.l_normal);
-        //vtx_normal.xyz = output.l_normal;
-
-        output.l_eye_position = mul(trans_model_to_view, vtx_position);
-        output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
-        //output.l_eye_normal = mul(tpose_view_to_model, vtx_normal);
 }
 '''
         return vShader
@@ -239,13 +258,17 @@ void fshader(
         uniform float4 attr_colorscale,
 
         //for terrain shader
-        in uniform sampler2D normalMap  : NORMALMAP,
-        in uniform sampler2D detailTex  : DETAILTEX,
-        in uniform float normalMapStrength : NORMALMAPSTRENGTH,
+        in uniform sampler2D normalMap,
+        in uniform sampler2D displacementMap,
+        in uniform sampler2D detailTex,
+        in uniform float normalMapStrength,
+        in uniform float parallaxStrength,
         in uniform float detailSmallScale,
         in uniform float detailBigScale,
         in uniform float detailHugeScale,
         in uniform float ambientOcclusion,
+        in uniform float debugDisableDiffuse,
+        in uniform float brightnessAdjust,
         '''
         if self.fogDensity:
             fshader += '''
@@ -262,48 +285,58 @@ void fshader(
         float2 detailCoordBig = input.l_tex_coord * detailBigScale;
         float2 detailCoordHuge = input.l_tex_coord * detailHugeScale;
         float3 terrainNormal = input.l_normal;
+'''
+        if self.parallax:
+            fshader += '''
+        // parallax mapping
+        float depth = (tex2D(displacementMap, detailCoordSmall).w * tex2D(displacementMap, detailCoordBig).w * tex2D(displacementMap, detailCoordHuge).w) - 0.5;
+        float3 offset = input.l_eyeVec * depth * parallaxStrength;
+
+        //depth = depth + (tex2D(displacementMap, detailCoordSmall + offset).w * tex2D(displacementMap, detailCoordBig + offset).w * tex2D(displacementMap, detailCoordHuge + offset).w);
+        //offset = input.l_eyeVec * depth * parallaxStrength;
+
+        //depth = depth + (tex2D(displacementMap, detailCoordSmall + offset).w * tex2D(displacementMap, detailCoordBig + offset).w * tex2D(displacementMap, detailCoordHuge + offset).w);
+        //offset = input.l_eyeVec * depth * parallaxStrength;
+
+        detailCoordSmall += offset;
+        detailCoordBig += offset;
+        detailCoordHuge += offset;
+        input.l_tex_coord += offset;
+'''
+
+        fshader += '''
         float4 detailColor = (tex2D(detailTex, detailCoordSmall) * tex2D(detailTex, detailCoordBig) * tex2D(detailTex, detailCoordHuge));
 '''
         if self.normalMapping:
             fshader += '''
         // normal mapping
-        float3 normalModifier = tex2D(normalMap, detailCoordSmall) + tex2D(normalMap, detailCoordBig) + tex2D(normalMap, detailCoordHuge) - 1.5;
+        float3 normalModifier = tex2D(normalMap, detailCoordSmall) + tex2D(normalMap, detailCoordBig) + tex2D(normalMap, detailCoordHuge)/2.0 - 1.25;
         input.l_normal *= normalModifier.z/normalMapStrength;
         input.l_normal.x += normalModifier.x;
         input.l_normal.y += normalModifier.y;
         input.l_normal = normalize(input.l_normal);
 '''
-        if self.parallax:
-            fshader += '''
-        // parallax mapping
-        // Given the regular uv coordinates
-        float2 uv = input.l_tex_coord;
 
-        // Step 1 - Get depth from the alpha (w) of the relief map
-	//float depth = (tex2D(reliefmap,uv).w) * hole_depth;
-        float depth = detailColor * 5.0;
-
-	// Step 2 - Create transform matrix to tangent space
-	//float3x3 to_tangent_space = float3x3(IN.binormal,IN.tangent,IN.normal);
-        float3x3 to_tangent_space = float3x3(input.l_binormal, input.l_tangent, input.l_normal);
-
-	// Steps 2 and 3
-        //float2 offset = depth * mul(to_tangent_space,v);
-        float2 offset = depth * mul(to_tangent_space,input.l_eye_normal);
-
-        // Step 4, offset u and v by x and y
-        input.l_tex_coord += offset;
-'''
         return fshader
 
 
     def getFragmentShaderEnd(self):
 
         fshader = ''
+        if self.avoidConditionals == 0:
+            fshader += '''
+        if (debugDisableDiffuse)
+            attr_color = float4(1,1,1,1);
+'''
+        else:
+            fshader += '''
+        attr_color = max(attr_color, float4(debugDisableDiffuse,debugDisableDiffuse,debugDisableDiffuse,debugDisableDiffuse));
+'''
         if self.detailTexture:
             fshader += '''
+
         // Add detail texture
-        attr_color *= 1.5 * detailColor;
+        attr_color *= brightnessAdjust * detailColor;
 '''
         fshader += '''
         // Begin view-space light calculations
@@ -353,6 +386,8 @@ void fshader(
         //result = tot_diffuse;
         //  Debug view terrain as solid color before fog
         //result = float4(1.0,0,0,0.5);
+        //  Debug view l_eyeVec
+        //result.rgb = input.l_eyeVec + float3 (1.0, 1.0, 1.0);
         //////////
 
 
@@ -365,7 +400,7 @@ void fshader(
 '''
         if self.fogDensity:
             fshader += '''
-        result = lerp( fogColor, result, input.l_fog );
+        //result = lerp( fogColor, result, input.l_fog );
 '''
         fshader += '''
         o_color = result * 1.000001;

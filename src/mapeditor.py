@@ -69,14 +69,14 @@ class MapEditor():
 
         #for this small example I will traverse everything, for bigger projects
         #this is probably a bad idea
-        self.mPickerTraverser.traverse(render)
+        self.mPickerTraverser.traverse(self.terrain)
         logging.info("Mouse pick ray traversing terrain.")
 
         if (self.mCollisionQueue.getNumEntries() > 0):
             self.mCollisionQueue.sortEntries()
             entry     = self.mCollisionQueue.getEntry(0);
             pickedObj = entry.getIntoNodePath()
-            pickedObj = pickedObj.findNetTag('EditableTerrain')
+            #pickedObj = pickedObj.findNetTag('EditableTerrain')
             if not pickedObj.isEmpty():
                 #here is how you get the surface collsion
                 pos = entry.getSurfacePoint(render)

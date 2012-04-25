@@ -22,10 +22,9 @@ struct vfconn
     float4 l_color : COLOR;
 
     //from auto shader
-    float4 l_eye_position : TEXCOORD2;
-    float4 l_eye_normal : TEXCOORD3;
-    float4 l_tangent : TEXCOORD4;
-    float4 l_binormal : TEXCOORD5;
+    float3 l_eye_position : TEXCOORD2;
+    float3 l_eye_normal : TEXCOORD3;
+    float3 l_eyeVec : TEXCOORD4;
 '''
         if self.fogDensity:
             vfconn += '''

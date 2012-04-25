@@ -170,10 +170,12 @@ class ShaderTexturer(TerrainTexturer):
 
         ### Load textures
         self.normalMap = self.loadTexture("Detail_NRM.png")
+        self.displacementMap = self.loadTexture("Detail_DISP.png")
         self.testOn = False
         self.detailTex = self.loadTexture("Detail_COLOR.png")
+        self.detailTex2 = self.loadTexture("Detail_COLOR2.png")
         self.tex1 = self.loadTexture("dirt.jpg")
-        self.tex2 = self.loadTexture("grass1b.jpg")
+        self.tex2 = self.loadTexture("grass.jpg")
         self.tex3 = self.loadTexture("rock.jpg")
         self.tex4 = self.loadTexture("snow.jpg")
 
@@ -181,9 +183,6 @@ class ShaderTexturer(TerrainTexturer):
         #self.normalTS2 = TextureStage('normalMap2')
         self.detailTS = TextureStage('detailMap')
         self.ts1 = TextureStage('textures')
-        #self.ts2 = TextureStage('tex2')
-        #self.ts3 = TextureStage('tex3')
-        #self.ts4 = TextureStage('tex4')
 
         ### Load the boundries for each texture
         # regionLimits ( min height, max height, min slope, max slope )
@@ -207,10 +206,10 @@ class ShaderTexturer(TerrainTexturer):
         logging.info( "intializing terrain shader generator...")
         file = 'shaders/terrain.sha'
         if SAVED_TEXTURE_MAPS:
-            self.shaderGenerator = BakedTerrainShaderGenerator(self.terrain, self.textureMapper)
+            self.shaderGenerator = BakedTerrainShaderGenerator(self.terrain, self, self.textureMapper)
             file = 'shaders/bakedTerrain.sha'
         else:
-            self.shaderGenerator = FullTerrainShaderGenerator(self.terrain, self.textureMapper)
+            self.shaderGenerator = FullTerrainShaderGenerator(self.terrain, self,  self.textureMapper)
             file = 'shaders/fullTerrain.sha'
         logging.info( "terrain shader generator initialized...")
 
@@ -221,6 +220,7 @@ class ShaderTexturer(TerrainTexturer):
             self.shader = Shader.make(self.shaderGenerator.createShader(), Shader.SLCg);
 
         self.terrain.setShaderInput("normalMap", self.normalMap)
+        self.terrain.setShaderInput("displacementMap", self.displacementMap)
         self.terrain.setShaderInput("detailTex", self.detailTex)
         self.terrain.setShaderInput('tscale', self.texScale)
         self.terrain.setShaderInput("fogColor", Vec4(1.0, 1.0, 1.0, 1.0))
@@ -232,10 +232,10 @@ class ShaderTexturer(TerrainTexturer):
         # we can just leave most shader inputs on top of terrain
 
         ### apply textures
-        input.setTexture(self.ts1, self.tex1)
-        input.setTexture(self.ts1, self.tex2)
-        input.setTexture(self.ts1, self.tex3)
-        input.setTexture(self.ts1, self.tex4)
+        #input.setTexture(self.ts1, self.tex1)
+        #input.setTexture(self.ts1, self.tex2)
+        #input.setTexture(self.ts1, self.tex3)
+        #input.setTexture(self.ts1, self.tex4)
         #input.setTexture(self.detailTS, self.detailTex)
         #input.setTexScale(self.detailTS, 10, 10)
 
