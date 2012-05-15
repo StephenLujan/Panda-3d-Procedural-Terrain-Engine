@@ -400,7 +400,7 @@ void fshader(
 '''
         if self.fogDensity:
             fshader += '''
-        //result = lerp( fogColor, result, input.l_fog );
+        result = lerp( fogColor, result, input.l_fog );
 '''
         fshader += '''
         o_color = result * 1.000001;

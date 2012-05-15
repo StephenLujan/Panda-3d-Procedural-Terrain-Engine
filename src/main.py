@@ -30,6 +30,7 @@ from splashCard import *
 from terrain import *
 from waterNode import *
 from mapeditor import *
+from physics import *
 
 #if __name__ == "__main__":
 logging.info( "Hello World")
@@ -54,7 +55,13 @@ class World(DirectObject):
         yield Task.cont
         yield Task.cont
         self._loadDisplay()
-
+        
+        self.bug_text.setText("loading physics...")
+        #showFrame()
+        yield Task.cont
+        yield Task.cont
+        self._loadPhysics()
+        
         self.bug_text.setText("loading sky...")
         #showFrame()
         yield Task.cont
@@ -90,7 +97,7 @@ class World(DirectObject):
         yield Task.cont
         self._loadWater()
 
-        self.bug_text.setText("loading filters")
+        self.bug_text.setText("loading filters...")
         #showFrame()
         yield Task.cont
         yield Task.cont
@@ -102,11 +109,13 @@ class World(DirectObject):
         yield Task.cont
         self._loadGui()
 
-        self.bug_text.setText("loading miscellanious")
+        self.bug_text.setText("loading miscellanious...")
         #showFrame()
         yield Task.cont
         yield Task.cont
-        
+
+        self.physics.setup(self.terrain, self.ralph)
+
         taskMgr.add(self.move, "moveTask")
 
         # Game state variables
@@ -153,8 +162,7 @@ class World(DirectObject):
         self.inst12 = addText(0.40, "[N]: Toggle Night Skipping")
         self.inst13 = addText(0.35, "[P]: Pause day night cycle")
         self.inst14 = addText(0.3, "[F11]: Screen Shot")
-        #self.inst15 = addText(0.25, "[T]: Special Test")
-        
+        self.inst15 = addText(0.25, "[T]: Special Test")
 
         self.loc_text = addText(0.15, "[POS]: ", True)
         self.hpr_text = addText(0.10, "[HPR]: ", True)
@@ -224,7 +232,7 @@ class World(DirectObject):
         self.accept("p", self.sky.pause)
         self.accept("r", self.terrain.initializeHeightMap)
         self.accept("l", self.terrain.toggleWireFrame)
-        self.accept("t", self.terrain.test)
+        self.accept("t", self.physics.test) #self.terrain.test)
         self.accept("e", self.toggleEditor)
         self.accept("w-up", self.ralph.setControl, ["forward", 0])
         self.accept("a-up", self.ralph.setControl, ["left", 0])
@@ -245,8 +253,10 @@ class World(DirectObject):
         self.critter2.maxSpeed = 5.0
         self.critter2.setWander(60)
 
+    def _loadPhysics(self):
+        self.physics = TerrainPhysics()
 
-    def _loadPointLight():
+    def _loadPointLight(self):
         self.lightpivot = render.attachNewNode("lightpivot")
         self.lightpivot.hprinterval(10, Point3(360, 0, 0)).loop()
         plight = PointLight('plight')

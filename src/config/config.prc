@@ -58,7 +58,7 @@ audio-library-name null
 # --- Terrain Engine Specific Settings ---
 
 # The distance below which terrain is guaranteed to be loaded and rendered
-max-view-range 600
+max-view-range 100
 max-terrain-height 300.0
 terrain-horizontal-stretch 1.0
 
